@@ -11,8 +11,10 @@ export default class GameScene extends Phaser.Scene {
     constructor() {
         super("GameScene");
         this.openSpaces = [];
-        this.energyCount = 50;
+        this.energyCount = 50000;
+        this.originalGravity = 300;
         this.totalEnergy = 200;
+
     }
 
     create() {
@@ -20,10 +22,11 @@ export default class GameScene extends Phaser.Scene {
         this.tileSize = window._tileSize;
         this.digging = false;
         this.drilling = false;
-        this.energyCount = 2;
         this.soilGroup = this.physics.add.staticGroup();
-        this.energyGroup = this.physics.add.group();
-        this.entityChildren = [this.soilGroup, this.energyGroup];
+        this.waterGroup = this.physics.add.group();
+        this.physics.add.collider(this.waterGroup, this.soilGroup);
+        this.physics.add.collider(this.waterGroup, this.waterGroup);
+        this.entityChildren = [this.soilGroup, this.waterGroup];
         this.mapService = new MapService(32, 16, this);
         this.mapService.generateMap();
 
@@ -40,10 +43,10 @@ export default class GameScene extends Phaser.Scene {
         const worldHeight = window._gridSize * this.tileSize;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
         // this.lightingCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
-        // this.lightingCamera.ignore([this.energyGroup, this.player, this.playerRect, this.soilGroup]);
+        // this.lightingCamera.ignore([this.waterGroup, this.player, this.playerRect, this.soilGroup]);
 
         // this.uiCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
-        // this.uiCamera.ignore([this.energyGroup, this.player, this.playerRect, this.soilGroup]);
+        // this.uiCamera.ignore([this.waterGroup, this.player, this.playerRect, this.soilGroup]);
         this.cameras.main.ignore([this.energyText]);
 
         // this.uiCamera.setScroll(0, 0);
@@ -72,7 +75,7 @@ export default class GameScene extends Phaser.Scene {
         let safeSpawn = this.openSpaces.splice(index, 1)[0];
 
         let x = window._width / 2;
-        let y = 0;
+        let y = window._height / 2;
 
         this.player = this.physics.add.body(x, y, this.tileSize * 0.8, this.tileSize * 0.8);
         this.player.setBounce(0.2);
@@ -129,36 +132,23 @@ export default class GameScene extends Phaser.Scene {
         this.mapService.loadChunks(this.player.x, this.player.y);
     }
 
-    collectEnergy(player, energy) {
-        energy.destroy();
-        this.energyCount += 1;
-        // this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`); // ✅ Update UI
+// Define swimming function
+    swimming(player, water) {
+        // Reduce gravity when in water
+        // player.setGravityY(this.originalGravity * 0.3); // 30% of normal gravity
+        // player.setDragY(300); // Increase drag to make sinking slower
+        // player.setVelocityY(player.body.velocity.y * 0.8); // Reduce downward momentum slightly
+        // this.inWater = true; // Track that the player is swimming
     }
 
-    createEnergy() {
-        this.energyGroup = this.physics.add.group();
-
-        for (let i = 0; i < this.totalEnergy; i++) {
-            const validSpace = this.openSpaces.filter(space => space.y > 5);
-            if (validSpace.length === 0) return;
-
-            let index = Math.floor(Math.random() * validSpace.length);
-            let spot = validSpace.splice(index, 1)[0];
-
-            let x = spot.x * this.tileSize;
-            let y = spot.y * this.tileSize;
-
-            let energyRect = this.add.rectangle(x, y, this.tileSize, this.tileSize, 0xeecd14);
-            this.physics.add.existing(energyRect);
-            energyRect.body.setSize(this.tileSize, this.tileSize);
-            energyRect.body.setOffset(0, 0);
-            energyRect.body.setBounce(0.5);
-            this.energyGroup.add(energyRect);
-            this.physics.add.collider(energyRect, this.soilGroup);
-            this.physics.add.overlap(this.player, energyRect, this.collectEnergy, null, this);
+// Function to reset gravity when exiting water
+    exitWater(player, water) {
+        if (this.inWater) {
+            player.setGravityY(this.originalGravity); // Restore normal gravity
+            player.setDragY(0); // Reset drag
+            this.inWater = false;
         }
-
-        this.physics.add.overlap(this.player, this.energyGroup, this.collectEnergy, null, this);
     }
+
 
 }
