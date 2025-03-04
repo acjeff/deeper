@@ -1,8 +1,10 @@
-import * as ROT from "rot-js";
+
 
 // Down
 // Create system for storing and retrieving the matrix of earth blocks.
 // Create a system for storing all the element groups for easy ignoring and retrieving.
+
+import MapService from "../services/map";
 
 export default class GameScene extends Phaser.Scene {
 
@@ -19,7 +21,10 @@ export default class GameScene extends Phaser.Scene {
         this.digging = false;
         this.drilling = false;
         this.energyCount = 2;
-        this.generateMap();
+        this.mapService = new MapService(32, 16, this);
+        this.mapService.generateMap();
+        console.log(this.soilGroup, ' : soil group');
+
         this.createPlayer();
         this.createControls();
         this.createEnergy();
@@ -55,105 +60,11 @@ export default class GameScene extends Phaser.Scene {
 
     }
 
-    generateMap() {
-        const mapWidth = window._gridSize;
-        const mapHeight = window._gridSize;
-
-        // Options for cellular automata to create more organic caves
-        const options = {
-            // born: [5, 6],   // Number of neighboring tiles for the cell to be "born"
-            // survive: [1, 5], // Number of neighboring tiles for the cell to "survive"
-            // iterations: 4,   // Number of iterations for the cellular automata
-            // floorChance: 0.1, // Chance for a tile to start as floor
-            // wallChance: 0.9,  // Chance for a tile to start as wall
-        };
-
-        // Create a map using Cellular Automata
-        const map = new ROT.Map.Cellular(mapWidth, mapHeight);
-        map.randomize(0.5); // Ensures the map is seeded properly before generating
-
-        // Initialize the grid with random values (representing walls and floors)
-        this.grid = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(2)); // Soil by default
-
-        map.create((x, y, wall) => {
-            if (wall) {
-                this.grid[y][x] = 2; // Wall
-            } else {
-                this.grid[y][x] = 1; // Open space
-            }
-            if (y < 10) {
-                this.grid[y][x] = 1; // Open space
-            }
-            if (y < 5) {
-                this.grid[y][x] = 0; // Open space
-            }
-        });
-
-        // Function to randomly set a certain number of coordinates to 0
-        function setRandomZeros(grid, count) {
-            let width = grid[0].length;
-            let height = grid.length;
-            let positions = [];
-
-            // Collect all open space positions
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    if (grid[y][x] === 1) {
-                        positions.push({ x, y });
-                    }
-                }
-            }
-
-            // Shuffle positions and pick `count` number of them
-            for (let i = positions.length - 1; i > 0; i--) {
-                let j = Math.floor(Math.random() * (i + 1));
-                [positions[i], positions[j]] = [positions[j], positions[i]];
-            }
-
-            // Set the selected positions to 0
-            for (let i = 0; i < Math.min(count, positions.length); i++) {
-                let { x, y } = positions[i];
-                grid[y][x] = 0;
-            }
-        }
-
-        setRandomZeros(this.grid, this.totalEnergy);
-
-        this.soilStrength = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(1 + Math.floor(Math.random() * 3))); // Soil strength 1-3
-
-        this.soilGroup = this.physics.add.staticGroup();
-        this.openSpaces = [];
-
-        for (let y = 0; y < mapHeight; y++) {
-            for (let x = 0; x < mapWidth; x++) {
-                let worldX = x * this.tileSize;
-                let worldY = y * this.tileSize;
-
-                // Create the soil tiles
-                if (this.grid[y][x] === 2) {
-                    let soilStrength = 3;
-                    let color = 0x654321; // Darker for stronger soil
-                    let soilRect = this.add.rectangle(worldX, worldY, this.tileSize, this.tileSize, color);
-                    soilRect.strength = soilStrength;
-                    this.soilGroup.add(soilRect);
-                } else if (this.grid[y][x] === 1) {
-                    let soilStrength = 1;
-                    let color = 0x724c25; // Darker for stronger soil
-                    let soilRect = this.add.rectangle(worldX, worldY, this.tileSize, this.tileSize, color);
-                    soilRect.strength = soilStrength;
-                    this.soilGroup.add(soilRect);
-                } else {
-                    this.openSpaces.push({x, y});
-                }
-            }
-        }
-    }
-
     createPlayer() {
-        if (this.openSpaces.length === 0) {
-            console.error("No open space found for player spawn!");
-            return;
-        }
+        // if (this.openSpaces.length === 0) {
+        //     console.error("No open space found for player spawn!");
+        //     return;
+        // }
 
         let index = Math.floor(Math.random() * this.openSpaces.length);
         let safeSpawn = this.openSpaces.splice(index, 1)[0];
@@ -211,6 +122,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.playerRect.x = this.player.x;
         this.playerRect.y = this.player.y;
+        this.mapService.loadChunks(this.player.x, this.player.y);
     }
 
     collectEnergy(player, energy) {
