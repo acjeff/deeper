@@ -11,7 +11,7 @@ export default class GameScene extends Phaser.Scene {
     constructor() {
         super("GameScene");
         this.openSpaces = [];
-        this.energyCount = 0;
+        this.energyCount = 50;
         this.totalEnergy = 200;
     }
 
@@ -21,13 +21,15 @@ export default class GameScene extends Phaser.Scene {
         this.digging = false;
         this.drilling = false;
         this.energyCount = 2;
+        this.soilGroup = this.physics.add.staticGroup();
+        this.energyGroup = this.physics.add.group();
+        this.entityChildren = [this.soilGroup, this.energyGroup];
         this.mapService = new MapService(32, 16, this);
         this.mapService.generateMap();
-        console.log(this.soilGroup, ' : soil group');
 
         this.createPlayer();
         this.createControls();
-        this.createEnergy();
+        // this.createEnergy();
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1, 0, 0);
         this.cameras.main.setZoom(2);
         this.energyText = this.add.text(20, 20, `Energy: ${this.energyCount} / ${this.totalEnergy}`, {
@@ -37,14 +39,14 @@ export default class GameScene extends Phaser.Scene {
         const worldWidth = window._gridSize * this.tileSize;
         const worldHeight = window._gridSize * this.tileSize;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
-        this.lightingCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
-        this.lightingCamera.ignore([this.energyGroup, this.player, this.playerRect, this.soilGroup]);
+        // this.lightingCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
+        // this.lightingCamera.ignore([this.energyGroup, this.player, this.playerRect, this.soilGroup]);
 
-        this.uiCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
-        this.uiCamera.ignore([this.energyGroup, this.player, this.playerRect, this.soilGroup]);
+        // this.uiCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
+        // this.uiCamera.ignore([this.energyGroup, this.player, this.playerRect, this.soilGroup]);
         this.cameras.main.ignore([this.energyText]);
 
-        this.uiCamera.setScroll(0, 0);
+        // this.uiCamera.setScroll(0, 0);
         window.addEventListener("keydown", (e) => {
             if (e.key === "d") {
                 self.digging = true;
@@ -93,7 +95,7 @@ export default class GameScene extends Phaser.Scene {
             if (this.energyCount >= soil.strength) {
                 soil.destroy();
                 this.energyCount -= soil.strength;
-                this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`);
+                // this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`);
             }
         }
     }
@@ -103,7 +105,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update() {
-        this.handlePlayerMovement();
+        if (this.player) {
+            this.handlePlayerMovement();
+        }
     }
 
     handlePlayerMovement() {
@@ -128,7 +132,7 @@ export default class GameScene extends Phaser.Scene {
     collectEnergy(player, energy) {
         energy.destroy();
         this.energyCount += 1;
-        this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`); // ✅ Update UI
+        // this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`); // ✅ Update UI
     }
 
     createEnergy() {
@@ -154,7 +158,7 @@ export default class GameScene extends Phaser.Scene {
             this.physics.add.overlap(this.player, energyRect, this.collectEnergy, null, this);
         }
 
-        // this.physics.add.overlap(this.player, this.energyGroup, this.collectEnergy, null, this);
+        this.physics.add.overlap(this.player, this.energyGroup, this.collectEnergy, null, this);
     }
 
 }
