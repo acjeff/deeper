@@ -10,6 +10,15 @@ export default class MapService {
         this.game.grid = {};
         this.game.openSpaces = [];
         // this.waterSim = new WaterSimulation(this.game);
+
+        this.layerCount = 7;  // Number of layers
+        this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);  // Height of each layer
+
+        this.layerMap = {};  // Stores elements by layer
+    }
+
+    getLayer(y) {
+        return Math.floor(y / this.layerHeight);
     }
 
     /** Generate the entire map but store it in chunks */
@@ -45,8 +54,10 @@ export default class MapService {
 
         // Randomly place water
         window._randomElements.forEach(element => {
-            this.setRandomElement(element.id, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance);
+            this.setRandomElement(element.id, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
         })
+
+        console.log(this.game.grid, ' : grid');
 
         // this.setRandomElement(window._tileTypes.stone, 100000);
     }
@@ -58,11 +69,11 @@ export default class MapService {
     }
 
     /** Randomly places empty tiles (energy spaces) */
-    setRandomElement(id, count, widthRange = [1, 1], heightRange = [1, 1], edgeNoiseChance = 0.3) {
+    setRandomElement(id, count, widthRange = [1, 1], heightRange = [1, 1], edgeNoiseChance = 0.3, layerWeights = [1, 1, 1, 1, 1, 1, 1]) {
         let self = this;
         let placed = 0;
         let filledPositions = new Set();
-        let chunkKeys = Object.keys(this.game.grid); // Only use existing chunks
+        let chunkKeys = Object.keys(this.game.grid);
 
         function placeBlock(x, y) {
             let chunkKey = self.getChunkKey.call(this, x, y);
@@ -75,24 +86,32 @@ export default class MapService {
             return true;
         }
 
+        // Normalize layer weights
+        let totalWeight = layerWeights.reduce((sum, w) => sum + w, 0);
+        let weightedLayers = [];
+        layerWeights.forEach((weight, index) => {
+            for (let i = 0; i < weight; i++) {
+                weightedLayers.push(index);
+            }
+        });
+
         while (placed < count) {
-            // Pick a random **existing** chunk to start a cluster
             let chunkKey = chunkKeys[Math.floor(Math.random() * chunkKeys.length)];
             let [chunkX, chunkY] = chunkKey.split("_").map(Number);
+
+            // Choose a weighted layer
+            let chosenLayer = weightedLayers[Math.floor(Math.random() * weightedLayers.length)];
+            let startY = chosenLayer * this.layerHeight + Math.floor(Math.random() * this.layerHeight);
             let startX = chunkX + Math.floor(Math.random() * this.game.chunkSize);
-            let startY = chunkY + Math.floor(Math.random() * this.game.chunkSize);
 
             let key = `${startX}_${startY}`;
             if (filledPositions.has(key)) continue;
 
-            // Generate a random aspect ratio based on width and height ranges
             let clusterWidth = Math.floor(Math.random() * (widthRange[1] - widthRange[0] + 1)) + widthRange[0];
             let clusterHeight = Math.floor(Math.random() * (heightRange[1] - heightRange[0] + 1)) + heightRange[0];
 
             let clusterSize = clusterWidth * clusterHeight;
-            let aspectRatio = clusterWidth / clusterHeight; // Aspect ratio factor
-
-            // Start growing from the center using weighted expansion
+            let aspectRatio = clusterWidth / clusterHeight;
             let queue = [{x: startX, y: startY}];
             let added = 0;
 
@@ -104,10 +123,8 @@ export default class MapService {
                     placed++;
                     added++;
 
-                    // Weighted random expansion, prioritizing horizontal or vertical growth
                     let expandDirections = [];
 
-                    // Adjust based on aspect ratio
                     if (Math.random() < aspectRatio) {
                         expandDirections.push({x: x + 1, y});
                         expandDirections.push({x: x - 1, y});
@@ -116,17 +133,14 @@ export default class MapService {
                         expandDirections.push({x, y: y - 1});
                     }
 
-                    // Introduce diagonal noise occasionally
                     if (Math.random() < edgeNoiseChance) {
                         expandDirections.push({x: x + 1, y: y + 1});
                         expandDirections.push({x: x - 1, y: y - 1});
                     }
 
-                    // Shuffle and add new expansion points
                     Phaser.Utils.Array.Shuffle(expandDirections);
                     for (let neighbor of expandDirections) {
                         let neighborKey = `${neighbor.x}_${neighbor.y}`;
-
                         if (!filledPositions.has(neighborKey) && Math.random() > edgeNoiseChance * 0.5) {
                             queue.push(neighbor);
                         }
@@ -135,6 +149,7 @@ export default class MapService {
             }
         }
     }
+
 
     updateWorldBounds() {
         if (this.game.loadedChunks.size === 0) return; // Avoid errors if no chunks are loaded

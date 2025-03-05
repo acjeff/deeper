@@ -25,12 +25,14 @@ window._randomElements = [
         count: 100000,
         widthRange: [20, 30],
         heightRange: [20, 30],
-        edgeNoiseChance: 0.5
+        edgeNoiseChance: 0.5,
+        layerWeights: [10,0,0,0,0,0,0]
     }, {
         id: window._tileTypes.stone,
         count: 100000,
         widthRange: [10, 150],
-        heightRange: [5, 5]
+        heightRange: [5, 5],
+        layerWeights: [0,10,0,0,0,0,0]
     }];
 
 const config = {
