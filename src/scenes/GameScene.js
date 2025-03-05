@@ -75,8 +75,8 @@ export default class GameScene extends Phaser.Scene {
                 this.playerLight.off = !this.playerLight.off;
             }
             if (e.key === "p") {
-                this.player.x = 1000;
-                this.player.y = 0;
+                this.player.x = this.startPoint.x;
+                this.player.y = this.startPoint.y;
             }
 
         });
@@ -95,6 +95,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);
         this.player.setBounce(0.2);
+        this.startPoint = this.add.rectangle(x, y, this.playerSize * 3, this.playerSize * 3, 0xffffff);
         this.playerRect = this.add.rectangle(x, y, this.playerSize, this.playerSize, 0xffb2fd);
         this.playerRect.setOrigin(0, 0);
         this.player.setCollideWorldBounds(true);
