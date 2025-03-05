@@ -34,7 +34,7 @@ window._randomElements = [
     }];
 
 const config = {
-    type: Phaser.CANVAS,
+    type: Phaser.AUTO,
     width: window.innerWidth,
     height: window.innerHeight,
     backgroundColor: "#422c16",
