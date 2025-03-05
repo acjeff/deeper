@@ -149,7 +149,7 @@ export default class GameScene extends Phaser.Scene {
 
         // 3. Lighting Properties
         this.lightRadius = 200; // Adjust for desired light spread
-        this.lightResolution = 60; // Number of rays
+        this.lightResolution = 30; // Number of rays
 
         console.log("✅ Lighting system initialized with canvas size:", this.lightCanvas.width, this.lightCanvas.height);
     }
@@ -173,8 +173,8 @@ export default class GameScene extends Phaser.Scene {
         const scale = camera.zoom;
 
         // 1. Convert player world position to screen position
-        const centerX = (this.player.x - camera.worldView.x) * scale;
-        const centerY = (this.player.y - camera.worldView.y) * scale;
+        const centerX = ((this.player.x + this.playerSize / 2) - camera.worldView.x) * scale;
+        const centerY = ((this.player.y + this.playerSize / 2) - camera.worldView.y) * scale;
 
         // 2. Define base light radius that always shows
         const minLightRadius = this.lightRadius * 0.4; // 40% of full light
@@ -196,19 +196,36 @@ export default class GameScene extends Phaser.Scene {
         this.lightCtx.fill();
 
         // 5. Now cast light rays with obstacles
-        // const rays = this.getRays(this.player.x, this.player.y, this.lightRadius);
-        // this.lightCtx.beginPath();
-        // this.lightCtx.moveTo(centerX, centerY);
-        // rays.forEach((point) => {
-        //     this.lightCtx.lineTo(
-        //         (point.x - camera.worldView.x) * scale,
-        //         (point.y - camera.worldView.y) * scale
-        //     );
-        // });
-        // this.lightCtx.closePath();
-        // this.lightCtx.fillStyle = "white";
-        // this.lightCtx.fill();
+        const rays = this.getRays(this.player.x + this.playerSize / 2, this.player.y  + this.playerSize / 2, this.lightRadius);
+        // 4. Create a gradient from the center to the light edges
+        const _gradient = this.lightCtx.createRadialGradient(
+            centerX, centerY, 0, // **Start bright (20% radius)**
+            centerX, centerY, 100 // **Fade out at full radius**
+        );
+        _gradient.addColorStop(0, "rgba(255,255,255,0.9)"); // Brightest center
+        _gradient.addColorStop(0.5, "rgba(255,255,255,0.4)"); // Mid-fade
+        _gradient.addColorStop(1, "rgba(255,255,255,0)"); // Fully transparent at edges
+        this.lightCtx.fillStyle = _gradient;
+        // 5. Draw the gradient-based light shape
+        this.lightCtx.beginPath();
+        if (rays.length > 1) {
+            this.lightCtx.moveTo(
+                (rays[0].x - camera.worldView.x) * scale,
+                (rays[0].y - camera.worldView.y) * scale
+            );
+        }
+        rays.forEach((point) => {
+            this.lightCtx.lineTo(
+                (point.x - camera.worldView.x) * scale,
+                (point.y - camera.worldView.y) * scale
+            );
+        });
+        this.lightCtx.closePath();
 
+        // 6. Apply the gradient
+        this.lightCtx.fill();
+
+        // 7. Reset composite mode
         this.lightCtx.globalCompositeOperation = "source-over";
     }
 
@@ -235,9 +252,10 @@ export default class GameScene extends Phaser.Scene {
                 finalPoint.x = (finalPoint.x + previousRay.x) * 0.5;
                 finalPoint.y = (finalPoint.y + previousRay.y) * 0.5;
             }
-
+            if (finalPoint) {
             rays.push(finalPoint);
             previousRay = finalPoint;
+            }
         }
         return rays;
     }
