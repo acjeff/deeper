@@ -66,6 +66,10 @@ export default class GameScene extends Phaser.Scene {
             if (e.key === "t") {
                 this.playerLight.off = !this.playerLight.off;
             }
+            if (e.key === "p") {
+                this.player.x = 1000;
+                this.player.y = 0;
+            }
 
         });
         window.addEventListener("keyup", (e) => {
@@ -78,7 +82,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createPlayer() {
-        let x = 500; //TODO Make half way through the whole map
+        let x = 1000; //TODO Make half way through the whole map
         let y = 0;
 
         this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);
