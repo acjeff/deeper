@@ -20,8 +20,10 @@ export default class GameScene extends Phaser.Scene {
     create() {
         let self = this;
         this.tileSize = window._tileSize;
+        this.playerSize = window._playerSize;
         this.digging = false;
         this.drilling = false;
+
         this.soilGroup = this.physics.add.staticGroup();
         this.waterGroup = this.physics.add.group();
         this.physics.add.collider(this.waterGroup, this.soilGroup);
@@ -35,15 +37,11 @@ export default class GameScene extends Phaser.Scene {
         // this.createEnergy();
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1, 0, 0);
         this.cameras.main.setZoom(2);
+        this.cameras.main.removeBounds();
         this.energyText = this.add.text(20, 20, `Energy: ${this.energyCount} / ${this.totalEnergy}`, {
             fontSize: "24px",
             fill: "#913434"
         });
-        const worldWidth = window._gridSize * this.tileSize;
-        const worldHeight = window._gridSize * this.tileSize;
-        this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
-        // this.lightingCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
-        // this.lightingCamera.ignore([this.waterGroup, this.player, this.playerRect, this.soilGroup]);
 
         // this.uiCamera = this.cameras.add(0, 0, window.innerWidth, window.innerHeight);
         // this.uiCamera.ignore([this.waterGroup, this.player, this.playerRect, this.soilGroup]);
@@ -62,6 +60,8 @@ export default class GameScene extends Phaser.Scene {
             self.digging = false;
             self.drilling = false;
         });
+        // Initialize Lighting System
+        this.initLighting();
 
     }
 
@@ -74,12 +74,12 @@ export default class GameScene extends Phaser.Scene {
         let index = Math.floor(Math.random() * this.openSpaces.length);
         let safeSpawn = this.openSpaces.splice(index, 1)[0];
 
-        let x = window._width / 2;
-        let y = window._height / 2;
+        let x = 0;
+        let y = 0;
 
-        this.player = this.physics.add.body(x, y, this.tileSize * 0.8, this.tileSize * 0.8);
+        this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);
         this.player.setBounce(0.2);
-        this.playerRect = this.add.rectangle(x, y, this.tileSize * 0.8, this.tileSize * 0.8, 0xffb2fd);
+        this.playerRect = this.add.rectangle(x, y, this.playerSize, this.playerSize, 0xffb2fd);
         this.playerRect.setOrigin(0, 0);
         this.player.setCollideWorldBounds(true);
 
@@ -110,6 +110,7 @@ export default class GameScene extends Phaser.Scene {
     update() {
         if (this.player) {
             this.handlePlayerMovement();
+            this.updateLighting();
         }
     }
 
@@ -131,6 +132,172 @@ export default class GameScene extends Phaser.Scene {
         this.playerRect.y = this.player.y;
         this.mapService.loadChunks(this.player.x, this.player.y);
     }
+
+    /** Initialize Raycasting-Based Lighting */
+    initLighting() {
+        // 1. Create a new canvas for the lighting system
+        this.lightCanvas = document.createElement("canvas");
+        this.lightCanvas.width = this.cameras.main.width;  // Match game world size
+        this.lightCanvas.height = this.cameras.main.height;
+        this.lightCanvas.style.position = "absolute";
+        this.lightCanvas.style.top = "0";
+        this.lightCanvas.style.left = "0";
+        document.body.appendChild(this.lightCanvas);
+
+        // 2. Get the canvas context
+        this.lightCtx = this.lightCanvas.getContext("2d");
+
+        // 3. Lighting Properties
+        this.lightRadius = 200; // Adjust for desired light spread
+        this.lightResolution = 60; // Number of rays
+
+        console.log("✅ Lighting system initialized with canvas size:", this.lightCanvas.width, this.lightCanvas.height);
+    }
+
+
+    updateLighting() {
+        // 1. Clear previous lighting frame
+        this.lightCtx.clearRect(0, 0, this.lightCanvas.width, this.lightCanvas.height);
+
+        // 2. Draw full black shadow
+        this.lightCtx.fillStyle = "rgba(0,0,0,1)";
+        this.lightCtx.fillRect(0, 0, this.lightCanvas.width, this.lightCanvas.height);
+
+        // 3. Apply light mask
+        this.castLight();
+    }
+
+    /** Raycasting Function */
+    castLight() {
+        const camera = this.cameras.main;
+        const scale = camera.zoom;
+
+        // 1. Convert player world position to screen position
+        const centerX = (this.player.x - camera.worldView.x) * scale;
+        const centerY = (this.player.y - camera.worldView.y) * scale;
+
+        // 2. Define base light radius that always shows
+        const minLightRadius = this.lightRadius * 0.4; // 40% of full light
+
+        // 3. Create soft glow using a radial gradient
+        const gradient = this.lightCtx.createRadialGradient(
+            centerX, centerY, 10, // Inner soft light
+            centerX, centerY, 200 // Outer fade
+        );
+        gradient.addColorStop(0, "rgba(255,255,255,0.8)"); // Strong at center
+        gradient.addColorStop(1, "rgba(0,0,0,0)"); // Fades out
+
+        this.lightCtx.globalCompositeOperation = "destination-out";
+
+        // 4. Draw the minimum light radius (unaffected by collisions)
+        this.lightCtx.fillStyle = gradient;
+        this.lightCtx.beginPath();
+        this.lightCtx.arc(centerX, centerY, 200, 0, Math.PI * 2);
+        this.lightCtx.fill();
+
+        // 5. Now cast light rays with obstacles
+        // const rays = this.getRays(this.player.x, this.player.y, this.lightRadius);
+        // this.lightCtx.beginPath();
+        // this.lightCtx.moveTo(centerX, centerY);
+        // rays.forEach((point) => {
+        //     this.lightCtx.lineTo(
+        //         (point.x - camera.worldView.x) * scale,
+        //         (point.y - camera.worldView.y) * scale
+        //     );
+        // });
+        // this.lightCtx.closePath();
+        // this.lightCtx.fillStyle = "white";
+        // this.lightCtx.fill();
+
+        this.lightCtx.globalCompositeOperation = "source-over";
+    }
+
+    /** Generate Rays for Light */
+    getRays(worldX, worldY, radius) {
+        const rays = [];
+        const angleStep = (Math.PI * 2) / this.lightResolution;
+        let previousRay = null;
+
+        for (let angle = 0; angle < Math.PI * 2; angle += angleStep) {
+            let endX = worldX + Math.cos(angle) * radius;
+            let endY = worldY + Math.sin(angle) * radius;
+            const collision = this.castRay(worldX, worldY, endX, endY);
+
+            let finalPoint = collision ? collision : { x: endX, y: endY };
+
+            // **Apply small random offset for smooth blending**
+            const jitter = this.tileSize * 0.05;
+            finalPoint.x += (Math.random() - 0.5) * jitter;
+            finalPoint.y += (Math.random() - 0.5) * jitter;
+
+            // **Blend transition between neighboring rays**
+            if (previousRay) {
+                finalPoint.x = (finalPoint.x + previousRay.x) * 0.5;
+                finalPoint.y = (finalPoint.y + previousRay.y) * 0.5;
+            }
+
+            rays.push(finalPoint);
+            previousRay = finalPoint;
+        }
+        return rays;
+    }
+
+
+    /** Cast a Ray and Detect Collisions */
+    castRay(startX, startY, endX, endY) {
+        const line = new Phaser.Geom.Line(startX, startY, endX, endY);
+        let closest = null;
+        let minDist = Number.MAX_VALUE;
+        let intersectionSide = null;
+
+        this.soilGroup.children.iterate((soil) => {
+            if (soil.active) {
+                const rect = new Phaser.Geom.Rectangle(soil.x, soil.y, this.tileSize, this.tileSize);
+                const intersection = Phaser.Geom.Intersects.GetLineToRectangle(line, rect);
+
+                if (intersection.length > 0) {
+                    const dist = Phaser.Math.Distance.Between(startX, startY, intersection[0].x, intersection[0].y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = intersection[0];
+
+                        // Detect which side of the tile was hit
+                        const hitX = intersection[0].x;
+                        const hitY = intersection[0].y;
+
+                        if (Math.abs(hitX - soil.x) < 2) intersectionSide = "left";
+                        else if (Math.abs(hitX - (soil.x + this.tileSize)) < 2) intersectionSide = "right";
+                        else if (Math.abs(hitY - soil.y) < 2) intersectionSide = "top";
+                        else if (Math.abs(hitY - (soil.y + this.tileSize)) < 2) intersectionSide = "bottom";
+                    }
+                }
+            }
+        });
+
+        // **Smooth tile edge by nudging intersection inward**
+        const softeningFactor = this.tileSize * 0.2;
+        if (closest) {
+            switch (intersectionSide) {
+                case "left":
+                    closest.x += softeningFactor;
+                    break;
+                case "right":
+                    closest.x -= softeningFactor;
+                    break;
+                case "top":
+                    closest.y += softeningFactor;
+                    break;
+                case "bottom":
+                    closest.y -= softeningFactor;
+                    break;
+            }
+        }
+
+        return closest;
+    }
+
+
+
 
 // Define swimming function
     swimming(player, water) {

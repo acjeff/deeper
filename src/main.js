@@ -4,6 +4,7 @@ import GameScene from "./scenes/GameScene.js";
 
 window._renderDistance = 2;
 window._tileSize = 10;
+window._playerSize = 5;
 window._gridSize = 200;
 window._width = window._tileSize * window._gridSize;
 window._height = window._tileSize * window._gridSize;
@@ -33,7 +34,7 @@ window._randomElements = [
     }];
 
 const config = {
-    type: Phaser.AUTO,
+    type: Phaser.CANVAS,
     width: window.innerWidth,
     height: window.innerHeight,
     backgroundColor: "#422c16",
