@@ -1,5 +1,4 @@
 import * as ROT from "rot-js";
-import WaterSimulation from "./water";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -17,9 +16,6 @@ export default class MapService {
     generateMap() {
         const map = new ROT.Map.Cellular(this.game.mapWidth, this.game.mapHeight);
 
-        // this.game.events.on('update', () => {
-        //     this.waterSim.update();
-        // });
         map.randomize(0.5);
 
         // Initialize grid storage
@@ -170,9 +166,8 @@ export default class MapService {
         this.game.ww = worldWidth;
         this.game.wh = worldHeight;
         this.game.physics.world.setBounds(minX, minY, worldWidth, worldHeight);
-    //     ADD SHADOW LAYER
+        //     ADD SHADOW LAYER
     }
-
 
     /** Loads chunks around the player */
     loadChunks(playerX, playerY, renderDistance = window._renderDistance) {
@@ -224,6 +219,80 @@ export default class MapService {
         return (r << 16) | (g << 8) | b;
     }
 
+    setTile(worldX, worldY, tileType, cellItem) {
+        const {chunkKey, cellY, cellX} = cellItem;
+
+        if (!this.game.grid[chunkKey]) return; // Ensure chunk exists
+
+        this.game.grid[chunkKey][cellY][cellX] = tileType;
+
+        // Remove existing Phaser objects at this position
+        this.game.soilGroup.children.each((tile) => {
+            if (tile.x === worldX && tile.y === worldY) {
+                tile.destroy();
+            }
+        });
+        this.game.waterGroup.children.each((tile) => {
+            if (tile.x === worldX && tile.y === worldY) {
+                tile.destroy();
+            }
+        });
+
+        this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
+
+    }
+
+    placeObject(tileType, worldX, worldY, cellDetails) {
+        const {chunkKey, cellX, cellY} = cellDetails;
+        let groupAddFuncs = [], object;
+
+        if (tileType === window._tileTypes.heavy_soil) {
+            // Place hard soil
+            groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
+            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x654321, 2));
+            object.strength = 3;
+        } else if (tileType === window._tileTypes.standard_soil) {
+            // Place regular soil
+            groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
+            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x724c25, 2));
+            object.strength = 1;
+        } else if (tileType === window._tileTypes.stone) {
+            // Place regular soil
+            groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
+            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
+            object.strength = 10;
+        } else if (tileType === window._tileTypes.water) {
+            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
+            object.setAlpha(0.5);
+            const circleRadius = this.game.tileSize / 4;
+
+            // Add physics first so `object.body` exists
+            this.game.physics.add.existing(object);
+
+            object.body.setCircle(circleRadius);
+            object.body.setBounce(0.05);
+            object.body.setFriction(0);
+            object.body.setDamping(true);
+            object.body.setDrag(0, 0);
+            object.body.setVelocityX(Phaser.Math.Between(-30, 30));
+            object.body.setMass(0.01);
+            object.body.allowGravity = true;
+            object.body.allowRotation = true;
+
+            groupAddFuncs.push(obj => this.game.waterGroup.add(obj));
+        }
+        if (groupAddFuncs.length && object) {
+            object.chunkKey = chunkKey;
+            object.cellX = cellX;
+            object.cellY = cellY;
+            groupAddFuncs.forEach(func => {
+                if (func) {
+                    func(object)
+                }
+            });
+        }
+
+    }
 
     /** Render a chunk */
     renderChunk(cx, cy) {
@@ -232,49 +301,13 @@ export default class MapService {
         // Prevent duplicate rendering of chunks
         if (!this.game.grid[chunkKey] || this.game.loadedChunks.has(chunkKey)) return;
 
-        // console.log("Rendering chunk:", chunkKey);
-
         for (let y = 0; y < this.game.chunkSize; y++) {
             for (let x = 0; x < this.game.chunkSize; x++) {
                 let worldX = (cx + x) * this.game.tileSize;
                 let worldY = (cy + y) * this.game.tileSize;
                 let tileType = this.game.grid[chunkKey][y][x];
 
-                if (tileType === window._tileTypes.heavy_soil) {
-                    // Place hard soil
-                    let soil = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x654321, 2));
-                    soil.strength = 3;
-                    this.game.soilGroup.add(soil);
-                } else if (tileType === window._tileTypes.standard_soil) {
-                    // Place regular soil
-                    let soil = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x724c25, 2));
-                    soil.strength = 1;
-                    this.game.soilGroup.add(soil);
-                } else if (tileType === window._tileTypes.stone) {
-                    // Place regular soil
-                    let stone = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
-                    stone.strength = 10;
-                    this.game.soilGroup.add(stone);
-                } else if (tileType === window._tileTypes.water) {
-                    // Place Energy
-                    let waterTile = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
-                    waterTile.setAlpha(0.5)
-                    this.game.physics.add.existing(waterTile);
-                    const circleRadius = this.game.tileSize / 4;
-                    waterTile.body.setCircle(circleRadius); // Make it circular
-                    waterTile.body.setBounce(0.05); // Minimal bounce to prevent jittering
-                    waterTile.body.setFriction(0); // Remove friction completely
-                    waterTile.body.setDamping(true); // Enables damping to prevent infinite sliding
-                    waterTile.body.setDrag(0, 0); // No drag for smoother movement
-                    waterTile.body.setVelocityX(Phaser.Math.Between(-30, 30)); // Tiny random movement to start spreading
-                    waterTile.body.setMass(0.01);
-                    waterTile.body.allowGravity = true; // Gravity still pulls it down
-                    waterTile.body.allowRotation = true; // Gravity still pulls it down
-                    this.game.waterGroup.add(waterTile);
-                    // this.game.physics.add.overlap(this.game.player, waterTile, this.game.swimming, null, this);
-                } else {
-                    this.game.openSpaces.push({x: worldX, y: worldY});
-                }
+                this.placeObject(tileType, worldX, worldY, {chunkKey: chunkKey, cellX: x, cellY: y});
             }
         }
     }
