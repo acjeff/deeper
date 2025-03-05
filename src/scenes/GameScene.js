@@ -31,6 +31,7 @@ export default class GameScene extends Phaser.Scene {
         this.entityChildren = [this.soilGroup, this.waterGroup];
         this.mapService = new MapService(32, 16, this);
         this.mapService.generateMap();
+        this.zoomAmount = 3;
 
         this.createPlayer();
         this.createControls();
@@ -38,7 +39,7 @@ export default class GameScene extends Phaser.Scene {
         this.glowStickCol = 0;
 
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1, 0, 0);
-        this.cameras.main.setZoom(2);
+        this.cameras.main.setZoom(this.zoomAmount);
         this.cameras.main.removeBounds();
         this.energyText = this.add.text(20, 20, `Energy: ${this.energyCount} / ${this.totalEnergy}`, {
             fontSize: "24px",
@@ -61,7 +62,7 @@ export default class GameScene extends Phaser.Scene {
                 this.glowStickCol = (this.glowStickCol + 1) % this.glowStickCols.length;
             }
             if (e.key === "l") {
-                this.lightingManager.addLight(this.player.x, this.player.y, 180, 0.8, this.glowStickCols[this.glowStickCol], false, true); // Orange torch light
+                this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.8, this.glowStickCols[this.glowStickCol], false, true); // Orange torch light
             }
             if (e.key === "t") {
                 this.playerLight.off = !this.playerLight.off;
@@ -78,7 +79,7 @@ export default class GameScene extends Phaser.Scene {
         });
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
-        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, 240, 0.6, '253,196,124', true);
+        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 20, 0.6, '253,196,124', true);
     }
 
     createPlayer() {
