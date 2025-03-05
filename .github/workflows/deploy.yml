@@ -11,8 +11,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write  # Required for GitHub Pages deployment
 
 jobs:
   build-and-deploy:
@@ -34,14 +32,9 @@ jobs:
       - name: Build project
         run: npx vite build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v3  # Updated to the latest version
-
-      - name: Upload Files
-        uses: actions/upload-pages-artifact@v2  # Updated version
-        with:
-          path: 'dist/'  # Ensure this matches your build output folder
-          
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2  # Updated version
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages  # Deploy to gh-pages branch
+          folder: dist       # Specify output folder (must match Vite config)
+          clean: true
