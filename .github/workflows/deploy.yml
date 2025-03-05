@@ -35,5 +35,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
+          branch: gd-pages
           folder: dist       # Specify output folder (must match Vite config)
           clean: true
+          token: ${{ secrets.GH_PAT }}
