@@ -59,6 +59,7 @@ export default class LightingManager {
     castLight(light) {
         const camera = this.scene.cameras.main;
         const scale = camera.zoom;
+        let radius = light.radius * scale;
 
         const screenX = (light.x - camera.worldView.x) * scale;
         const screenY = (light.y - camera.worldView.y) * scale;
@@ -66,7 +67,7 @@ export default class LightingManager {
         // Soft glow gradient
         const gradient = this.scene.lightCtx.createRadialGradient(
             screenX, screenY, 10,
-            screenX, screenY, light.radius
+            screenX, screenY, radius
         );
         gradient.addColorStop(0, `rgba(${light.color}, ${light.intensity})`);
         gradient.addColorStop(1, `rgba(${light.color},0)`);
@@ -74,13 +75,13 @@ export default class LightingManager {
         this.scene.lightCtx.globalCompositeOperation = "destination-out";
         this.scene.lightCtx.fillStyle = gradient;
         this.scene.lightCtx.beginPath();
-        this.scene.lightCtx.arc(screenX, screenY, light.radius, 0, Math.PI * 2);
+        this.scene.lightCtx.arc(screenX, screenY, radius, 0, Math.PI * 2);
         this.scene.lightCtx.fill();
 
 
         // Raycast lighting for obstacles
         if (light.raycast) {
-            const rays = this.getRays(light.x, light.y, light.radius);
+            const rays = this.getRays(light.x, light.y, radius);
             this.scene.lightCtx.filter = "blur(10px)";
             this.scene.lightCtx.globalCompositeOperation = "destination-out";
             this.scene.lightCtx.beginPath();
@@ -103,14 +104,14 @@ export default class LightingManager {
 
         const _gradient = this.scene.lightCtx.createRadialGradient(
             screenX, screenY, 10,
-            screenX, screenY, light.radius
+            screenX, screenY, radius
         );
         _gradient.addColorStop(0, `rgba(${light.color}, ${light.neon ? '0.5' : '0.2'})`);
         _gradient.addColorStop(1, `rgba(${light.color},0)`);
         this.scene.lightCtx.globalCompositeOperation = "source-over";
         this.scene.lightCtx.fillStyle = _gradient;
         this.scene.lightCtx.beginPath();
-        this.scene.lightCtx.arc(screenX, screenY, light.radius, 0, Math.PI * 2);
+        this.scene.lightCtx.arc(screenX, screenY, radius, 0, Math.PI * 2);
         this.scene.lightCtx.fill();
     }
 
