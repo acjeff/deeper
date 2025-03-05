@@ -50,7 +50,7 @@ export default class LightingManager {
         ctx.fillRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
 
         // Apply each light source
-        this.lights.forEach(light => this.castLight(light));
+        this.lights.forEach(light => !light.off && this.castLight(light));
 
         ctx.globalCompositeOperation = "source-over"; // Reset blending
     }

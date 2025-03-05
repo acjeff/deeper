@@ -6,6 +6,7 @@ export default class LightSource {
         this.intensity = intensity; // Brightness (0-1)
         this.color = color; // RGB color
         this.raycast = raycast;
+        this.off = false;
     }
 
     /** Updates the position of the light (for dynamic lights) */

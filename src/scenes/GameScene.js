@@ -61,6 +61,9 @@ export default class GameScene extends Phaser.Scene {
             if (e.key === "l") {
                 this.lightingManager.addLight(this.player.x, this.player.y, 200, 0.3, "255,150,0"); // Orange torch light
             }
+            if (e.key === "t") {
+                this.playerLight.off = !this.playerLight.off;
+            }
 
         });
         window.addEventListener("keyup", (e) => {
