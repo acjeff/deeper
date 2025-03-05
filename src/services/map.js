@@ -45,7 +45,7 @@ export default class MapService {
             }
         });
 
-        console.log(this.game.grid, ' : this.game.grid');
+        // console.log(this.game.grid, ' : this.game.grid');
 
         // Randomly place water
         window._randomElements.forEach(element => {
@@ -232,7 +232,7 @@ export default class MapService {
         // Prevent duplicate rendering of chunks
         if (!this.game.grid[chunkKey] || this.game.loadedChunks.has(chunkKey)) return;
 
-        console.log("Rendering chunk:", chunkKey);
+        // console.log("Rendering chunk:", chunkKey);
 
         for (let y = 0; y < this.game.chunkSize; y++) {
             for (let x = 0; x < this.game.chunkSize; x++) {
@@ -260,7 +260,8 @@ export default class MapService {
                     let waterTile = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
                     waterTile.setAlpha(0.5)
                     this.game.physics.add.existing(waterTile);
-                    waterTile.body.setCircle(this.game.tileSize / 4 ); // Make it circular
+                    const circleRadius = this.game.tileSize / 4;
+                    waterTile.body.setCircle(circleRadius); // Make it circular
                     waterTile.body.setBounce(0.05); // Minimal bounce to prevent jittering
                     waterTile.body.setFriction(0); // Remove friction completely
                     waterTile.body.setDamping(true); // Enables damping to prevent infinite sliding
@@ -280,7 +281,7 @@ export default class MapService {
 
     /** Remove chunk from rendering */
     unloadChunk(chunkKey) {
-        console.log('Unloading chunk: ', chunkKey);
+        // console.log('Unloading chunk: ', chunkKey);
         this.game.entityChildren.forEach((entityGroup) => {
             entityGroup.children.each((tile) => {
                 let {x, y} = tile;

@@ -1,89 +1,154 @@
-export default class LightingSystem {
-    constructor(game, player, mapService) {
-        this.game = game;
-        this.player = player;
-        this.mapService = mapService;
+import LightSource from "./lightsource";
 
-        // Enable the lighting system
-        this.game.lights.enable();
-        this.game.lights.setAmbientColor(0x222222); // Soft ambient light
-
-        // Create the player's light
-        this.playerLight = this.game.lights.addLight(player.x, player.y, 250, 0xffffff, 3);
-
-        // Light source list (dynamic lights in the world)
-        this.dynamicLights = [];
-
-        // Attach lights to objects
-        this.addDynamicLights();
-
-        // Update the light mask dynamically
-        this.updateLighting();
+export default class LightingManager {
+    constructor(scene) {
+        this.scene = scene;
+        this.lights = []; // Stores all light sources
+        this.trackedGroups = []; // Groups that block light
+        this.initLighting();
     }
 
-    addDynamicLights() {
-        // Add lights at random open spaces
-        this.game.openSpaces.forEach((pos, index) => {
-            if (index % 50 === 0) { // Add a light every 50 open spaces
-                let newLight = this.game.lights.addLight(pos.x, pos.y, 200, 0x22ffff, 2);
-                this.dynamicLights.push(newLight);
-            }
-        });
+    initLighting() {
+        // Create a new canvas for the lighting system
+        this.scene.lightCanvas = document.createElement("canvas");
+        this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
+        this.scene.lightCanvas.height = this.scene.cameras.main.height;
+        this.scene.lightCanvas.style.position = "absolute";
+        this.scene.lightCanvas.style.top = "0";
+        this.scene.lightCanvas.style.left = "0";
+        this.scene.lightCanvas.style.pointerEvents = "none"; // Ensure it doesn't block input
+        document.body.appendChild(this.scene.lightCanvas);
+
+        // Get the canvas context
+        this.scene.lightCtx = this.scene.lightCanvas.getContext("2d");
     }
 
+    /** Registers a Phaser Group for tracking */
+    registerGroup(group) {
+        this.trackedGroups.push(group);
+    }
+
+    /** Adds a new light source to the system */
+    addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255") {
+        const light = new LightSource(x, y, radius, intensity, color);
+        this.lights.push(light);
+        return light; // Return reference for updates
+    }
+
+    /** Removes a specific light */
+    removeLight(light) {
+        this.lights = this.lights.filter(l => l !== light);
+    }
+
+    /** Updates and applies lighting */
     updateLighting() {
-        // Keep player's light centered on them
-        this.playerLight.x = this.player.x;
-        this.playerLight.y = this.player.y;
+        const ctx = this.scene.lightCtx;
+        ctx.clearRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
 
-        // Update the lights inside loaded chunks
-        this.updateChunkLighting();
+        // Draw global darkness
+        ctx.fillStyle = "rgba(0,0,0,1)";
+        ctx.fillRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
+
+        // Apply each light source
+        this.lights.forEach(light => this.castLight(light));
+
+        ctx.globalCompositeOperation = "source-over"; // Reset blending
     }
 
-    updateChunkLighting() {
-        // Get loaded chunk bounds
-        let { minX, minY, width, height } = this.getLoadedChunkBounds();
+    /** Casts rays and applies light from a given light source */
+    castLight(light) {
+        const camera = this.scene.cameras.main;
+        const scale = camera.zoom;
 
-        // Remove lights outside the loaded chunks
-        this.dynamicLights = this.dynamicLights.filter(light => {
-            return light.x >= minX && light.x <= minX + width &&
-                light.y >= minY && light.y <= minY + height;
-        });
+        const screenX = (light.x - camera.worldView.x) * scale;
+        const screenY = (light.y - camera.worldView.y) * scale;
 
-        // Add new lights for chunks that were just loaded
-        this.game.openSpaces.forEach(pos => {
-            if (!this.dynamicLights.some(light => light.x === pos.x && light.y === pos.y)) {
-                let newLight = this.game.lights.addLight(pos.x, pos.y, 180, 0xffaa00, 2);
-                this.dynamicLights.push(newLight);
-            }
-        });
-    }
+        // Soft glow gradient
+        const gradient = this.scene.lightCtx.createRadialGradient(
+            screenX, screenY, 10,
+            screenX, screenY, light.radius
+        );
+        gradient.addColorStop(0, `rgba(${light.color}, ${light.intensity})`);
+        gradient.addColorStop(1, `rgba(${light.color},0)`);
 
-    getLoadedChunkBounds() {
-        if (this.game.loadedChunks.size === 0) return { minX: 0, minY: 0, width: this.game.scale.width, height: this.game.scale.height };
+        this.scene.lightCtx.globalCompositeOperation = "destination-out";
+        this.scene.lightCtx.fillStyle = gradient;
+        this.scene.lightCtx.beginPath();
+        this.scene.lightCtx.arc(screenX, screenY, light.radius, 0, Math.PI * 2);
+        this.scene.lightCtx.fill();
 
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
 
-        for (let key of this.game.loadedChunks.keys()) {
-            let [cx, cy] = key.split('_').map(Number);
-
-            let chunkStartX = cx * this.game.tileSize;
-            let chunkStartY = cy * this.game.tileSize;
-            let chunkEndX = chunkStartX + this.game.chunkSize * this.game.tileSize;
-            let chunkEndY = chunkStartY + this.game.chunkSize * this.game.tileSize;
-
-            minX = Math.min(minX, chunkStartX);
-            minY = Math.min(minY, chunkStartY);
-            maxX = Math.max(maxX, chunkEndX);
-            maxY = Math.max(maxY, chunkEndY);
+        // Raycast lighting for obstacles
+        const rays = this.getRays(light.x, light.y, light.radius);
+        this.scene.lightCtx.filter = "blur(10px)";
+        this.scene.lightCtx.globalCompositeOperation = "destination-out";
+        this.scene.lightCtx.beginPath();
+        if (rays.length > 1) {
+            this.scene.lightCtx.moveTo(
+                (rays[0].x - camera.worldView.x) * scale,
+                (rays[0].y - camera.worldView.y) * scale
+            );
         }
+        rays.forEach((point) => {
+            this.scene.lightCtx.lineTo(
+                (point.x - camera.worldView.x) * scale,
+                (point.y - camera.worldView.y) * scale
+            );
+        });
+        this.scene.lightCtx.closePath();
+        this.scene.lightCtx.fill();
+        this.scene.lightCtx.filter = "blur(0)";
 
-        return {
-            minX,
-            minY,
-            width: maxX - minX,
-            height: maxY - minY
-        };
+        const _gradient = this.scene.lightCtx.createRadialGradient(
+            screenX, screenY, 10,
+            screenX, screenY, light.radius
+        );
+        _gradient.addColorStop(0, `rgba(${light.color}, 0.1)`);
+        _gradient.addColorStop(1, `rgba(${light.color},0)`);
+        this.scene.lightCtx.globalCompositeOperation = "source-over";
+        this.scene.lightCtx.fillStyle = _gradient;
+        this.scene.lightCtx.beginPath();
+        this.scene.lightCtx.arc(screenX, screenY, light.radius, 0, Math.PI * 2);
+        this.scene.lightCtx.fill();
+    }
+
+    /** Generates rays for a light */
+    getRays(worldX, worldY, radius) {
+        const rays = [];
+        const angleStep = (Math.PI * 2) / 30; // Resolution of light rays
+
+        for (let angle = 0; angle < Math.PI * 2; angle += angleStep) {
+            let endX = worldX + Math.cos(angle) * radius;
+            let endY = worldY + Math.sin(angle) * radius;
+            const collision = this.castRay(worldX, worldY, endX, endY);
+            let finalPoint = collision || { x: endX, y: endY };
+            rays.push(finalPoint);
+        }
+        return rays;
+    }
+
+    /** Casts a ray and checks for obstacles */
+    castRay(startX, startY, endX, endY) {
+        const line = new Phaser.Geom.Line(startX, startY, endX, endY);
+        let closest = null;
+        let minDist = Number.MAX_VALUE;
+
+        this.trackedGroups.forEach((group) => {
+            group.children.iterate((element) => {
+                if (element.active) {
+                    const rect = new Phaser.Geom.Rectangle(element.x, element.y, this.scene.tileSize, this.scene.tileSize);
+                    const intersection = Phaser.Geom.Intersects.GetLineToRectangle(line, rect);
+                    if (intersection.length > 0) {
+                        const dist = Phaser.Math.Distance.Between(startX, startY, intersection[0].x, intersection[0].y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = intersection[0];
+                        }
+                    }
+                }
+            });
+        });
+
+        return closest;
     }
 }
