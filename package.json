@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "noisejs": "^2.1.0",
     "phaser": "^3.88.2",
     "rot-js": "^2.2.1"
   },
