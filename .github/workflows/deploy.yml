@@ -32,9 +32,14 @@ jobs:
       - name: Build project
         run: npx vite build
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+        
+      - name: Upload Files
+        uses: actions/upload-pages-artifact@v1
         with:
-          branch: gh-pages  # Deploy to gh-pages branch
-          folder: dist       # Specify output folder (must match Vite config)
-          clean: true
+          path: 'dist/'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
