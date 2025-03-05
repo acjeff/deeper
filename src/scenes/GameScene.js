@@ -57,6 +57,13 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
+        window.addEventListener("wheel", (e) => {
+            const zoomSpeed = 0.1; // Adjust zoom sensitivity
+            this.zoomAmount = Phaser.Math.Clamp(this.cameras.main.zoom + (e.deltaY * -zoomSpeed * 0.01), 0.5, 5);
+
+            this.cameras.main.setZoom(this.zoomAmount);
+        });
+
         window.addEventListener("keypress", (e) => {
             if (e.key === "c") {
                 this.glowStickCol = (this.glowStickCol + 1) % this.glowStickCols.length;
