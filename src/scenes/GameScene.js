@@ -59,7 +59,7 @@ export default class GameScene extends Phaser.Scene {
 
         window.addEventListener("keypress", (e) => {
             if (e.key === "l") {
-                this.lightingManager.addLight(this.player.x, this.player.y, 100, 0.3, "255,50,0"); // Orange torch light
+                this.lightingManager.addLight(this.player.x, this.player.y, 200, 0.3, "255,150,0"); // Orange torch light
             }
 
         });
@@ -75,7 +75,7 @@ export default class GameScene extends Phaser.Scene {
         // this.lightingManager.registerGroup(this.waterGroup);
 
         // ✅ Add multiple light sources
-        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, 200, 0.4);
+        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, 200, 0.4, '255,255,255', true);
     }
 
     createPlayer() {

@@ -29,8 +29,8 @@ export default class LightingManager {
     }
 
     /** Adds a new light source to the system */
-    addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255") {
-        const light = new LightSource(x, y, radius, intensity, color);
+    addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false) {
+        const light = new LightSource(x, y, radius, intensity, color, raycast);
         this.lights.push(light);
         return light; // Return reference for updates
     }
@@ -79,25 +79,27 @@ export default class LightingManager {
 
 
         // Raycast lighting for obstacles
-        const rays = this.getRays(light.x, light.y, light.radius);
-        this.scene.lightCtx.filter = "blur(10px)";
-        this.scene.lightCtx.globalCompositeOperation = "destination-out";
-        this.scene.lightCtx.beginPath();
-        if (rays.length > 1) {
-            this.scene.lightCtx.moveTo(
-                (rays[0].x - camera.worldView.x) * scale,
-                (rays[0].y - camera.worldView.y) * scale
-            );
+        if (light.raycast) {
+            const rays = this.getRays(light.x, light.y, light.radius);
+            this.scene.lightCtx.filter = "blur(10px)";
+            this.scene.lightCtx.globalCompositeOperation = "destination-out";
+            this.scene.lightCtx.beginPath();
+            if (rays.length > 1) {
+                this.scene.lightCtx.moveTo(
+                    (rays[0].x - camera.worldView.x) * scale,
+                    (rays[0].y - camera.worldView.y) * scale
+                );
+            }
+            rays.forEach((point) => {
+                this.scene.lightCtx.lineTo(
+                    (point.x - camera.worldView.x) * scale,
+                    (point.y - camera.worldView.y) * scale
+                );
+            });
+            this.scene.lightCtx.closePath();
+            this.scene.lightCtx.fill();
+            this.scene.lightCtx.filter = "blur(0)";
         }
-        rays.forEach((point) => {
-            this.scene.lightCtx.lineTo(
-                (point.x - camera.worldView.x) * scale,
-                (point.y - camera.worldView.y) * scale
-            );
-        });
-        this.scene.lightCtx.closePath();
-        this.scene.lightCtx.fill();
-        this.scene.lightCtx.filter = "blur(0)";
 
         const _gradient = this.scene.lightCtx.createRadialGradient(
             screenX, screenY, 10,
