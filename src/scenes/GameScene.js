@@ -137,7 +137,7 @@ export default class GameScene extends Phaser.Scene {
     initLighting() {
         // 1. Create a new canvas for the lighting system
         this.lightCanvas = document.createElement("canvas");
-        this.lightCanvas.width = this.cameras.main.width;  // Match game world size
+        this.lightCanvas.width = this.cameras.main.width; // Match game world size
         this.lightCanvas.height = this.cameras.main.height;
         this.lightCanvas.style.position = "absolute";
         this.lightCanvas.style.top = "0";
@@ -148,7 +148,7 @@ export default class GameScene extends Phaser.Scene {
         this.lightCtx = this.lightCanvas.getContext("2d");
 
         // 3. Lighting Properties
-        this.lightRadius = 200; // Adjust for desired light spread
+        this.lightRadius = 500; // Adjust for desired light spread
         this.lightResolution = 30; // Number of rays
 
         console.log("✅ Lighting system initialized with canvas size:", this.lightCanvas.width, this.lightCanvas.height);
@@ -184,7 +184,7 @@ export default class GameScene extends Phaser.Scene {
             centerX, centerY, 10, // Inner soft light
             centerX, centerY, 200 // Outer fade
         );
-        gradient.addColorStop(0, "rgba(255,255,255,0.8)"); // Strong at center
+        gradient.addColorStop(0, "rgba(255,255,255,0.4)"); // Strong at center
         gradient.addColorStop(1, "rgba(0,0,0,0)"); // Fades out
 
         this.lightCtx.globalCompositeOperation = "destination-out";
@@ -198,9 +198,10 @@ export default class GameScene extends Phaser.Scene {
         // 5. Now cast light rays with obstacles
         const rays = this.getRays(this.player.x + this.playerSize / 2, this.player.y  + this.playerSize / 2, this.lightRadius);
         // 4. Create a gradient from the center to the light edges
+        this.lightCtx.filter = "blur(10px)";
         const _gradient = this.lightCtx.createRadialGradient(
             centerX, centerY, 0, // **Start bright (20% radius)**
-            centerX, centerY, 100 // **Fade out at full radius**
+            centerX, centerY, 200 // **Fade out at full radius**
         );
         _gradient.addColorStop(0, "rgba(255,255,255,0.9)"); // Brightest center
         _gradient.addColorStop(0.5, "rgba(255,255,255,0.4)"); // Mid-fade
@@ -224,6 +225,7 @@ export default class GameScene extends Phaser.Scene {
 
         // 6. Apply the gradient
         this.lightCtx.fill();
+        this.lightCtx.filter = "blur(0)";
 
         // 7. Reset composite mode
         this.lightCtx.globalCompositeOperation = "source-over";
