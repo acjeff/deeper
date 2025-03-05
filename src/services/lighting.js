@@ -29,8 +29,8 @@ export default class LightingManager {
     }
 
     /** Adds a new light source to the system */
-    addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false) {
-        const light = new LightSource(x, y, radius, intensity, color, raycast);
+    addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false) {
+        const light = new LightSource(x, y, radius, intensity, color, raycast, neon);
         this.lights.push(light);
         return light; // Return reference for updates
     }
@@ -105,7 +105,7 @@ export default class LightingManager {
             screenX, screenY, 10,
             screenX, screenY, light.radius
         );
-        _gradient.addColorStop(0, `rgba(${light.color}, 0.1)`);
+        _gradient.addColorStop(0, `rgba(${light.color}, ${light.neon ? '0.5' : '0.2'})`);
         _gradient.addColorStop(1, `rgba(${light.color},0)`);
         this.scene.lightCtx.globalCompositeOperation = "source-over";
         this.scene.lightCtx.fillStyle = _gradient;

@@ -1,11 +1,12 @@
 export default class LightSource {
-    constructor(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false) {
+    constructor(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false) {
         this.x = x; // World X position
         this.y = y; // World Y position
         this.radius = radius; // Light spread
         this.intensity = intensity; // Brightness (0-1)
         this.color = color; // RGB color
         this.raycast = raycast;
+        this.neon = neon;
         this.off = false;
     }
 
