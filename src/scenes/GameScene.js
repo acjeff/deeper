@@ -1,11 +1,10 @@
-
-
 // Down
 // Create system for storing and retrieving the matrix of earth blocks.
 // Create a system for storing all the element groups for easy ignoring and retrieving.
 
 import MapService from "../services/map";
 import LightingManager from "../services/lighting";
+import {db, doc, setDoc, auth} from "../firebaseconfig";
 
 export default class GameScene extends Phaser.Scene {
 
@@ -17,7 +16,7 @@ export default class GameScene extends Phaser.Scene {
         this.totalEnergy = 200;
     }
 
-    create() {
+    async create() {
         let self = this;
         this.tileSize = window._tileSize;
         this.playerSize = window._playerSize;
@@ -30,7 +29,9 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.collider(this.waterGroup, this.waterGroup);
         this.entityChildren = [this.soilGroup, this.waterGroup];
         this.mapService = new MapService(32, 16, this);
-        this.mapService.generateMap();
+        if (this.newGame) {
+            this.mapService.generateMap();
+        }
         this.zoomAmount = 3;
 
         this.createPlayer();
@@ -41,6 +42,11 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1, 0, 0);
         this.cameras.main.setZoom(this.zoomAmount);
         this.cameras.main.removeBounds();
+        this.fpsText = this.add.text(20, 50, "FPS: --", {
+            fontSize: "24px",
+            fill: "#ffffff"
+        });
+
         this.energyText = this.add.text(20, 20, `Energy: ${this.energyCount} / ${this.totalEnergy}`, {
             fontSize: "24px",
             fill: "#a3ff5d"
@@ -87,6 +93,85 @@ export default class GameScene extends Phaser.Scene {
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 20, 0.6, '253,196,124', true);
+        if (this.newGame) {
+            // const gridToSave = Object.fromEntries(Object.entries(this.grid).map(([key, value]) => [key, JSON.stringify(value)]));
+            // console.log(gridToSave, ' : this.convertValuesToStrings(this.grid)');
+            // await setDoc(doc(db, "game_saves", this.user.uid + '_grid'), gridToSave);
+            await this.saveGridInChunks(this.user, this.grid);
+        }
+        await this.addSaveButton();
+    }
+
+    async addSaveButton() {
+        let self = this;
+        let saveButton = document.createElement("button");
+        saveButton.innerText = "Save Game";
+        saveButton.style.position = "absolute";
+        saveButton.style.top = "10px";
+        saveButton.style.right = "10px";
+        saveButton.style.padding = "10px 15px";
+        saveButton.style.fontSize = "16px";
+        saveButton.style.backgroundColor = "#28a745"; // Green button
+        saveButton.style.color = "#fff";
+        saveButton.style.border = "none";
+        saveButton.style.borderRadius = "5px";
+        saveButton.style.cursor = "pointer";
+        saveButton.style.zIndex = "1000"; // Ensure it stays on top
+
+        document.body.appendChild(saveButton);
+
+        saveButton.addEventListener("click", async () => {
+            console.log(self.user, ' : user');
+            console.log(self.grid, ' : grid');
+            await this.saveGridInChunks(self.user, self.grid);
+        });
+    }
+
+
+    async saveGridInChunks(user, gridData, chunkCount = 6) {
+        if (!user) {
+            console.error("User not authenticated");
+            return;
+        }
+
+        // Convert grid data to JSON strings
+        const gridToSave = Object.fromEntries(
+            Object.entries(gridData).map(([key, value]) => [key, JSON.stringify(value)])
+        );
+
+
+        // ✅ Split into N chunks dynamically
+        const entries = Object.entries(gridToSave);
+        const chunkSize = Math.ceil(entries.length / chunkCount); // Calculate chunk size
+
+        for (let i = 0; i < chunkCount; i++) {
+            const chunkData = Object.fromEntries(entries.slice(i * chunkSize, (i + 1) * chunkSize));
+
+            await setDoc(doc(db, "game_saves", user.uid, "map_data", `grid_chunk_${i}`), chunkData);
+        }
+    }
+
+    convertValuesToStrings(obj) {
+        if (typeof obj !== "object" || obj === null) {
+            return String(obj); // Convert primitive values
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(this.convertValuesToStrings); // Convert each element in an array
+        }
+
+        return Object.fromEntries(
+            Object.entries(obj).map(([key, value]) => [key, this.convertValuesToStrings(value)])
+        );
+    }
+
+    init(data) {
+        if (!data.newGame) {
+            this.grid = data.grid;
+        }
+
+        this.newGame = data.newGame;
+        this.user = data.user;
     }
 
     createPlayer() {
@@ -132,6 +217,8 @@ export default class GameScene extends Phaser.Scene {
 
             // ✅ Update lighting
             this.lightingManager.updateLighting();
+
+            this.fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
 
         }
     }

@@ -63,10 +63,11 @@ export default class LightingManager {
 
         const screenX = (light.x - camera.worldView.x) * scale;
         const screenY = (light.y - camera.worldView.y) * scale;
-
+        this.scene.lightCtx.filter = "blur(10px)";
+        const falloff = 1;
         // Soft glow gradient
         const gradient = this.scene.lightCtx.createRadialGradient(
-            screenX, screenY, 10,
+            screenX, screenY, falloff,
             screenX, screenY, radius
         );
         gradient.addColorStop(0, `rgba(${light.color}, ${light.intensity})`);
@@ -82,7 +83,6 @@ export default class LightingManager {
         // Raycast lighting for obstacles
         if (light.raycast) {
             const rays = this.getRays(light.x, light.y, radius);
-            this.scene.lightCtx.filter = "blur(10px)";
             this.scene.lightCtx.globalCompositeOperation = "destination-out";
             this.scene.lightCtx.beginPath();
             if (rays.length > 1) {
@@ -99,11 +99,10 @@ export default class LightingManager {
             });
             this.scene.lightCtx.closePath();
             this.scene.lightCtx.fill();
-            this.scene.lightCtx.filter = "blur(0)";
         }
 
         const _gradient = this.scene.lightCtx.createRadialGradient(
-            screenX, screenY, 10,
+            screenX, screenY, falloff,
             screenX, screenY, radius
         );
         _gradient.addColorStop(0, `rgba(${light.color}, ${light.neon ? '0.5' : '0.2'})`);
@@ -113,6 +112,8 @@ export default class LightingManager {
         this.scene.lightCtx.beginPath();
         this.scene.lightCtx.arc(screenX, screenY, radius, 0, Math.PI * 2);
         this.scene.lightCtx.fill();
+
+        this.scene.lightCtx.filter = "blur(0)";
     }
 
     /** Generates rays for a light */

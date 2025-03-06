@@ -7,7 +7,7 @@ export default class MapService {
         this.game.mapHeight = this.game.tileSize * 128;
         this.game.mapWidth = this.game.tileSize * 128;
         this.game.loadedChunks = new Map();
-        this.game.grid = {};
+        this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
         // this.waterSim = new WaterSimulation(this.game);
 
@@ -57,7 +57,7 @@ export default class MapService {
             this.setRandomElement(element.id, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
         })
 
-        console.log(this.game.grid, ' : grid');
+        // console.log(this.game.grid, ' : grid');
 
         // this.setRandomElement(window._tileTypes.stone, 100000);
     }
@@ -150,7 +150,6 @@ export default class MapService {
         }
     }
 
-
     updateWorldBounds() {
         if (this.game.loadedChunks.size === 0) return; // Avoid errors if no chunks are loaded
 
@@ -189,12 +188,16 @@ export default class MapService {
         let chunkX = Math.floor(playerX / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
         let chunkY = Math.floor(playerY / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
         let newChunks = new Map(); // Keep existing chunks
+        // console.log(this.game.grid, ' : first chunk');
 
         for (let dx = -renderDistance; dx <= renderDistance; dx++) {
             for (let dy = -renderDistance; dy <= renderDistance; dy++) {
                 let cx = chunkX + dx * this.game.chunkSize;
                 let cy = chunkY + dy * this.game.chunkSize;
                 let chunkKey = `${cx}_${cy}`;
+                // console.log(chunkKey, ' : chunkKey');
+
+                // console.log(this.game.grid[chunkKey], ' : this.game.grid[chunkKey]');
 
                 if (this.game.grid[chunkKey]) {
                     // Only render if it's not already loaded
