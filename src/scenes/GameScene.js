@@ -1,7 +1,3 @@
-// Down
-// Create system for storing and retrieving the matrix of earth blocks.
-// Create a system for storing all the element groups for easy ignoring and retrieving.
-
 import MapService from "../services/map";
 import LightingManager from "../services/lighting";
 import {db, doc, setDoc, auth} from "../firebaseconfig.js";
@@ -10,9 +6,7 @@ export default class GameScene extends Phaser.Scene {
 
     constructor() {
         super("GameScene");
-        this.openSpaces = [];
         this.energyCount = 50000;
-        this.originalGravity = 300;
         this.totalEnergy = 200;
     }
 
@@ -81,6 +75,8 @@ export default class GameScene extends Phaser.Scene {
                 this.playerLight.off = !this.playerLight.off;
             }
             if (e.key === "p") {
+                console.log(this.startPoint.x, this.startPoint.y, ' : this.startPoint.x, this.startPoint.y');
+
                 this.player.x = this.startPoint.x;
                 this.player.y = this.startPoint.y;
             }
@@ -92,12 +88,9 @@ export default class GameScene extends Phaser.Scene {
         });
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
-        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 20, 0.6, '253,196,124', true);
+        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 50, 0.6, '253,196,124', true);
         if (this.newGame) {
-            // const gridToSave = Object.fromEntries(Object.entries(this.grid).map(([key, value]) => [key, JSON.stringify(value)]));
-            // console.log(gridToSave, ' : this.convertValuesToStrings(this.grid)');
-            // await setDoc(doc(db, "game_saves", this.user.uid + '_grid'), gridToSave);
-            await this.saveGridInChunks(this.user, this.grid);
+            await this.saveGame(this.user, this.grid);
         }
         await this.addSaveButton();
     }
@@ -123,12 +116,12 @@ export default class GameScene extends Phaser.Scene {
         saveButton.addEventListener("click", async () => {
             console.log(self.user, ' : user');
             console.log(self.grid, ' : grid');
-            await this.saveGridInChunks(self.user, self.grid);
+            await this.saveGame(self.user, self.grid);
         });
     }
 
 
-    async saveGridInChunks(user, gridData, chunkCount = 6) {
+    async saveGame(user, gridData, chunkCount = 6) {
         if (!user) {
             console.error("User not authenticated");
             return;
@@ -139,8 +132,6 @@ export default class GameScene extends Phaser.Scene {
             Object.entries(gridData).map(([key, value]) => [key, JSON.stringify(value)])
         );
 
-
-        // ✅ Split into N chunks dynamically
         const entries = Object.entries(gridToSave);
         const chunkSize = Math.ceil(entries.length / chunkCount); // Calculate chunk size
 
@@ -175,15 +166,19 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createPlayer() {
-        let x = 1000; //TODO Make half way through the whole map
+        let x = 640;
         let y = 0;
+
+        this.startPoint = {
+            x: x,
+            y: y
+        }
 
         this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);
         this.player.setBounce(0.2);
-        this.startPoint = this.add.rectangle(x, y, this.playerSize * 3, this.playerSize * 3, 0xffffff);
         this.playerRect = this.add.rectangle(x, y, this.playerSize, this.playerSize, 0xffb2fd);
         this.playerRect.setOrigin(0, 0);
-        this.player.setCollideWorldBounds(true);
+        // this.player.setCollideWorldBounds(true);
 
         if (this.soilGroup) {
             this.physics.add.collider(this.player, this.soilGroup, (player, soil) => this.digSoil(player, soil), null, this);

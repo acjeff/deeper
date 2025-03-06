@@ -6,6 +6,7 @@ export default class MapService {
         this.game.chunkSize = 16;
         this.game.mapHeight = this.game.tileSize * 128;
         this.game.mapWidth = this.game.tileSize * 128;
+        console.log(this.game.mapWidth, ' : map width');
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
@@ -150,6 +151,16 @@ export default class MapService {
         }
     }
 
+    getGlobalRelativePosition(goalPosition, currentPosition) {
+        console.log(goalPosition, ' : goalPosition');
+        console.log(currentPosition, ' : currentPosition');
+        let x = Math.round((goalPosition.chunkX + goalPosition.x) - (currentPosition.chunkX + currentPosition.x));
+        let y = Math.round((goalPosition.chunkY + goalPosition.y) - (currentPosition.chunkY + currentPosition.y));
+
+        console.log('result x,y: ', { x, y });
+        return { x, y };
+    }
+
     updateWorldBounds() {
         if (this.game.loadedChunks.size === 0) return; // Avoid errors if no chunks are loaded
 
@@ -218,7 +229,8 @@ export default class MapService {
         }
 
         this.game.loadedChunks = newChunks;
-        this.updateWorldBounds();
+        // this.updateWorldBounds();
+        // this.game.physics.world.setBounds(0, 0, 10000, 10000);
         this.game.children.bringToTop(this.game.shadowGraphics);
     }
 

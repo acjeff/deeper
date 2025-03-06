@@ -2,9 +2,9 @@ import Phaser from "phaser";
 import GameScene from "./scenes/GameScene.js";
 import MenuScene from "./scenes/MenuScene";
 
-window._renderDistance = 2;
+window._renderDistance = 1;
 window._tileSize = 10;
-window._playerSize = 5;
+window._playerSize = 10;
 window._gridSize = 200;
 window._width = window._tileSize * window._gridSize;
 window._height = window._tileSize * window._gridSize;
