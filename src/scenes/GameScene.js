@@ -4,7 +4,7 @@
 
 import MapService from "../services/map";
 import LightingManager from "../services/lighting";
-import {db, doc, setDoc, auth} from "../firebaseconfig";
+import {db, doc, setDoc, auth} from "../firebaseconfig.js";
 
 export default class GameScene extends Phaser.Scene {
 
