@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import {auth, db, provider, signInWithPopup, signOut, setDoc, doc, getDoc} from "../firebaseConfig";
+import {auth, db, provider, signInWithPopup, signOut, setDoc, doc, getDoc} from "../firebaseconfig";
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
