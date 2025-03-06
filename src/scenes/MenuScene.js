@@ -7,7 +7,7 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.text(300, 50, "Game Menu", {fontSize: "32px", fill: "#ffffff"});
+        this.add.text(300, 50, "Deeper", {fontSize: "32px", fill: "#ffffff"});
 
 
         // ✅ Google Sign-In Button
