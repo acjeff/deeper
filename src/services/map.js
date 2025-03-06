@@ -311,6 +311,7 @@ export default class MapService {
 
     /** Render a chunk */
     renderChunk(cx, cy) {
+        console.log('render chunk')
         let chunkKey = `${cx}_${cy}`;
 
         // Prevent duplicate rendering of chunks
