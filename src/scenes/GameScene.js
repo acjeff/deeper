@@ -137,9 +137,17 @@ export default class GameScene extends Phaser.Scene {
 
         for (let i = 0; i < chunkCount; i++) {
             const chunkData = Object.fromEntries(entries.slice(i * chunkSize, (i + 1) * chunkSize));
-
             await setDoc(doc(db, "game_saves", user.uid, "map_data", `grid_chunk_${i}`), chunkData);
         }
+        await setDoc(
+            doc(db, "game_saves", user.uid, "player_data", "player_position"),
+            {
+                x: this.player.x,
+                y: this.player.y
+            },
+            { merge: true } // Merges with existing data
+        );
+
     }
 
     convertValuesToStrings(obj) {
@@ -162,16 +170,21 @@ export default class GameScene extends Phaser.Scene {
         }
 
         this.newGame = data.newGame;
+        console.log(data.playerData, ' : player data');
+        if (data.playerData.length > 0) {
+            this.playerX = data.playerData[0].x;
+            this.playerY = data.playerData[0].y;
+        }
         this.user = data.user;
     }
 
     createPlayer() {
-        let x = 640;
-        let y = 0;
+        let x = this.playerX || 640;
+        let y = this.playerY || 0;
 
         this.startPoint = {
-            x: x,
-            y: y
+            x: 640,
+            y: 0
         }
 
         this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import {auth, db, provider, signInWithPopup, signOut, setDoc, doc, getDoc} from "../firebaseconfig";
+import {auth, db, provider, signInWithPopup, signOut, getDocs, collection, doc, getDoc} from "../firebaseconfig";
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
@@ -92,11 +92,19 @@ export default class MenuScene extends Phaser.Scene {
 
         try {
             const gameSave = await this.loadGridChunks(user);
+            const playerDataCollection = collection(db, "game_saves", user.uid, "player_data");
+
+            const playerDataSnapshot = await getDocs(playerDataCollection);
+
+            const playerData = playerDataSnapshot.docs.map(doc => ({
+                id: doc.id,  // Document ID
+                ...doc.data() // Document fields
+            }));
             if (gameSave) {
                 console.log("Game data loaded:", gameSave);
 
                 // ✅ Hide menu and start the game with loaded data
-                this.scene.start("GameScene", {grid: gameSave, user: user});
+                this.scene.start("GameScene", {grid: gameSave, user: user, playerData: playerData});
             } else {
                 alert("No game save found.");
             }
