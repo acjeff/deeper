@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { auth, db, provider, signInWithPopup, signOut, setDoc, doc, getDoc } from "../firebaseConfig";
+import {auth, db, provider, signInWithPopup, signOut, setDoc, doc, getDoc} from "../firebaseConfig";
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
@@ -7,28 +7,28 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.text(300, 50, "Game Menu", { fontSize: "32px", fill: "#ffffff" });
+        this.add.text(300, 50, "Game Menu", {fontSize: "32px", fill: "#ffffff"});
 
 
         // ✅ Google Sign-In Button
-        this.googleSignInButton = this.add.text(300, 200, "Sign in with Google", { fontSize: "24px", fill: "#ff0" })
+        this.googleSignInButton = this.add.text(300, 200, "Sign in with Google", {fontSize: "24px", fill: "#ff0"})
             .setInteractive()
             .on("pointerdown", () => this.signInWithGoogle());
 
         // ✅ Logout Button (Initially Hidden)
-        this.logoutButton = this.add.text(300, 250, "Logout", { fontSize: "24px", fill: "#f00" })
+        this.logoutButton = this.add.text(300, 250, "Logout", {fontSize: "24px", fill: "#f00"})
             .setInteractive()
             .setVisible(false)
             .on("pointerdown", () => this.logout());
 
         // ✅ Load Game Button (Initially Hidden)
-        this.loadGameButton = this.add.text(300, 300, "Load Game", { fontSize: "24px", fill: "#0f0" })
+        this.loadGameButton = this.add.text(300, 300, "Load Game", {fontSize: "24px", fill: "#0f0"})
             .setInteractive()
             .setVisible(false)
             .on("pointerdown", () => this.loadGame());
 
         // ✅ New Game Button (Initially Hidden)
-        this.newGameButton = this.add.text(300, 350, "New Game", { fontSize: "24px", fill: "#00f" })
+        this.newGameButton = this.add.text(300, 350, "New Game", {fontSize: "24px", fill: "#00f"})
             .setInteractive()
             .setVisible(false)
             .on("pointerdown", () => this.createNewGame());
@@ -48,8 +48,7 @@ export default class MenuScene extends Phaser.Scene {
 
             console.log("User signed in:", user);
 
-            // ✅ Check if a save exists
-            const gameSave = await getDoc(doc(db, "game_saves", `${user.uid}_grid_chunk_0`));
+            const gameSave = await getDoc(doc(db, "game_saves", user.uid, "map_data", "grid_chunk_0"));
 
             if (gameSave.exists()) {
                 console.log("Save exists:", gameSave.data());
@@ -72,9 +71,8 @@ export default class MenuScene extends Phaser.Scene {
         let fullGrid = {};
 
         for (let i = 0; i < chunkCount; i++) {
-            const chunkDoc = await getDoc(doc(db, `game_saves/${user.uid}_grid_chunk_${i}`));
+            const chunkDoc = await getDoc(doc(db, "game_saves", user.uid, "map_data", `grid_chunk_${i}`));
             if (chunkDoc.exists()) {
-                console.log(`Loaded chunk ${i}`, chunkDoc.data());
                 Object.assign(fullGrid, chunkDoc.data()); // Merge chunks into full grid
             }
         }
@@ -98,7 +96,7 @@ export default class MenuScene extends Phaser.Scene {
                 console.log("Game data loaded:", gameSave);
 
                 // ✅ Hide menu and start the game with loaded data
-                this.scene.start("GameScene", gameSave);
+                this.scene.start("GameScene", {grid: gameSave, user: user});
             } else {
                 alert("No game save found.");
             }
@@ -149,7 +147,7 @@ export default class MenuScene extends Phaser.Scene {
         this.loadGameButton.setVisible(false);
         this.newGameButton.setVisible(false);
 
-        getDoc(doc(db, "game_saves", `${user.uid}_grid_chunk_0`)).then((gameSave) => {
+        getDoc(doc(db, "game_saves", user.uid, "map_data", "grid_chunk_0")).then((gameSave) => {
             if (gameSave.exists()) {
                 this.loadGameButton.setVisible(true);
             } else {
