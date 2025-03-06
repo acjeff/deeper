@@ -88,7 +88,7 @@ export default class GameScene extends Phaser.Scene {
         });
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
-        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 50, 0.6, '253,196,124', true);
+        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.6, '253,196,124', true);
         if (this.newGame) {
             await this.saveGame(this.user, this.grid);
         }
