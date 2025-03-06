@@ -93,14 +93,40 @@ export default class GameScene extends Phaser.Scene {
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 20, 0.6, '253,196,124', true);
-        window.addEventListener("beforeunload", () => this.saveGame());
         if (this.newGame) {
             // const gridToSave = Object.fromEntries(Object.entries(this.grid).map(([key, value]) => [key, JSON.stringify(value)]));
             // console.log(gridToSave, ' : this.convertValuesToStrings(this.grid)');
             // await setDoc(doc(db, "game_saves", this.user.uid + '_grid'), gridToSave);
             await this.saveGridInChunks(this.user, this.grid);
         }
+        await this.addSaveButton();
     }
+
+    async addSaveButton() {
+        let self = this;
+        let saveButton = document.createElement("button");
+        saveButton.innerText = "Save Game";
+        saveButton.style.position = "absolute";
+        saveButton.style.top = "10px";
+        saveButton.style.right = "10px";
+        saveButton.style.padding = "10px 15px";
+        saveButton.style.fontSize = "16px";
+        saveButton.style.backgroundColor = "#28a745"; // Green button
+        saveButton.style.color = "#fff";
+        saveButton.style.border = "none";
+        saveButton.style.borderRadius = "5px";
+        saveButton.style.cursor = "pointer";
+        saveButton.style.zIndex = "1000"; // Ensure it stays on top
+
+        document.body.appendChild(saveButton);
+
+        saveButton.addEventListener("click", async () => {
+            console.log(self.user, ' : user');
+            console.log(self.grid, ' : grid');
+            await this.saveGridInChunks(self.user, self.grid);
+        });
+    }
+
 
     async saveGridInChunks(user, gridData, chunkCount = 6) {
         if (!user) {
@@ -121,7 +147,7 @@ export default class GameScene extends Phaser.Scene {
         for (let i = 0; i < chunkCount; i++) {
             const chunkData = Object.fromEntries(entries.slice(i * chunkSize, (i + 1) * chunkSize));
 
-            await setDoc(doc(db, `game_saves/${user.uid}_grid_chunk_${i}`), chunkData);
+            await setDoc(doc(db, "game_saves", user.uid, "map_data", `grid_chunk_${i}`), chunkData);
         }
     }
 
@@ -141,27 +167,11 @@ export default class GameScene extends Phaser.Scene {
 
     init(data) {
         if (!data.newGame) {
-            this.grid = data;
+            this.grid = data.grid;
         }
 
         this.newGame = data.newGame;
         this.user = data.user;
-    }
-
-    async saveGame() {
-        const user = auth.currentUser;
-        if (!user) return;
-
-        try {
-            await setDoc(doc(db, "game_saves", user.uid), {
-                playerX: this.player.x,
-                playerY: this.player.y,
-                energyCount: this.energyCount,
-                grid: this.grid
-            });
-        } catch (error) {
-            console.error("Error saving game:", error);
-        }
     }
 
     createPlayer() {
