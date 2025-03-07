@@ -10,9 +10,6 @@ export default class ControlsManager {
 
 
         window.addEventListener("keydown", (e) => {
-            if (e.key === "d") {
-                this.scene.digging = true;
-            }
             if (e.key === "r") {
                 this.scene.drilling = true;
             }
