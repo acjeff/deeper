@@ -11,6 +11,7 @@ export default class LightingManager {
     initLighting() {
         // Create a new canvas for the lighting system
         this.scene.lightCanvas = document.createElement("canvas");
+        this.scene.lightCanvas.id = 'light_canvas';
         this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
         this.scene.lightCanvas.height = this.scene.cameras.main.height;
         this.scene.lightCanvas.style.position = "absolute";

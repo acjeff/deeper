@@ -4,8 +4,8 @@ export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
         this.game = game;
         this.game.chunkSize = 16;
-        this.game.mapHeight = this.game.tileSize * 128;
-        this.game.mapWidth = this.game.tileSize * 128;
+        this.game.mapHeight = 1040;
+        this.game.mapWidth = 320;
         console.log(this.game.mapWidth, ' : map width');
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
@@ -28,12 +28,16 @@ export default class MapService {
 
         map.randomize(0.5);
 
+        console.log(map, ' : map');
+
         // Initialize grid storage
         for (let y = 0; y < this.game.mapHeight; y += this.game.chunkSize) {
             for (let x = 0; x < this.game.mapWidth; x += this.game.chunkSize) {
                 let chunkKey = `${x}_${y}`;
                 this.game.grid[chunkKey] = Array.from({length: this.game.chunkSize}, () =>
-                    Array(this.game.chunkSize).fill('1_200') // Default soil
+                    Array(this.game.chunkSize).fill({
+                        ...window._tileTypes.soil
+                    }) // Default soil
                 );
             }
         }
@@ -47,16 +51,23 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                this.game.grid[chunkKey][localY][localX] = wall ? '1_200' : '1_100';
+                this.game.grid[chunkKey][localY][localX] = wall ? {
+                    ...window._tileTypes.soil
+                } : {
+                    ...window._tileTypes.soil,
+                    strength: 100
+                };
             }
         });
 
-        // console.log(this.game.grid, ' : this.game.grid');
+        console.log(this.game.grid, ' : this.game.grid');
 
         // Randomly place water
         window._randomElements.forEach(element => {
-            this.setRandomElement(element.id, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
+            this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
         })
+
+        console.log('set random elements')
 
         // console.log(this.game.grid, ' : grid');
 
@@ -70,7 +81,7 @@ export default class MapService {
     }
 
     /** Randomly places empty tiles (energy spaces) */
-    setRandomElement(id, count, widthRange = [1, 1], heightRange = [1, 1], edgeNoiseChance = 0.3, layerWeights = [1, 1, 1, 1, 1, 1, 1]) {
+    setRandomElement(element, count, widthRange = [1, 1], heightRange = [1, 1], edgeNoiseChance = 0.3, layerWeights = [1, 1, 1, 1, 1, 1, 1]) {
         let self = this;
         let placed = 0;
         let filledPositions = new Set();
@@ -82,7 +93,7 @@ export default class MapService {
 
             let localX = x % this.game.chunkSize;
             let localY = y % this.game.chunkSize;
-            this.game.grid[chunkKey][localY][localX] = id;
+            this.game.grid[chunkKey][localY][localX] = element;
             filledPositions.add(`${x}_${y}`);
             return true;
         }
@@ -300,21 +311,21 @@ export default class MapService {
     placeObject(tileType, worldX, worldY, cellDetails) {
         const {chunkKey, cellX, cellY} = cellDetails;
         let groupAddFuncs = [], object;
-        const tileData = tileType.split('_');
+        const tileData = tileType;
 
-        if (tileData[0] === window._tileTypes.soil) {
+        if (tileData.id === window._tileTypes.soil.id) {
             // Place hard soil
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
-            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.darkenColor(0x724c25, parseInt(tileData[1]) / 10));
-            object.strength = parseInt(tileData[1] / 100);
-        } if (tileData[0] === window._tileTypes.light) {
-            this.game.lightingManager.addLight(worldX, worldY, tileData[2] || 50, 0.8, tileData[1] || this.game.glowStickCols[0], false, true);
-        } else if (tileData[0] === window._tileTypes.stone) {
+            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.darkenColor(0x724c25, parseInt(tileData.strength) / 10));
+            object.strength = tileData.strength / 100;
+        } if (tileData.id === window._tileTypes.light) {
+            this.game.lightingManager.addLight(worldX, worldY, tileData.radius || 50, 0.8, tileData.color || this.game.glowStickCols[0], false, true);
+        } else if (tileData.id === window._tileTypes.stone.id) {
             // Place regular soil
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
             object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
             object.strength = 10;
-        } else if (tileData[0] === window._tileTypes.water) {
+        } else if (tileData.id === window._tileTypes.water.id) {
             object = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
             object.setAlpha(0.5);
             const circleRadius = this.game.tileSize / 4;
@@ -381,7 +392,6 @@ export default class MapService {
                 });
             } else {
                 entityGroup.forEach((tile) => {
-                    console.log('light: ', tile);
                     let {x, y} = tile;
                     let chunkX = Math.floor(x / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
                     let chunkY = Math.floor(y / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;

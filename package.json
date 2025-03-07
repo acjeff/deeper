@@ -1,20 +1,53 @@
 {
-  "name": "energy-factory-game",
+  "name": "deeper",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "dev:electron": "NODE_OPTIONS='--max-old-space-size=8192' BUILD_TARGET=electron vite build && electron electron/main.js",
+    "build": "vite build",
+    "build:electron": "NODE_OPTIONS='--max-old-space-size=8192' BUILD_TARGET=electron vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.rooboogames.deeper",
+    "productName": "Deeper",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "electron/**"
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build"
+    }
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "firebase": "^11.4.0",
+    "lz-string": "^1.5.0",
+    "msgpackr": "^1.11.2",
     "phaser": "^3.88.2",
     "rot-js": "^2.2.1"
   },
   "devDependencies": {
-    "vite": "^6.2.0"
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8",
+    "vite": "^6.2.0",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6"
   }
 }

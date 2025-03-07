@@ -13,7 +13,7 @@ export default class PreloadScene extends Phaser.Scene {
 
     create() {
         // TODO remove back in to save/load
-        // this.scene.start("MenuScene");
-        this.scene.start("GameScene");
+        this.scene.start("MenuScene");
+        // this.scene.start("GameScene");
     }
 }

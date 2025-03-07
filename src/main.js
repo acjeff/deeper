@@ -10,49 +10,74 @@ window._gridSize = 200;
 window._width = window._tileSize * window._gridSize;
 window._height = window._tileSize * window._gridSize;
 window._tileTypes = {
-    empty: '0',
-    soil: '1',
-    water: '3',
-    stone: '4',
-    light: '5'
+    empty: {
+        id: 0
+    },
+    soil: {
+        id: 1,
+        strength: 200
+    },
+    water: {
+        id: 2
+    },
+    stone: {
+        id: 3
+    },
+    light: {
+        id: 4,
+        color: 0xff0000
+    }
 }
 
 window._randomElements = [
     {
-        id: window._tileTypes.empty,
-        count: 10000
+        tile: {
+            ...window._tileTypes.empty
+        },
+        count: 1000
     },
     {
-        id: window._tileTypes.light,
-        count: 10000
+        tile: {
+            ...window._tileTypes.light
+        },
+        count: 1000
     },
     {
-        id: window._tileTypes.empty,
-        count: 100000,
+        tile: {
+            ...window._tileTypes.empty
+        },
+        count: 1000,
         widthRange: [20, 30],
         heightRange: [20, 30],
         edgeNoiseChance: 0.5,
-        layerWeights: [10,0,0,0,0,0,0]
+        layerWeights: [10, 0, 0, 0, 0, 0, 0]
     },
     {
-        id: window._tileTypes.stone,
-        count: 100000,
-        widthRange: [10, 150],
+        tile: {
+            ...window._tileTypes.stone
+        },
+        count: 1000,
+        widthRange: [10, 50],
         heightRange: [5, 5],
-        layerWeights: [0,10,0,0,0,0,0]
+        layerWeights: [0, 10, 0, 0, 0, 0, 0]
     }];
 
 const config = {
     type: Phaser.AUTO,
     width: window.innerWidth,
     height: window.innerHeight,
-    backgroundColor: "#422c16",
+    backgroundColor: "#000000",
+    fps: {
+        target: 60,  // ✅ Force 60 FPS
+        forceSetTimeOut: false, // ✅ Ensure requestAnimationFrame is used
+    },
+    autoFocus: true, // ✅ Helps with background focus issues
     physics: {
         default: "arcade",
-        arcade: {gravity: {y: 300}, debug: false}
+        arcade: {gravity: {y: 300}, debug: false, fps: 60}
     },
-    scene: [PreloadScene, GameScene],
-    // scene: [PreloadScene, MenuScene, GameScene],
+    // scene: [PreloadScene, GameScene],
+    scene: [PreloadScene, MenuScene, GameScene],
 };
 
 const game = new Phaser.Game(config);

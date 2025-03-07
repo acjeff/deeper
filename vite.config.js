@@ -1,10 +1,12 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
+const isElectron = process.env.BUILD_TARGET === "electron"
 export default defineConfig({
-    base: '/deeper/', // 👈 Set this to your repository name
-    root: '.', // Ensure Vite serves from the root folder
+    base: isElectron ? "./" : "/deeper/",
+    root: ".", // Ensure Vite serves from the root folder
     build: {
-        outDir: 'dist', // Output compiled files to 'dist'
+        outDir: "dist",
+        target: "esnext"
     },
     server: {
         open: true, // Auto-open in browser
