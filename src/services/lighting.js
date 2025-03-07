@@ -21,6 +21,10 @@ export default class LightingManager {
 
         // Get the canvas context
         this.scene.lightCtx = this.scene.lightCanvas.getContext("2d");
+        window.addEventListener("resize", () => {
+            this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
+            this.scene.lightCanvas.height = this.scene.cameras.main.height;
+        });
     }
 
     /** Registers a Phaser Group for tracking */
