@@ -33,7 +33,7 @@ export default class MapService {
             for (let x = 0; x < this.game.mapWidth; x += this.game.chunkSize) {
                 let chunkKey = `${x}_${y}`;
                 this.game.grid[chunkKey] = Array.from({length: this.game.chunkSize}, () =>
-                    Array(this.game.chunkSize).fill(2) // Default soil
+                    Array(this.game.chunkSize).fill('1_200') // Default soil
                 );
             }
         }
@@ -47,7 +47,7 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                this.game.grid[chunkKey][localY][localX] = wall ? 2 : 1;
+                this.game.grid[chunkKey][localY][localX] = wall ? '1_200' : '1_100';
             }
         });
 
@@ -272,26 +272,47 @@ export default class MapService {
 
     }
 
+     darkenColor(hexColor, factor) {
+        // Ensure the hex color is a valid 6-digit hex string
+        hexColor = hexColor & 0xFFFFFF;
+
+        // Extract RGB components
+        let r = (hexColor >> 16) & 0xFF;
+        let g = (hexColor >> 8) & 0xFF;
+        let b = hexColor & 0xFF;
+
+        // Normalize factor to be between 0 and 1 (assuming factor is between 0-100)
+        let darkenFactor = Math.min(Math.max(factor / 100, 0), 1);
+
+        // Apply darkening
+        r = Math.round(r * (1 - darkenFactor));
+        g = Math.round(g * (1 - darkenFactor));
+        b = Math.round(b * (1 - darkenFactor));
+
+        // Convert back to hex
+        let darkenedHex = (r << 16) | (g << 8) | b;
+
+        // Return as a hex string
+        return `0x${darkenedHex.toString(16).padStart(6, '0')}`;
+    }
+
+
     placeObject(tileType, worldX, worldY, cellDetails) {
         const {chunkKey, cellX, cellY} = cellDetails;
         let groupAddFuncs = [], object;
+        const tileData = tileType.split('_');
 
-        if (tileType === window._tileTypes.heavy_soil) {
+        if (tileData[0] === window._tileTypes.soil) {
             // Place hard soil
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
-            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x654321, 2));
-            object.strength = 3;
-        } else if (tileType === window._tileTypes.standard_soil) {
-            // Place regular soil
-            groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
-            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x724c25, 2));
-            object.strength = 1;
-        } else if (tileType === window._tileTypes.stone) {
+            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.darkenColor(0x724c25, parseInt(tileData[1]) / 10));
+            object.strength = parseInt(tileData[1] / 100);
+        } else if (tileData[0] === window._tileTypes.stone) {
             // Place regular soil
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
             object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
             object.strength = 10;
-        } else if (tileType === window._tileTypes.water) {
+        } else if (tileData[0] === window._tileTypes.water) {
             object = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
             object.setAlpha(0.5);
             const circleRadius = this.game.tileSize / 4;

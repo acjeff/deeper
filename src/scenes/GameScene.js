@@ -12,6 +12,11 @@ export default class GameScene extends Phaser.Scene {
 
     async create() {
         let self = this;
+
+        // TODO remove back in to save/load
+        this.newGame = true;
+        console.log("Creating new game...");
+
         this.tileSize = window._tileSize;
         this.playerSize = window._playerSize;
         this.digging = false;
@@ -24,9 +29,11 @@ export default class GameScene extends Phaser.Scene {
         this.entityChildren = [this.soilGroup, this.waterGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
+            console.log("generate map")
             this.mapService.generateMap();
         }
         this.zoomAmount = 3;
+        console.log(this.grid, ' : this.grid');
 
         this.createPlayer();
         this.createControls();
@@ -90,7 +97,7 @@ export default class GameScene extends Phaser.Scene {
         this.lightingManager.registerGroup(this.soilGroup);
         this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.6, '253,196,124', true);
         if (this.newGame) {
-            await this.saveGame(this.user, this.grid);
+            // await this.saveGame(this.user, this.grid);
         }
         await this.addSaveButton();
     }
@@ -165,17 +172,21 @@ export default class GameScene extends Phaser.Scene {
     }
 
     init(data) {
-        if (!data.newGame) {
-            this.grid = data.grid;
-        }
+        console.log("init new game...", data);
+        // TODO add back in to save/load
+        if (Object.keys(data).length) {
+            if (!data.newGame) {
+                this.grid = data.grid;
+            }
 
-        this.newGame = data.newGame;
-        console.log(data.playerData, ' : player data');
-        if (data.playerData.length > 0) {
-            this.playerX = data.playerData[0].x;
-            this.playerY = data.playerData[0].y;
+            this.newGame = data.newGame;
+            console.log(data.playerData, ' : player data');
+            if (data.playerData.length > 0) {
+                this.playerX = data.playerData[0].x;
+                this.playerY = data.playerData[0].y;
+            }
+            this.user = data.user;
         }
-        this.user = data.user;
     }
 
     createPlayer() {
@@ -201,12 +212,12 @@ export default class GameScene extends Phaser.Scene {
     digSoil(player, soil) {
         if (this.digging) {
             if (soil.strength === 1) {
-                this.mapService.setTile(soil.x, soil.y, 0, soil);
+                this.mapService.setTile(soil.x, soil.y, '0', soil);
             }
         }
         if (this.drilling) {
             if (this.energyCount >= soil.strength) {
-                this.mapService.setTile(soil.x, soil.y, 0, soil);
+                this.mapService.setTile(soil.x, soil.y, '0', soil);
                 this.energyCount -= soil.strength;
                 // this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`);
             }
