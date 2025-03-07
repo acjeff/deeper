@@ -307,6 +307,8 @@ export default class MapService {
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
             object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.darkenColor(0x724c25, parseInt(tileData[1]) / 10));
             object.strength = parseInt(tileData[1] / 100);
+        } if (tileData[0] === window._tileTypes.light) {
+            this.game.lightingManager.addLight(worldX, worldY, tileData[2] || 50, 0.8, tileData[1] || this.game.glowStickCols[0], false, true);
         } else if (tileData[0] === window._tileTypes.stone) {
             // Place regular soil
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
@@ -367,16 +369,29 @@ export default class MapService {
     unloadChunk(chunkKey) {
         // console.log('Unloading chunk: ', chunkKey);
         this.game.entityChildren.forEach((entityGroup) => {
-            entityGroup.children.each((tile) => {
-                let {x, y} = tile;
-                let chunkX = Math.floor(x / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
-                let chunkY = Math.floor(y / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
+            if (entityGroup.children) {
+                entityGroup.children.each((tile) => {
+                    let {x, y} = tile;
+                    let chunkX = Math.floor(x / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
+                    let chunkY = Math.floor(y / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
 
-                if (`${chunkX}_${chunkY}` === chunkKey) {
-                    tile.destroy();
-                }
-            });
-        })
+                    if (`${chunkX}_${chunkY}` === chunkKey) {
+                        tile.destroy();
+                    }
+                });
+            } else {
+                entityGroup.forEach((tile) => {
+                    console.log('light: ', tile);
+                    let {x, y} = tile;
+                    let chunkX = Math.floor(x / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
+                    let chunkY = Math.floor(y / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
+
+                    if (`${chunkX}_${chunkY}` === chunkKey) {
+                        tile.destroy();
+                    }
+                });
+            }
+        });
 
         this.game.loadedChunks.delete(chunkKey); // Ensure removed chunks are cleared from memory
     }

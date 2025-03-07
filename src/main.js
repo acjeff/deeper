@@ -13,12 +13,17 @@ window._tileTypes = {
     empty: '0',
     soil: '1',
     water: '3',
-    stone: '4'
+    stone: '4',
+    light: '5'
 }
 
 window._randomElements = [
     {
         id: window._tileTypes.empty,
+        count: 10000
+    },
+    {
+        id: window._tileTypes.light,
         count: 10000
     },
     {

@@ -26,7 +26,10 @@ export default class GameScene extends Phaser.Scene {
         this.waterGroup = this.physics.add.group();
         this.physics.add.collider(this.waterGroup, this.soilGroup);
         this.physics.add.collider(this.waterGroup, this.waterGroup);
-        this.entityChildren = [this.soilGroup, this.waterGroup];
+        this.lightingManager = new LightingManager(this);
+        this.lightingManager.registerGroup(this.soilGroup);
+
+        this.entityChildren = [this.soilGroup, this.waterGroup, this.lightingManager.lights];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             console.log("generate map")
@@ -36,6 +39,7 @@ export default class GameScene extends Phaser.Scene {
         console.log(this.grid, ' : this.grid');
 
         this.createPlayer();
+        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.6, '253,196,124', true);
         this.createControls();
         this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255"];
         this.glowStickCol = 0;
@@ -93,9 +97,7 @@ export default class GameScene extends Phaser.Scene {
             self.digging = false;
             self.drilling = false;
         });
-        this.lightingManager = new LightingManager(this);
-        this.lightingManager.registerGroup(this.soilGroup);
-        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.6, '253,196,124', true);
+
         if (this.newGame) {
             // await this.saveGame(this.user, this.grid);
         }
