@@ -88,7 +88,7 @@ export default class GameScene extends Phaser.Scene {
 
         document.body.appendChild(this.backToMenuButton);
 
-        this.backToMenuButton.addEventListener("click",  async () => {
+        this.backToMenuButton.addEventListener("click", async () => {
             // 🚀 UI Update Before Processing
             this.backToMenuButton.disabled = true;
             this.backToMenuButton.style.pointerEvents = 'none';
@@ -106,7 +106,7 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-     addSaveButton() {
+    addSaveButton() {
         let self = this;
         this.saveButton = document.createElement("button");
         this.saveButton.id = 'save_button';
@@ -125,7 +125,7 @@ export default class GameScene extends Phaser.Scene {
 
         document.body.appendChild(this.saveButton);
 
-        this.saveButton.addEventListener("click",  async () => {
+        this.saveButton.addEventListener("click", async () => {
             // 🚀 UI Update Before Processing
             this.saveButton.disabled = true;
             this.saveButton.innerHTML = "Saving...";
@@ -141,7 +141,7 @@ export default class GameScene extends Phaser.Scene {
             const compressedData = LZString.compressToUTF16(JSON.stringify(gridData));
 
             if (window.electronAPI?.isElectron) {
-                await window.electronAPI.saveGame({ grid: gridData, playerData: { x: this.player.x, y: this.player.y }});
+                await window.electronAPI.saveGame({grid: gridData, playerData: {x: this.player.x, y: this.player.y}});
                 this.saveButton.disabled = true;
                 this.saveButton.innerHTML = "Saved";
                 window.setTimeout(async () => {
@@ -170,8 +170,8 @@ export default class GameScene extends Phaser.Scene {
         const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
         const playerSaveRef = doc(db, "game_saves", user.uid, "player_data", "position");
 
-        batch.set(gameSaveRef, { data: gridData });
-        batch.set(playerSaveRef, { x: this.player.x, y: this.player.y });
+        batch.set(gameSaveRef, {data: gridData});
+        batch.set(playerSaveRef, {x: this.player.x, y: this.player.y});
 
         try {
             await batch.commit(); // Execute the batch write
@@ -201,8 +201,7 @@ export default class GameScene extends Phaser.Scene {
             }
 
             this.newGame = data.newGame;
-            console.log(data.playerData, ' : playerData');
-            if (data.playerData?.length > 0) {
+            if (data.playerData?.length > 0 && !data.newGame) {
                 this.playerX = data.playerData[0].x;
                 this.playerY = data.playerData[0].y;
             }
@@ -211,7 +210,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createPlayer() {
-        let x = this.playerX || this.mapWidth / 2;
+        let x = this.playerX || (this.mapWidth / 2);
         let y = this.playerY || 0;
 
         this.startPoint = {
@@ -255,6 +254,8 @@ export default class GameScene extends Phaser.Scene {
             this.lightingManager.updateLighting();
 
             this.fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
+
+            this.controlsManager.getInteractableBlock();
 
         }
     }

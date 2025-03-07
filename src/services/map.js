@@ -62,7 +62,6 @@ export default class MapService {
             this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
         })
 
-        // console.log(this.game.grid, ' : grid');
 
         // this.setRandomElement(window._tileTypes.stone, 100000);
     }
@@ -155,11 +154,96 @@ export default class MapService {
         }
     }
 
+    getClosestBlockInDirection(startX, startY, dirX, dirY, blocks) {
+        let closestBlock = null;
+        let closestDistance = Infinity;
+
+        blocks.forEach(block => {
+            let bx = block.x + block.width / 2;
+            let by = block.y + block.height / 2;
+
+            // Project the block's position onto the direction vector
+            let t = ((bx - startX) * dirX + (by - startY) * dirY);
+
+            if (t > 0) { // Ensure block is in front of the player
+                let projectedX = startX + t * dirX;
+                let projectedY = startY + t * dirY;
+                let distance = Math.sqrt((bx - projectedX) ** 2 + (by - projectedY) ** 2);
+
+                // If the block is close to the line, consider it
+                if (distance < this.game.tileSize / 2 && t < closestDistance) {
+                    closestDistance = t;
+                    closestBlock = block;
+                }
+            }
+        });
+
+        return closestBlock;
+    }
+
+    getEntitiesAround(x, y, radius) {
+        let entities = [];
+
+        // Iterate over each group in entityChildren
+        this.game.entityChildren.forEach(group => {
+            if (group.children) {
+                // Handle Phaser groups (e.g., soilGroup, waterGroup)
+                group.children.each(entity => {
+                    if (this.isWithinRadius(entity.x, entity.y, x, y, radius)) {
+                        entities.push(entity);
+                    }
+                });
+            } else if (Array.isArray(group)) {
+                // Handle arrays of entities (e.g., lightingManager.lights)
+                group.forEach(entity => {
+                    if (this.isWithinRadius(entity.x, entity.y, x, y, radius)) {
+                        entities.push(entity);
+                    }
+                });
+            }
+        });
+
+        return entities;
+    }
+
+// Helper function to check if an entity is within the given radius
+    isWithinRadius(entityX, entityY, centerX, centerY, radius) {
+        let dx = entityX - centerX;
+        let dy = entityY - centerY;
+        return Math.sqrt(dx * dx + dy * dy) <= radius;
+    }
+
+    getBlocksAround(x, y, radius) {
+        let blocks = [];
+
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                let nx = x + dx;
+                let ny = y + dy;
+
+                // Ensure we don't include the center block itself
+                if (dx === 0 && dy === 0) continue;
+
+                // Determine the chunk key and local coordinates within the chunk
+                let chunkKey = this.getChunkKey(nx, ny);
+                let localX = nx % this.game.chunkSize;
+                let localY = ny % this.game.chunkSize;
+
+                if (this.game.grid[chunkKey] && this.game.grid[chunkKey][localY]) {
+                    let block = this.game.grid[chunkKey][localY][localX];
+                    blocks.push({x: nx, y: ny, block});
+                }
+            }
+        }
+
+        return blocks;
+    }
+
     getGlobalRelativePosition(goalPosition, currentPosition) {
         let x = Math.round((goalPosition.chunkX + goalPosition.x) - (currentPosition.chunkX + currentPosition.x));
         let y = Math.round((goalPosition.chunkY + goalPosition.y) - (currentPosition.chunkY + currentPosition.y));
 
-        return { x, y };
+        return {x, y};
     }
 
     updateWorldBounds() {
@@ -191,7 +275,7 @@ export default class MapService {
         this.game.wy = minY;
         this.game.ww = worldWidth;
         this.game.wh = worldHeight;
-        this.game.physics.world.setBounds(minX, minY, worldWidth, worldHeight);
+        // this.game.physics.world.setBounds(minX, minY, worldWidth, worldHeight);
         //     ADD SHADOW LAYER
     }
 
@@ -200,16 +284,12 @@ export default class MapService {
         let chunkX = Math.floor(playerX / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
         let chunkY = Math.floor(playerY / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
         let newChunks = new Map(); // Keep existing chunks
-        // console.log(this.game.grid, ' : first chunk');
 
         for (let dx = -renderDistance; dx <= renderDistance; dx++) {
             for (let dy = -renderDistance; dy <= renderDistance; dy++) {
                 let cx = chunkX + dx * this.game.chunkSize;
                 let cy = chunkY + dy * this.game.chunkSize;
                 let chunkKey = `${cx}_${cy}`;
-                // console.log(chunkKey, ' : chunkKey');
-
-                // console.log(this.game.grid[chunkKey], ' : this.game.grid[chunkKey]');
 
                 if (this.game.grid[chunkKey]) {
                     // Only render if it's not already loaded
@@ -273,7 +353,7 @@ export default class MapService {
 
     }
 
-     darkenColor(hexColor, factor) {
+    darkenColor(hexColor, factor) {
         // Ensure the hex color is a valid 6-digit hex string
         hexColor = hexColor & 0xFFFFFF;
 
@@ -297,7 +377,6 @@ export default class MapService {
         return `0x${darkenedHex.toString(16).padStart(6, '0')}`;
     }
 
-
     placeObject(tileType, worldX, worldY, cellDetails) {
         const {chunkKey, cellX, cellY} = cellDetails;
         let groupAddFuncs = [], object;
@@ -308,7 +387,8 @@ export default class MapService {
             groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
             object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.darkenColor(0x724c25, parseInt(tileData.strength) / 10));
             object.strength = tileData.strength / 100;
-        } if (tileData.id === window._tileTypes.light) {
+        }
+        if (tileData.id === window._tileTypes.light) {
             this.game.lightingManager.addLight(worldX, worldY, tileData.radius || 50, 0.8, tileData.color || this.game.glowStickCols[0], false, true);
         } else if (tileData.id === window._tileTypes.stone.id) {
             // Place regular soil
@@ -368,7 +448,6 @@ export default class MapService {
 
     /** Remove chunk from rendering */
     unloadChunk(chunkKey) {
-        // console.log('Unloading chunk: ', chunkKey);
         this.game.entityChildren.forEach((entityGroup) => {
             if (entityGroup.children) {
                 entityGroup.children.each((tile) => {
