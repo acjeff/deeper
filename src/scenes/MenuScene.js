@@ -121,16 +121,12 @@ export default class MenuScene extends Phaser.Scene {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
 
-            console.log("User signed in:", user);
-
             const gameSave = await getDoc(doc(db, "game_saves", user.uid, "map_data", "grid"));
 
             if (gameSave.exists()) {
-                console.log("Save exists:", gameSave.data());
                 this.loadGameButton.setVisible(true);
                 this.deleteSaveButton.setVisible(true);
             } else {
-                console.log("No save found. Show New Game button.");
                 this.newGameButton.setVisible(true);
             }
 
@@ -161,7 +157,6 @@ export default class MenuScene extends Phaser.Scene {
         } else {
             // ✅ Browser: Save to Firebase
             await this.loadGameFromCloud();
-            console.log("✅ Game saved to Firebase!");
         }
     }
 
@@ -175,7 +170,6 @@ export default class MenuScene extends Phaser.Scene {
         try {
             const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
             const gameSaveDoc = await getDoc(gameSaveRef);
-            console.log(gameSaveDoc.data().data, ' : gameSaveDoc.data().data')
             const gameSave = JSON.parse(LZString.decompressFromUTF16(gameSaveDoc.data().data));
 
             const playerDataCollection = collection(db, "game_saves", user.uid, "player_data");
@@ -222,7 +216,6 @@ export default class MenuScene extends Phaser.Scene {
     async logout() {
         try {
             await signOut(auth);
-            console.log("User logged out");
 
             // ✅ Reset UI
             this.googleSignInButton.setVisible(true);
@@ -253,7 +246,6 @@ export default class MenuScene extends Phaser.Scene {
                 const savedData = await window.electronAPI.loadGame();
                 this.savedData = savedData;
                 if (savedData) {
-                    console.log("✅ Local save found");
                     hasSaveData = true;
                 }
             } else {
@@ -261,7 +253,6 @@ export default class MenuScene extends Phaser.Scene {
                 const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
                 const gameSave = await getDoc(gameSaveRef);
                 if (gameSave.exists()) {
-                    console.log("✅ Cloud save found");
                     hasSaveData = true;
                 }
             }

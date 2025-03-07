@@ -6,7 +6,6 @@ export default class MapService {
         this.game.chunkSize = 16;
         this.game.mapHeight = 1040;
         this.game.mapWidth = 320;
-        console.log(this.game.mapWidth, ' : map width');
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
@@ -27,8 +26,6 @@ export default class MapService {
         const map = new ROT.Map.Cellular(this.game.mapWidth, this.game.mapHeight);
 
         map.randomize(0.5);
-
-        console.log(map, ' : map');
 
         // Initialize grid storage
         for (let y = 0; y < this.game.mapHeight; y += this.game.chunkSize) {
@@ -60,14 +57,10 @@ export default class MapService {
             }
         });
 
-        console.log(this.game.grid, ' : this.game.grid');
-
         // Randomly place water
         window._randomElements.forEach(element => {
             this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
         })
-
-        console.log('set random elements')
 
         // console.log(this.game.grid, ' : grid');
 
@@ -163,12 +156,9 @@ export default class MapService {
     }
 
     getGlobalRelativePosition(goalPosition, currentPosition) {
-        console.log(goalPosition, ' : goalPosition');
-        console.log(currentPosition, ' : currentPosition');
         let x = Math.round((goalPosition.chunkX + goalPosition.x) - (currentPosition.chunkX + currentPosition.x));
         let y = Math.round((goalPosition.chunkY + goalPosition.y) - (currentPosition.chunkY + currentPosition.y));
 
-        console.log('result x,y: ', { x, y });
         return { x, y };
     }
 
@@ -331,7 +321,7 @@ export default class MapService {
             const circleRadius = this.game.tileSize / 4;
 
             // Add physics first so `object.body` exists
-            this.game.physics.add.existing(object);
+            this.game.add.existing(object);
 
             object.body.setCircle(circleRadius);
             object.body.setBounce(0.05);

@@ -1,7 +1,8 @@
 import MapService from "../services/map";
 import LightingManager from "../services/lighting";
-import {db, doc, setDoc} from "../firebaseconfig.js";
-import LZString from "lz-string"; // Install via `npm install lz-string`
+import {db, doc, writeBatch} from "../firebaseconfig.js";
+import LZString from "lz-string";
+import ControlsManager from "../services/controls"; // Install via `npm install lz-string`
 
 
 export default class GameScene extends Phaser.Scene {
@@ -29,6 +30,7 @@ export default class GameScene extends Phaser.Scene {
         // this.physics.add.collider(this.waterGroup, this.waterGroup);
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
+        this.controlsManager = new ControlsManager(this);
 
         this.entityChildren = [this.soilGroup, this.waterGroup, this.lightingManager.lights];
         this.mapService = new MapService(32, 16, this);
@@ -39,7 +41,6 @@ export default class GameScene extends Phaser.Scene {
 
         this.createPlayer();
         this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.6, '253,196,124', true);
-        this.createControls();
         this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255"];
         this.glowStickCol = 0;
 
@@ -58,45 +59,10 @@ export default class GameScene extends Phaser.Scene {
 
         this.cameras.main.ignore([this.energyText]);
 
-        window.addEventListener("keydown", (e) => {
-            if (e.key === "d") {
-                self.digging = true;
-            }
-            if (e.key === "r") {
-                self.drilling = true;
-            }
-        });
 
-        window.addEventListener("wheel", (e) => {
-            const zoomSpeed = 0.1; // Adjust zoom sensitivity
-            this.zoomAmount = Phaser.Math.Clamp(this.cameras.main.zoom + (e.deltaY * -zoomSpeed * 0.01), 0.5, 5);
-
-            this.cameras.main.setZoom(this.zoomAmount);
-        });
-
-        window.addEventListener("keypress", (e) => {
-            if (e.key === "c") {
-                this.glowStickCol = (this.glowStickCol + 1) % this.glowStickCols.length;
-            }
-            if (e.key === "l") {
-                this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.8, this.glowStickCols[this.glowStickCol], false, true); // Orange torch light
-            }
-            if (e.key === "t") {
-                this.playerLight.off = !this.playerLight.off;
-            }
-            if (e.key === "p") {
-
-                this.player.x = this.startPoint.x;
-                this.player.y = this.startPoint.y;
-            }
-
-        });
-        window.addEventListener("keyup", (e) => {
-            self.digging = false;
-            self.drilling = false;
-        });
         this.addSaveButton();
         this.addBackToMenuButton();
+
         if (this.newGame) {
             await this.saveGame(this.user, this.grid);
         }
@@ -175,7 +141,6 @@ export default class GameScene extends Phaser.Scene {
             const compressedData = LZString.compressToUTF16(JSON.stringify(gridData));
 
             if (window.electronAPI?.isElectron) {
-                // ✅ Electron: Save Locally
                 await window.electronAPI.saveGame({ grid: gridData, playerData: { x: this.player.x, y: this.player.y }});
                 this.saveButton.disabled = true;
                 this.saveButton.innerHTML = "Saved";
@@ -183,17 +148,13 @@ export default class GameScene extends Phaser.Scene {
                     this.saveButton.disabled = false;
                     this.saveButton.innerHTML = "Save Game";
                 }, 150)
-                console.log("✅ Game saved locally!");
             } else {
-                // ✅ Browser: Save to Firebase
                 await this.saveGameToCloud(user, compressedData);
-                console.log("✅ Game saved to Firebase!");
             }
         } catch (error) {
             console.error("Error saving game:", error);
         }
 
-        // Restore button UI
         this.saveButton.innerHTML = "Save Game";
         this.saveButton.disabled = false;
     }
@@ -204,11 +165,19 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
-        // ✅ Store as a single document (reduces index entries)
-        const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
-        await setDoc(gameSaveRef, { data: gridData });
+        const batch = writeBatch(db);
 
-        console.log("✅ Game saved to Firestore (compressed).");
+        const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
+        const playerSaveRef = doc(db, "game_saves", user.uid, "player_data", "position");
+
+        batch.set(gameSaveRef, { data: gridData });
+        batch.set(playerSaveRef, { x: this.player.x, y: this.player.y });
+
+        try {
+            await batch.commit(); // Execute the batch write
+        } catch (error) {
+            console.error("Error saving data: ", error);
+        }
     }
 
     convertValuesToStrings(obj) {
@@ -226,13 +195,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     init(data) {
-        // TODO add back in to save/load
         if (Object.keys(data).length) {
             if (!data.newGame) {
                 this.grid = data.grid;
             }
 
             this.newGame = data.newGame;
+            console.log(data.playerData, ' : playerData');
             if (data.playerData?.length > 0) {
                 this.playerX = data.playerData[0].x;
                 this.playerY = data.playerData[0].y;
@@ -276,13 +245,9 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    createControls() {
-        this.cursors = this.input.keyboard.createCursorKeys();
-    }
-
     update() {
         if (this.player) {
-            this.handlePlayerMovement();
+            this.controlsManager.handlePlayerMovement();
             // ✅ Update player light position
             this.playerLight.setPosition(this.player.x, this.player.y);
 
@@ -292,25 +257,6 @@ export default class GameScene extends Phaser.Scene {
             this.fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
 
         }
-    }
-
-    handlePlayerMovement() {
-        const speed = 100;
-        if (this.cursors.left.isDown) {
-            this.player.setVelocityX(-speed);
-        } else if (this.cursors.right.isDown) {
-            this.player.setVelocityX(speed);
-        } else {
-            this.player.setVelocityX(0);
-        }
-
-        if (this.cursors.up.isDown && this.player.blocked.down) {
-            this.player.setVelocityY(-150);
-        }
-
-        this.playerRect.x = this.player.x;
-        this.playerRect.y = this.player.y;
-        this.mapService.loadChunks(this.player.x, this.player.y);
     }
 
 }
