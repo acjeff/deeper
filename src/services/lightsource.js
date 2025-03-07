@@ -1,5 +1,5 @@
 export default class LightSource {
-    constructor(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false) {
+    constructor(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false, lightManager) {
         this.x = x; // World X position
         this.y = y; // World Y position
         this.radius = radius; // Light spread
@@ -7,6 +7,7 @@ export default class LightSource {
         this.color = color; // RGB color
         this.raycast = raycast;
         this.neon = neon;
+        this.lightManager = lightManager;
         this.off = false;
     }
 
@@ -14,5 +15,9 @@ export default class LightSource {
     setPosition(x, y) {
         this.x = x;
         this.y = y;
+    }
+
+    destroy() {
+        this.lightManager.destroy(this);
     }
 }

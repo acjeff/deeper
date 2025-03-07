@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {auth, db, provider, signInWithPopup, signOut, getDocs, collection, doc, getDoc} from "../firebaseconfig";
+import LZString from "lz-string";
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
@@ -11,34 +12,108 @@ export default class MenuScene extends Phaser.Scene {
 
 
         // ✅ Google Sign-In Button
-        this.googleSignInButton = this.add.text(300, 200, "Sign in with Google", {fontSize: "24px", fill: "#ff0"})
+        this.googleSignInButton = this.add.text(300, 200, "Sign in with Google", {
+            fontSize: "24px",
+            fill: "#ff0",
+            cursor: 'pointer'
+        })
             .setInteractive()
-            .on("pointerdown", () => this.signInWithGoogle());
+            .on("pointerover", () => {
+                this.googleSignInButton.setAlpha(0.7);
+                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
+            })
+            .on("pointerout", () => {
+                this.input.setDefaultCursor("default");
+                this.googleSignInButton.setAlpha(1);
+            })
+            .on("pointerdown", () => {
+                this.input.setDefaultCursor("default");
+                this.signInWithGoogle()
+            });
 
         // ✅ Logout Button (Initially Hidden)
-        this.logoutButton = this.add.text(300, 250, "Logout", {fontSize: "24px", fill: "#f00"})
+        this.logoutButton = this.add.text(300, 250, "Logout", {fontSize: "24px", fill: "#f00", cursor: 'pointer'})
             .setInteractive()
             .setVisible(false)
-            .on("pointerdown", () => this.logout());
+            .on("pointerover", () => {
+                this.logoutButton.setAlpha(0.7);
+                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
+            })
+            .on("pointerout", () => {
+                this.input.setDefaultCursor("default");
+                this.logoutButton.setAlpha(1);
+            })
+            .on("pointerdown", () => {
+                this.input.setDefaultCursor("default");
+                this.logout()
+            });
 
         // ✅ Load Game Button (Initially Hidden)
-        this.loadGameButton = this.add.text(300, 300, "Load Game", {fontSize: "24px", fill: "#0f0"})
+        this.loadGameButton = this.add.text(300, 300, "Continue", {fontSize: "24px", fill: "#0f0", cursor: 'pointer'})
             .setInteractive()
             .setVisible(false)
-            .on("pointerdown", () => this.loadGame());
+            .on("pointerover", () => {
+                this.loadGameButton.setAlpha(0.7);
+                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
+            })
+            .on("pointerout", () => {
+                this.input.setDefaultCursor("default");
+                this.loadGameButton.setAlpha(1);
+            })
+            .on("pointerdown", () => {
+                this.input.setDefaultCursor("default");
+                this.loadGame()
+            });
+
+        // ✅ Load Game Button (Initially Hidden)
+        this.deleteSaveButton = this.add.text(300, 350, "Start New Game", {
+            fontSize: "24px",
+            fill: "#0f0",
+            cursor: 'pointer'
+        })
+            .setInteractive()
+            .setVisible(false)
+            .on("pointerover", () => {
+                this.deleteSaveButton.setAlpha(0.7);
+                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
+            })
+            .on("pointerout", () => {
+                this.input.setDefaultCursor("default");
+                this.deleteSaveButton.setAlpha(1);
+            })
+            .on("pointerdown", async () => {
+                this.input.setDefaultCursor("default");
+                await this.deleteSaves();
+                await this.createNewGame();
+            });
 
         // ✅ New Game Button (Initially Hidden)
-        this.newGameButton = this.add.text(300, 350, "New Game", {fontSize: "24px", fill: "#00f"})
+        this.newGameButton = this.add.text(300, 350, "New Game", {fontSize: "24px", fill: "#00f", cursor: 'pointer'})
             .setInteractive()
             .setVisible(false)
-            .on("pointerdown", () => this.createNewGame());
+            .on("pointerover", () => {
+                this.newGameButton.setAlpha(0.7);
+                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
+            })
+            .on("pointerout", () => {
+                this.input.setDefaultCursor("default");
+                this.newGameButton.setAlpha(1);
+            })
+            .on("pointerdown", () => {
+                this.input.setDefaultCursor("default");
+                this.createNewGame()
+            });
 
         // ✅ Check if the user is already logged in
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                this.updateUIForLoggedInUser(user);
-            }
-        });
+        if (window.electronAPI?.isElectron) {
+            this.updateUIForLoggedInUser();
+        } else {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    this.updateUIForLoggedInUser(user);
+                }
+            });
+        }
     }
 
     async signInWithGoogle() {
@@ -48,11 +123,12 @@ export default class MenuScene extends Phaser.Scene {
 
             console.log("User signed in:", user);
 
-            const gameSave = await getDoc(doc(db, "game_saves", user.uid, "map_data", "grid_chunk_0"));
+            const gameSave = await getDoc(doc(db, "game_saves", user.uid, "map_data", "grid"));
 
             if (gameSave.exists()) {
                 console.log("Save exists:", gameSave.data());
                 this.loadGameButton.setVisible(true);
+                this.deleteSaveButton.setVisible(true);
             } else {
                 console.log("No save found. Show New Game button.");
                 this.newGameButton.setVisible(true);
@@ -65,33 +141,43 @@ export default class MenuScene extends Phaser.Scene {
         }
     }
 
-    async loadGridChunks(user, chunkCount = 6) {
-        if (!user) return console.error("User not authenticated");
-
-        let fullGrid = {};
-
-        for (let i = 0; i < chunkCount; i++) {
-            const chunkDoc = await getDoc(doc(db, "game_saves", user.uid, "map_data", `grid_chunk_${i}`));
-            if (chunkDoc.exists()) {
-                Object.assign(fullGrid, chunkDoc.data()); // Merge chunks into full grid
-            }
+    async deleteSaves() {
+        if (window.electronAPI?.isElectron) {
+            await window.electronAPI.deleteGameSave();
+        } else {
+            //     Delete cloud save
         }
-
-        // ✅ Convert back from stringified JSON
-        return Object.fromEntries(
-            Object.entries(fullGrid).map(([key, value]) => [key, JSON.parse(value)])
-        );
+        return Promise.resolve();
     }
 
     async loadGame() {
+
+        if (window.electronAPI?.isElectron) {
+            // ✅ Electron: Save Locally
+            this.scene.start("GameScene", {
+                grid: this.savedData.grid,
+                playerData: this.savedData.playerData
+            });
+        } else {
+            // ✅ Browser: Save to Firebase
+            await this.loadGameFromCloud();
+            console.log("✅ Game saved to Firebase!");
+        }
+    }
+
+    async loadGameFromCloud() {
         const user = auth.currentUser;
         if (!user) {
             alert("You must be logged in to load a game.");
             return;
         }
-
+        this.loadGameButton.setText('Loading').setInteractive(false).setAlpha(0.5);
         try {
-            const gameSave = await this.loadGridChunks(user);
+            const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
+            const gameSaveDoc = await getDoc(gameSaveRef);
+            console.log(gameSaveDoc.data().data, ' : gameSaveDoc.data().data')
+            const gameSave = JSON.parse(LZString.decompressFromUTF16(gameSaveDoc.data().data));
+
             const playerDataCollection = collection(db, "game_saves", user.uid, "player_data");
 
             const playerDataSnapshot = await getDocs(playerDataCollection);
@@ -101,7 +187,6 @@ export default class MenuScene extends Phaser.Scene {
                 ...doc.data() // Document fields
             }));
             if (gameSave) {
-                console.log("Game data loaded:", gameSave);
 
                 // ✅ Hide menu and start the game with loaded data
                 this.scene.start("GameScene", {grid: gameSave, user: user, playerData: playerData});
@@ -112,21 +197,26 @@ export default class MenuScene extends Phaser.Scene {
             console.error("Error loading game:", error);
             alert(error.message);
         }
+        this.loadGameButton.setText('Continue').setInteractive(true).setAlpha(1);
     }
 
     async createNewGame() {
-        const user = auth.currentUser;
-        if (!user) {
-            alert("You must be logged in to start a new game.");
-            return;
-        }
+        let user;
 
-        try {
-            this.scene.start("GameScene", {newGame: true, user: user});
-        } catch (error) {
-            console.error("Error creating new game:", error);
-            alert(error.message);
-        }
+        this.deleteSaveButton.setText('Generating map...').setInteractive(false).setAlpha(0.5);
+        window.setTimeout(() => {
+
+            if (!window.electronAPI?.isElectron) {
+                user = auth.currentUser;
+            }
+
+            try {
+                this.scene.start("GameScene", {newGame: true, user: user});
+            } catch (error) {
+                console.error("Error creating new game:", error);
+                alert(error.message);
+            }
+        }, 100)
     }
 
     async logout() {
@@ -138,6 +228,7 @@ export default class MenuScene extends Phaser.Scene {
             this.googleSignInButton.setVisible(true);
             this.logoutButton.setVisible(false);
             this.loadGameButton.setVisible(false);
+            this.deleteSaveButton.setVisible(false);
             this.newGameButton.setVisible(false);
         } catch (error) {
             console.error("Error logging out:", error);
@@ -145,22 +236,46 @@ export default class MenuScene extends Phaser.Scene {
         }
     }
 
-    updateUIForLoggedInUser(user) {
-        console.log(`User logged in: ${user.displayName} (${user.email})`);
+    async updateUIForLoggedInUser(user) {
 
         this.googleSignInButton.setVisible(false);
         this.logoutButton.setVisible(true);
-
-        // ✅ Check if the user already has a game save
         this.loadGameButton.setVisible(false);
+        this.deleteSaveButton.setVisible(false);
         this.newGameButton.setVisible(false);
 
-        getDoc(doc(db, "game_saves", user.uid, "map_data", "grid_chunk_0")).then((gameSave) => {
-            if (gameSave.exists()) {
-                this.loadGameButton.setVisible(true);
+        let hasSaveData = false;
+
+        try {
+            if (window.electronAPI?.isElectron) {
+                this.logoutButton.setVisible(false);
+                // ✅ Electron: Check local save
+                const savedData = await window.electronAPI.loadGame();
+                this.savedData = savedData;
+                if (savedData) {
+                    console.log("✅ Local save found");
+                    hasSaveData = true;
+                }
             } else {
-                this.newGameButton.setVisible(true);
+                // ✅ Browser: Check Firebase save
+                const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
+                const gameSave = await getDoc(gameSaveRef);
+                if (gameSave.exists()) {
+                    console.log("✅ Cloud save found");
+                    hasSaveData = true;
+                }
             }
-        });
+        } catch (error) {
+            console.error("Error checking save data:", error);
+        }
+
+        // ✅ Show the correct button based on whether save data exists
+        if (hasSaveData) {
+            this.loadGameButton.setVisible(true);
+            this.deleteSaveButton.setVisible(true);
+        } else {
+            this.newGameButton.setVisible(true);
+        }
     }
+
 }

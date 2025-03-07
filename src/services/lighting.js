@@ -11,6 +11,7 @@ export default class LightingManager {
     initLighting() {
         // Create a new canvas for the lighting system
         this.scene.lightCanvas = document.createElement("canvas");
+        this.scene.lightCanvas.id = 'light_canvas';
         this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
         this.scene.lightCanvas.height = this.scene.cameras.main.height;
         this.scene.lightCanvas.style.position = "absolute";
@@ -21,6 +22,10 @@ export default class LightingManager {
 
         // Get the canvas context
         this.scene.lightCtx = this.scene.lightCanvas.getContext("2d");
+        window.addEventListener("resize", () => {
+            this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
+            this.scene.lightCanvas.height = this.scene.cameras.main.height;
+        });
     }
 
     /** Registers a Phaser Group for tracking */
@@ -30,13 +35,13 @@ export default class LightingManager {
 
     /** Adds a new light source to the system */
     addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false) {
-        const light = new LightSource(x, y, radius, intensity, color, raycast, neon);
+        const light = new LightSource(x, y, radius, intensity, color, raycast, neon, this);
         this.lights.push(light);
         return light; // Return reference for updates
     }
 
     /** Removes a specific light */
-    removeLight(light) {
+    destroy(light) {
         this.lights = this.lights.filter(l => l !== light);
     }
 
