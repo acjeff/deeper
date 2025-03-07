@@ -15,7 +15,7 @@ export default class ControlsManager {
                 this.scene.drilling = true;
             }
             if (e.key === "g") {
-                const blocks = this.scene.mapService.getEntitiesAround(this.scene.player.x + this.scene.playerSize, this.scene.player.y + this.scene.playerSize, 50);
+                const blocks = this.scene.mapService.getEntitiesAround(this.scene.player.x + this.scene.playerSize, this.scene.player.y + this.scene.playerSize, 5);
                 blocks.forEach(block => {
                     this.scene.mapService.setTile(block.x, block.y, {
                         ...window._tileTypes.empty
@@ -83,54 +83,52 @@ export default class ControlsManager {
         this.scene.mapService.loadChunks(this.scene.player.x, this.scene.player.y);
     }
 
-    getInteractableBlock() {
+    getInteractableBlock(interactionRange) {
         const player = this.scene.player;
+        const pointer = this.scene.input.activePointer; // Get current mouse pointer
 
-        // Get mouse position relative to the center of the screen
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        const mouseX = this.scene.mousePos.x;
-        const mouseY = this.scene.mousePos.y;
+        // Convert mouse screen coordinates to world coordinates
+        const worldPoint = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const worldMouseX = worldPoint.x;
+        const worldMouseY = worldPoint.y;
 
-        // Compute direction vector
-        let dx = mouseX - centerX;
-        let dy = mouseY - centerY;
-        let length = Math.sqrt(dx * dx + dy * dy);
+        // Get all entities around the player
+        const nearbyBlocks = this.scene.mapService.getEntitiesAround(
+            player.x + this.scene.playerSize / 2,
+            player.y + this.scene.playerSize / 2,
+            interactionRange
+        );
 
-        // Normalize direction vector
-        if (length > 0) {
-            dx /= length;
-            dy /= length;
-        }
+        // Find the first block that the mouse is over
+        let hoveredBlock = nearbyBlocks.find(block => this.isMouseOverEntity(block, worldMouseX, worldMouseY));
 
-        // Get all blocks around the player
-        const nearbyBlocks = this.scene.mapService.getEntitiesAround(player.x + this.scene.playerSize / 2, player.y + this.scene.playerSize / 2, 20);
-
-        // Get the closest block in the direction of the mouse
-        const closestBlock = this.scene.mapService.getClosestBlockInDirection(player.x + this.scene.playerSize / 2, player.y + this.scene.playerSize / 2, dx, dy, nearbyBlocks);
-
-        if (closestBlock) {
-            // Remove stroke from the previous block
+        if (!hoveredBlock) {
             if (this.closestBlock && this.closestBlock.setStrokeStyle) {
-                this.closestBlock.setStrokeStyle(0, 0); // Remove stroke
-                this.closestBlock.setDepth(1); // Thickness 3, color red
-            }
-
-            // Store the new closest block
-            this.closestBlock = closestBlock;
-
-            // Apply a red stroke to highlight it
-            if (this.closestBlock.setStrokeStyle) {
-                this.closestBlock.setStrokeStyle(1, 0xFFA500); // Thickness 3, color red
-                this.closestBlock.setDepth(999); // Thickness 3, color red
-            }
-        } else {
-            if (this.closestBlock && this.closestBlock.setStrokeStyle) {
-                this.closestBlock.setStrokeStyle(0, 0); // Remove stroke
-                this.closestBlock.setDepth(1); // Thickness 3, color red
+                this.closestBlock.setStrokeStyle(0, 0);
+                this.closestBlock.setDepth(1);
             }
             this.closestBlock = null;
+            return;
         }
+
+        // Highlight the hovered block
+        if (hoveredBlock !== this.closestBlock) {
+            if (this.closestBlock && this.closestBlock.setStrokeStyle) {
+                this.closestBlock.setStrokeStyle(0, 0);
+                this.closestBlock.setDepth(1);
+            }
+
+            this.closestBlock = hoveredBlock;
+            this.closestBlock.setStrokeStyle(1, 0xFFA500);
+            this.closestBlock.setDepth(999);
+        }
+    }
+
+    isMouseOverEntity(entity, mouseX, mouseY) {
+        if (entity.getBounds) {
+            return entity.getBounds().contains(mouseX, mouseY);
+        }
+        return false;
     }
 
 }

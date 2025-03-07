@@ -156,11 +156,11 @@ export default class MapService {
 
     getClosestBlockInDirection(startX, startY, dirX, dirY, blocks) {
         let closestBlock = null;
-        let closestDistance = Infinity;
+        let closestT = Infinity;
 
         blocks.forEach(block => {
-            let bx = block.x + block.width / 2;
-            let by = block.y + block.height / 2;
+            let bx = block.x;
+            let by = block.y;
 
             // Project the block's position onto the direction vector
             let t = ((bx - startX) * dirX + (by - startY) * dirY);
@@ -168,11 +168,11 @@ export default class MapService {
             if (t > 0) { // Ensure block is in front of the player
                 let projectedX = startX + t * dirX;
                 let projectedY = startY + t * dirY;
-                let distance = Math.sqrt((bx - projectedX) ** 2 + (by - projectedY) ** 2);
+                let perpendicularDistance = Math.sqrt((bx - projectedX) ** 2 + (by - projectedY) ** 2);
 
-                // If the block is close to the line, consider it
-                if (distance < this.game.tileSize / 2 && t < closestDistance) {
-                    closestDistance = t;
+                // If the block is close to the direction line and is the closest so far
+                if (perpendicularDistance < this.game.playerSize / 2 && t < closestT) {
+                    closestT = t;
                     closestBlock = block;
                 }
             }
@@ -180,6 +180,7 @@ export default class MapService {
 
         return closestBlock;
     }
+
 
     getEntitiesAround(x, y, radius) {
         let entities = [];
