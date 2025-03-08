@@ -11,6 +11,11 @@ window._playerSize = 8;
 window._gridSize = 200;
 window._width = window._tileSize * window._gridSize;
 window._height = window._tileSize * window._gridSize;
+window._soilTypes = {
+    1: {
+        image: 'coal'
+    }
+}
 window._tileTypes = {
     empty: {
         id: 0
@@ -18,6 +23,11 @@ window._tileTypes = {
     soil: {
         id: 1,
         strength: 200
+    },
+    coal: {
+        id: 1,
+        strength: 200,
+        type: 1
     },
     water: {
         id: 2
@@ -33,19 +43,19 @@ window._tileTypes = {
 window._randomElements = [
     {
         tile: {
-            ...window._tileTypes.soil,
+            ...window._tileTypes.empty,
             strength: 500
         },
         widthRange: [20, 30],
         heightRange: [20, 30],
-        count: 5000,
+        count: 10000,
         layerWeights: [10, 0, 0, 0, 0, 0, 0]
     }, {
         tile: {
             ...window._tileTypes.soil,
             strength: 1000
         },
-        count: 5000,
+        count: 10000,
         widthRange: [50, 80],
         heightRange: [20, 30],
         layerWeights: [0, 10, 0, 0, 0, 0, 0]

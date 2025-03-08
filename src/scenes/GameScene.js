@@ -17,13 +17,12 @@ export default class GameScene extends Phaser.Scene {
         this.tileSize = window._tileSize;
         this.playerSize = window._playerSize;
         this.soilGroup = this.physics.add.staticGroup();
-        this.waterGroup = this.physics.add.group();
-        this.physics.add.collider(this.waterGroup, this.soilGroup);
+        this.emptyGroup = this.add.group();
+        this.lightGroup = this.add.group();
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.controlsManager = new ControlsManager(this);
-
-        this.entityChildren = [this.soilGroup, this.waterGroup, this.lightingManager.lights];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();

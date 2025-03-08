@@ -1,5 +1,5 @@
-import {Soil} from "./soil";
+import {Breakable} from "./breakable";
 import {Light} from "./light";
 import {Empty} from "./empty";
 
-export {Soil, Light, Empty};
+export {Breakable, Light, Empty};

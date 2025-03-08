@@ -11,6 +11,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('dust', 'images/particles/dust.png');
         this.load.image('crack', 'images/cracked.png');
         this.load.image('lamp', 'images/lamp.png');
+        this.load.image('coal', 'images/coal.png');
     }
 
     create() {

@@ -1,5 +1,5 @@
 import * as ROT from "rot-js";
-import {Soil, Light, Empty} from "../classes/tiles";
+import {Breakable, Light, Empty} from "../classes/tiles";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -82,6 +82,22 @@ export default class MapService {
 
 
         // this.setRandomElement(window._tileTypes.stone, 100000);
+    }
+
+    getLocalCellFromWorldPosition(worldX, worldY) {
+        const globalCellX = Math.floor(worldX / this.game.tileSize);
+        const globalCellY = Math.floor(worldY / this.game.tileSize);
+
+        const cellX = globalCellX % this.game.chunkSize;
+        const cellY = globalCellY % this.game.chunkSize;
+
+        return { cellX, cellY };
+    }
+
+    getCellFromWorldPosition(worldX, worldY) {
+        const cellX = Math.floor(worldX / this.game.tileSize);
+        const cellY = Math.floor(worldY / this.game.tileSize);
+        return {cellX, cellY};
     }
 
     getChunkKey(x, y) {
@@ -176,17 +192,14 @@ export default class MapService {
     getEntitiesAround(x, y, radius) {
         let entities = [];
 
-        // Iterate over each group in entityChildren
         this.game.entityChildren.forEach(group => {
-            if (group.children) {
-                // Handle Phaser groups (e.g., soilGroup, waterGroup)
+            if (group?.children) {
                 group.children.each(entity => {
                     if (this.isWithinRadius(entity.x, entity.y, x, y, radius)) {
                         entities.push(entity);
                     }
                 });
             } else if (Array.isArray(group)) {
-                // Handle arrays of entities (e.g., lightingManager.lights)
                 group.forEach(entity => {
                     if (this.isWithinRadius(entity.x, entity.y, x, y, radius)) {
                         entities.push(entity);
@@ -240,21 +253,34 @@ export default class MapService {
     }
 
     setTile(worldX, worldY, tileType, cellItem) {
-        const {chunkKey, cellY, cellX} = cellItem;
+        let _cellItem = {
+            chunkKey: this.game.mapService.getChunkKey(worldX, worldY),
+            ...this.game.mapService.getLocalCellFromWorldPosition(worldX, worldY)
+        }
+        let {chunkKey, cellY, cellX} = cellItem ? cellItem : _cellItem;
 
-        if (!this.game.grid[chunkKey]) return; // Ensure chunk exists
+        if (!this.game.grid[chunkKey] || !this.game.grid[chunkKey][cellY] || !this.game.grid[chunkKey][cellX]) return; // Ensure chunk exists
 
         this.game.grid[chunkKey][cellY][cellX] = tileType;
 
-        cellItem.tileRef.destroy();
+        if (cellItem?.tileRef) cellItem.tileRef.destroy();
 
         this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
 
     }
 
     placeObject(tileType, worldX, worldY, cellDetails) {
+        if (tileType.id === window._tileTypes.empty.id) {
+            new Empty({
+                game: this.game,
+                cellDetails: cellDetails,
+                tileDetails: tileType,
+                worldX: worldX,
+                worldY: worldY
+            });
+        }
         if (tileType.id === window._tileTypes.soil.id) {
-            new Soil({
+            new Breakable({
                 game: this.game,
                 cellDetails: cellDetails,
                 tileDetails: tileType,
@@ -298,7 +324,7 @@ export default class MapService {
         const chunkPixelSize = this.game.chunkSize * this.game.tileSize;
 
         this.game.entityChildren.forEach((entityGroup) => {
-            if (entityGroup.children) {
+            if (entityGroup?.children) {
                 entityGroup.children.getArray().slice().forEach((tile) => {
                     if (!tile.active) return; // Skip already destroyed or inactive tiles
                     const {x, y} = tile;

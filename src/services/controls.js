@@ -1,3 +1,5 @@
+import {Light} from "../classes/light";
+
 export default class ControlsManager {
     constructor(scene) {
         this.scene = scene;
@@ -45,9 +47,6 @@ export default class ControlsManager {
             if (e.key === "c") {
                 this.scene.glowStickCol = (this.scene.glowStickCol + 1) % this.scene.glowStickCols.length;
             }
-            if (e.key === "l") {
-                this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 10, 0.8, this.scene.glowStickCols[this.scene.glowStickCol], false, true);
-            }
             if (e.key === "t") {
                 this.scene.playerLight.off = !this.scene.playerLight.off;
             }
@@ -80,8 +79,6 @@ export default class ControlsManager {
         this.scene.mapService.loadChunks(this.scene.player.x, this.scene.player.y);
         this.scene.playerLight.setPosition(this.scene.player.x, this.scene.player.y);
     }
-
-
 
     getInteractableBlock(interactionRange) {
         const player = this.scene.player;

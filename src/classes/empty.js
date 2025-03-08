@@ -1,16 +1,28 @@
 import {Tile} from "./tile";
+
 export class Empty extends Tile {
-    constructor({game, worldX, worldY, chunkKey, cellX, cellY}) {
-        super({game, worldX, worldY, chunkKey, cellX, cellY});
-        this.strength = 100;
+    constructor({game, worldX, worldY, tileDetails, cellDetails}) {
+        super({game, worldX, worldY, tileDetails, cellDetails});
+        this.game = game;
+        this.init();
+    }
+
+    addToGroup() {
+        return this.game.emptyGroup.add(this.sprite);
     }
 
     createSprite() {
-        return this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, 0x724c25);
+        let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
+        baseSprite.setAlpha(0);
+        return baseSprite;
     }
 
-    hit_block() {
-        super.hit_block();
-        this.sprite.fillColor = 0x5e3b1c; // Darken slightly on hit
+    onClick() {
+        let baseCell = {...window._tileTypes.light};
+        this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+    }
+
+    destroy() {
+        this.sprite.destroy();
     }
 }

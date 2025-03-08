@@ -1,7 +1,7 @@
 import {Tile} from "./tile";
 import {darkenColor} from "../services/colourManager";
 
-export class Soil extends Tile {
+export class Breakable extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
         this.init();
@@ -11,30 +11,27 @@ export class Soil extends Tile {
         return this.game.soilGroup.add(this.sprite);
     }
 
-    onMouseLeave() {
-        this.sprite.setStrokeStyle(0, 0);
-        this.sprite.setDepth(1);
-        this.crackSprite.setDepth(2);
-    }
-
-    onMouseEnter(hoveredBlock) {
-        this.sprite.setStrokeStyle(1, 0xFFA500);
-        this.sprite.setDepth(999);
-        this.crackSprite.setDepth(9910);
-    }
-
     createSprite() {
-        const baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
+        let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
+
+        if (this.tileDetails.type) {
+            const image = window._soilTypes[this.tileDetails.type].image;
+            this.overlaySprite = this.game.add.image(this.worldX, this.worldY, image);
+            this.overlaySprite.setDisplaySize(this.game.tileSize, this.game.tileSize);
+            this.overlaySprite.setDepth(3);
+        }
+
         this.crackSprite = this.game.add.image(this.worldX, this.worldY, 'crack');
         this.crackSprite.setDisplaySize(this.game.tileSize - 1, this.game.tileSize - 1);
         this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
-        this.crackSprite.setDepth(2);
+        this.crackSprite.setDepth(4);
         return baseSprite;
     }
 
     destroy() {
         this.crackSprite.destroy();
         this.sprite.destroy();
+        if (this.overlaySprite) this.overlaySprite.destroy();
     }
 
     onClick() {
