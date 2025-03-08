@@ -24,23 +24,18 @@ window._tileTypes = {
         id: 3
     },
     light: {
-        id: 4,
-        color: 0xff0000
+        id: 4
     }
 }
 
 window._randomElements = [
     {
         tile: {
-            ...window._tileTypes.empty
+            ...window._tileTypes.light,
+            radius: 30
         },
-        count: 1000
-    },
-    {
-        tile: {
-            ...window._tileTypes.light
-        },
-        count: 1000
+        count: 1000,
+        layerWeights: [10, 0, 0, 0, 0, 0, 0]
     },
     {
         tile: {

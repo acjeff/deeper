@@ -9,6 +9,8 @@ export default class LightSource {
         this.neon = neon;
         this.lightManager = lightManager;
         this.off = false;
+        // Add an 'active' property to match Phaser convention
+        this.active = true;
     }
 
     /** Updates the position of the light (for dynamic lights) */
@@ -18,6 +20,8 @@ export default class LightSource {
     }
 
     destroy() {
+        if (!this.active) return;  // Guard against double-destroy
+        this.active = false;
         this.lightManager.destroy(this);
     }
 }

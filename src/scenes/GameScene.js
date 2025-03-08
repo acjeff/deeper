@@ -2,8 +2,7 @@ import MapService from "../services/map";
 import LightingManager from "../services/lighting";
 import {db, doc, writeBatch} from "../firebaseconfig.js";
 import LZString from "lz-string";
-import ControlsManager from "../services/controls"; // Install via `npm install lz-string`
-
+import ControlsManager from "../services/controls";
 
 export default class GameScene extends Phaser.Scene {
 
@@ -14,11 +13,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async create() {
-        let self = this;
-
-        // TODO remove back in to save/load
-        // this.newGame = true;
-
         this.tileSize = window._tileSize;
         this.playerSize = window._playerSize;
         this.digging = false;
@@ -27,7 +21,6 @@ export default class GameScene extends Phaser.Scene {
         this.soilGroup = this.physics.add.staticGroup();
         this.waterGroup = this.physics.add.group();
         this.physics.add.collider(this.waterGroup, this.soilGroup);
-        // this.physics.add.collider(this.waterGroup, this.waterGroup);
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.controlsManager = new ControlsManager(this);
@@ -211,13 +204,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createPlayer() {
-        let x = this.playerX || (this.mapWidth / 2);
-        let y = this.playerY || 0;
+        this.startPoint = {x: 300, y: 197};
+        let x = this.playerX || this.startPoint.x;
+        let y = this.playerY || this.startPoint.y;
 
-        this.startPoint = {
-            x: x,
-            y: 0
-        }
 
         this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);
         this.player.setBounce(0.2);

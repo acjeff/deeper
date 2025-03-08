@@ -54,8 +54,9 @@ export default class ControlsManager {
                 this.scene.playerLight.off = !this.scene.playerLight.off;
             }
             if (e.key === "p") {
-                this.scene.player.x = this.scene.startPoint.x;
-                this.scene.player.y = this.scene.startPoint.y;
+                const relativePos = {x: this.scene.startPoint.x, y: this.scene.startPoint.y};
+                this.scene.player.x = relativePos.x;
+                this.scene.player.y = relativePos.y;
             }
         });
         window.addEventListener("keyup", (e) => {
