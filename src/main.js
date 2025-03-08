@@ -43,7 +43,7 @@ window._tileTypes = {
 window._randomElements = [
     {
         tile: {
-            ...window._tileTypes.empty,
+            ...window._tileTypes.coal,
             strength: 500
         },
         widthRange: [20, 30],
