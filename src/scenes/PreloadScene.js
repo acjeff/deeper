@@ -8,6 +8,8 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image("energy", "src/images/energy.png"); // ✅ Ensure the file exists
         this.load.image("door", "src/images/door.png"); // ✅ Ensure the file exists
         this.load.image("wall", "src/images/door.png");
+        this.load.image('dust', 'src/images/particles/dust.png');
+        this.load.image('crack', 'src/images/cracked.png');
 
     }
 

@@ -1,4 +1,5 @@
 import * as ROT from "rot-js";
+import {Soil, Light, Empty} from "../classes/tiles";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -9,6 +10,17 @@ export default class MapService {
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
+        this.game.dustEmitter = this.game.add.particles(0, 0, 'dust', {
+            lifespan: { min: 200, max: 500 },
+            speed: { min: 20, max: 50 },
+            scale: { start: 0.1, end: 0.1 },
+            alpha: { start: 0.5, end: 0 },
+            quantity: 100,
+            emitting: false,
+            blendMode: 'NORMAL'
+        });
+        this.game.dustEmitter.setDepth(9999);
+
         // this.waterSim = new WaterSimulation(this.game);
 
         // this.game.physics.world.setBounds(0, 0, this.game.mapWidth, this.game.mapHeight);
@@ -345,94 +357,53 @@ export default class MapService {
 
         this.game.grid[chunkKey][cellY][cellX] = tileType;
 
-        // Remove existing Phaser objects at this position
-        this.game.soilGroup.children.each((tile) => {
-            if (tile.x === worldX && tile.y === worldY) {
-                tile.destroy();
-            }
-        });
-        this.game.waterGroup.children.each((tile) => {
-            if (tile.x === worldX && tile.y === worldY) {
-                tile.destroy();
-            }
-        });
+        cellItem.tileRef.destroy();
 
         this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
 
     }
 
-    darkenColor(hexColor, factor) {
-        // Ensure the hex color is a valid 6-digit hex string
-        hexColor = hexColor & 0xFFFFFF;
-
-        // Extract RGB components
-        let r = (hexColor >> 16) & 0xFF;
-        let g = (hexColor >> 8) & 0xFF;
-        let b = hexColor & 0xFF;
-
-        // Normalize factor to be between 0 and 1 (assuming factor is between 0-100)
-        let darkenFactor = Math.min(Math.max(factor / 100, 0), 1);
-
-        // Apply darkening
-        r = Math.round(r * (1 - darkenFactor));
-        g = Math.round(g * (1 - darkenFactor));
-        b = Math.round(b * (1 - darkenFactor));
-
-        // Convert back to hex
-        let darkenedHex = (r << 16) | (g << 8) | b;
-
-        // Return as a hex string
-        return `0x${darkenedHex.toString(16).padStart(6, '0')}`;
-    }
-
     placeObject(tileType, worldX, worldY, cellDetails) {
-        const {chunkKey, cellX, cellY} = cellDetails;
-        let groupAddFuncs = [], object;
-        const tileData = tileType;
-
-        if (tileData.id === window._tileTypes.soil.id) {
-            // Place hard soil
-            groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
-            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.darkenColor(0x724c25, parseInt(tileData.strength) / 10));
-            object.strength = tileData.strength / 100;
+        if (tileType.id === window._tileTypes.soil.id) {
+            new Soil({game: this.game, cellDetails: cellDetails, tileDetails: tileType, worldX: worldX, worldY: worldY});
         }
-        if (tileData.id === window._tileTypes.light.id) {
-            this.game.lightingManager.addLight(worldX, worldY, 20, 0.8, this.game.glowStickCols[1], false, true);
-        } else if (tileData.id === window._tileTypes.stone.id) {
-            // Place regular soil
-            groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
-            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
-            object.strength = 10;
-        } else if (tileData.id === window._tileTypes.water.id) {
-            object = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
-            object.setAlpha(0.5);
-            const circleRadius = this.game.tileSize / 4;
-
-            // Add physics first so `object.body` exists
-            this.game.add.existing(object);
-
-            object.body.setCircle(circleRadius);
-            object.body.setBounce(0.05);
-            object.body.setFriction(0);
-            object.body.setDamping(true);
-            object.body.setDrag(0, 0);
-            object.body.setVelocityX(Phaser.Math.Between(-30, 30));
-            object.body.setMass(0.01);
-            object.body.allowGravity = true;
-            object.body.allowRotation = true;
-
-            groupAddFuncs.push(obj => this.game.waterGroup.add(obj));
-        }
-        if (groupAddFuncs.length && object) {
-            object.chunkKey = chunkKey;
-            object.cellX = cellX;
-            object.cellY = cellY;
-            groupAddFuncs.forEach(func => {
-                if (func) {
-                    func(object)
-                }
-            });
-        }
+        // if (tileData.id === window._tileTypes.light.id) {
+        //     this.game.lightingManager.addLight(worldX, worldY, 20, 0.8, this.game.glowStickCols[1], false, true);
+        // } else if (tileData.id === window._tileTypes.stone.id) {
+        //     // Place regular soil
+        //     groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
+        //     object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
+        //     object.strength = 10;
+        // } else if (tileData.id === window._tileTypes.water.id) {
+        //     object = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
+        //     object.setAlpha(0.5);
+        //     const circleRadius = this.game.tileSize / 4;
+        //
+        //     // Add physics first so `object.body` exists
+        //     this.game.add.existing(object);
+        //
+        //     object.body.setCircle(circleRadius);
+        //     object.body.setBounce(0.05);
+        //     object.body.setFriction(0);
+        //     object.body.setDamping(true);
+        //     object.body.setDrag(0, 0);
+        //     object.body.setVelocityX(Phaser.Math.Between(-30, 30));
+        //     object.body.setMass(0.01);
+        //     object.body.allowGravity = true;
+        //     object.body.allowRotation = true;
+        //
+        //     groupAddFuncs.push(obj => this.game.waterGroup.add(obj));
+        // }
+        // if (groupAddFuncs.length && object) {
+        //     object.chunkKey = chunkKey;
+        //     object.cellX = cellX;
+        //     object.cellY = cellY;
+        //     groupAddFuncs.forEach(func => {
+        //         if (func) {
+        //             func(object)
+        //         }
+        //     });
+        // }
 
     }
 

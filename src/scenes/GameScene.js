@@ -213,6 +213,7 @@ export default class GameScene extends Phaser.Scene {
         this.player.setBounce(0.2);
         this.playerRect = this.add.rectangle(x, y, this.playerSize, this.playerSize, 0xffb2fd);
         this.playerRect.setOrigin(0, 0);
+        this.player.hitPower = 100;
         // this.player.setCollideWorldBounds(true);
 
         if (this.soilGroup) {

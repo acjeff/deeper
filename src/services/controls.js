@@ -24,11 +24,9 @@ export default class ControlsManager {
             }
         });
 
-        window.addEventListener("click", (e) => {
+        window.addEventListener("mousedown", (e) => {
             if (this.closestBlock) {
-                this.scene.mapService.setTile(this.closestBlock.x, this.closestBlock.y, {
-                    ...window._tileTypes.empty
-                }, this.closestBlock);
+                this.closestBlock.tileRef.onClick(e);
             }
         });
 
@@ -105,8 +103,7 @@ export default class ControlsManager {
 
         if (!hoveredBlock) {
             if (this.closestBlock && this.closestBlock.setStrokeStyle) {
-                this.closestBlock.setStrokeStyle(0, 0);
-                this.closestBlock.setDepth(1);
+                this.closestBlock.tileRef.onMouseLeave();
             }
             this.closestBlock = null;
             return;
@@ -115,13 +112,11 @@ export default class ControlsManager {
         // Highlight the hovered block
         if (hoveredBlock !== this.closestBlock) {
             if (this.closestBlock && this.closestBlock.setStrokeStyle) {
-                this.closestBlock.setStrokeStyle(0, 0);
-                this.closestBlock.setDepth(1);
+                this.closestBlock.tileRef.onMouseLeave();
             }
 
             this.closestBlock = hoveredBlock;
-            this.closestBlock.setStrokeStyle(1, 0xFFA500);
-            this.closestBlock.setDepth(999);
+            this.closestBlock.tileRef.onMouseEnter();
         }
     }
 

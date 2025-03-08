@@ -14,18 +14,18 @@ export default class LightingManager {
         this.colorCaches = {};
         this.scene.lightCanvas = document.createElement("canvas");
         this.scene.lightCanvas.id = 'light_canvas';
-        this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
+        this.scene.lightCanvas.width = this.scene.cameras.main.width;
         this.scene.lightCanvas.height = this.scene.cameras.main.height;
         this.scene.lightCanvas.style.position = "absolute";
         this.scene.lightCanvas.style.top = "0";
         this.scene.lightCanvas.style.left = "0";
-        this.scene.lightCanvas.style.pointerEvents = "none"; // Ensure it doesn't block input
+        this.scene.lightCanvas.style.pointerEvents = "none";
         document.body.appendChild(this.scene.lightCanvas);
 
         // Get the canvas context
         this.scene.lightCtx = this.scene.lightCanvas.getContext("2d");
         window.addEventListener("resize", () => {
-            this.scene.lightCanvas.width = this.scene.cameras.main.width; // Match game world size
+            this.scene.lightCanvas.width = this.scene.cameras.main.width;
             this.scene.lightCanvas.height = this.scene.cameras.main.height;
         });
 
@@ -123,9 +123,6 @@ export default class LightingManager {
 
         // Select cached canvas based on the color
         const cachedCanvas = this.cachedCanvases[light.color] || this.cachedCanvases['255,255,255'];
-        console.log(this.cachedCanvases, ' : this.cachedCanvases');
-        console.log(light.color, ' : light.color');
-        console.log(cachedCanvas, ' : cachedCanvas');
 
         // Step 1: Apply the gradient blur (destination-out)
         ctx.globalCompositeOperation = "destination-out";

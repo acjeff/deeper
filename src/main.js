@@ -31,10 +31,12 @@ window._tileTypes = {
 window._randomElements = [
     {
         tile: {
-            ...window._tileTypes.light,
-            radius: 30
+            ...window._tileTypes.soil,
+            strength: 500
         },
-        count: 1000,
+        widthRange: [20, 30],
+        heightRange: [20, 30],
+        count: 5000,
         layerWeights: [10, 0, 0, 0, 0, 0, 0]
     },
     {
