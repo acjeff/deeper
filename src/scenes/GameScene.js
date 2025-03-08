@@ -5,6 +5,7 @@ import LZString from "lz-string";
 import ControlsManager from "../services/controls";
 import CameraManager from "../services/cameraManager";
 import PlayerManager from "../services/playerManager";
+import UiManager from "../services/uiManager";
 
 export default class GameScene extends Phaser.Scene {
 
@@ -32,84 +33,18 @@ export default class GameScene extends Phaser.Scene {
 
         this.playerManager = new PlayerManager(this);
         this.cameraManager = new CameraManager(this);
+        this.uiManager = new UiManager(this);
 
         this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255"];
         this.glowStickCol = 0;
 
-        this.addSaveButton();
-        this.addBackToMenuButton();
+        this.saveButton = this.uiManager.addSaveButton();
+        this.backToMenuButton = this.uiManager.addBackToMenuButton();
 
         if (this.newGame) {
             await this.saveGame(this.user, this.grid);
         }
 
-    }
-
-    addBackToMenuButton() {
-        let self = this;
-        this.backToMenuButton = document.createElement("button");
-        this.backToMenuButton.id = 'menu_button';
-        this.backToMenuButton.innerText = "Back to menu";
-        this.backToMenuButton.style.position = "absolute";
-        this.backToMenuButton.style.top = "10px";
-        this.backToMenuButton.style.left = "10px";
-        this.backToMenuButton.style.padding = "10px 15px";
-        this.backToMenuButton.style.fontSize = "16px";
-        this.backToMenuButton.style.backgroundColor = "#646464"; // Green button
-        this.backToMenuButton.style.color = "#fff";
-        this.backToMenuButton.style.border = "none";
-        this.backToMenuButton.style.borderRadius = "5px";
-        this.backToMenuButton.style.cursor = "pointer";
-        this.backToMenuButton.style.zIndex = "1000"; // Ensure it stays on top
-
-        document.body.appendChild(this.backToMenuButton);
-
-        this.backToMenuButton.addEventListener("click", async () => {
-            // 🚀 UI Update Before Processing
-            this.backToMenuButton.disabled = true;
-            this.backToMenuButton.style.pointerEvents = 'none';
-            this.backToMenuButton.innerHTML = "Saving...";
-            this.saveButton.style.visibility = 'hidden';
-            window.setTimeout(async () => {
-                await this.saveGame(self.user, self.grid);
-                this.backToMenuButton.remove();
-                this.saveButton.remove();
-                this.lightCanvas.remove();
-                this.scene.stop("GameScene"); // ✅ Stop the game scene
-                this.scene.start("MenuScene");
-            }, 100)
-
-        });
-    }
-
-    addSaveButton() {
-        let self = this;
-        this.saveButton = document.createElement("button");
-        this.saveButton.id = 'save_button';
-        this.saveButton.innerText = "Save Game";
-        this.saveButton.style.position = "absolute";
-        this.saveButton.style.top = "10px";
-        this.saveButton.style.right = "10px";
-        this.saveButton.style.padding = "10px 15px";
-        this.saveButton.style.fontSize = "16px";
-        this.saveButton.style.backgroundColor = "#28a745"; // Green button
-        this.saveButton.style.color = "#fff";
-        this.saveButton.style.border = "none";
-        this.saveButton.style.borderRadius = "5px";
-        this.saveButton.style.cursor = "pointer";
-        this.saveButton.style.zIndex = "1000"; // Ensure it stays on top
-
-        document.body.appendChild(this.saveButton);
-
-        this.saveButton.addEventListener("click", async () => {
-            // 🚀 UI Update Before Processing
-            this.saveButton.disabled = true;
-            this.saveButton.innerHTML = "Saving...";
-            window.setTimeout(async () => {
-                await this.saveGame(self.user, self.grid);
-            }, 100)
-
-        });
     }
 
     async saveGame(user, gridData) {
