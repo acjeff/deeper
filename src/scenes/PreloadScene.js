@@ -4,12 +4,12 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image("player", "src/images/player.png"); // ✅ Update with the correct path
-        this.load.image("energy", "src/images/energy.png"); // ✅ Ensure the file exists
-        this.load.image("door", "src/images/door.png"); // ✅ Ensure the file exists
-        this.load.image("wall", "src/images/door.png");
-        this.load.image('dust', 'src/images/particles/dust.png');
-        this.load.image('crack', 'src/images/cracked.png');
+        this.load.image("player", "images/player.png"); // ✅ Update with the correct path
+        this.load.image("energy", "images/energy.png"); // ✅ Ensure the file exists
+        this.load.image("door", "images/door.png"); // ✅ Ensure the file exists
+        this.load.image("wall", "images/door.png");
+        this.load.image('dust', 'images/particles/dust.png');
+        this.load.image('crack', 'images/cracked.png');
 
     }
 
