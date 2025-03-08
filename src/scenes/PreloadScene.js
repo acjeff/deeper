@@ -10,12 +10,9 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image("wall", "images/door.png");
         this.load.image('dust', 'images/particles/dust.png');
         this.load.image('crack', 'images/cracked.png');
-
     }
 
     create() {
-        // TODO remove back in to save/load
         this.scene.start("MenuScene");
-        // this.scene.start("GameScene");
     }
 }

@@ -25,14 +25,10 @@ export class Soil extends Tile {
     createSprite() {
         const baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
 
-        // Crack overlay sprite (initially invisible)
         this.crackSprite = this.game.add.image(this.worldX, this.worldY, 'crack');
         this.crackSprite.setDisplaySize(this.game.tileSize - 1, this.game.tileSize - 1);
         this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
         this.crackSprite.setDepth(2);
-        // this.crackSprite.setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2));
-        // this.crackSprite.setFlipX(Phaser.Math.Between(0, 1) === 1);
-        // this.crackSprite.setFlipY(Phaser.Math.Between(0, 1) === 1);
         return baseSprite;
     }
 
@@ -58,24 +54,14 @@ export class Soil extends Tile {
             this.game.physics.world.disable(this.sprite);
             this.crackSprite.setAlpha(0);
             this.sprite.setStrokeStyle(0, 0);
-            this.game.dustEmitter.explode(50); // emit 10 particles
+            this.game.dustEmitter.explode(50);
 
             baseCell = {...window._tileTypes.empty};
-            // this.game.tweens.add({
-            //     targets: [this.sprite, this.crackSprite],
-            //     alpha: 0,
-            //     scaleX: 1.5,
-            //     scaleY: 1.5,
-            //     duration: 300,
-            //     ease: 'Cubic.easeOut',
-            //     onComplete: () => {
-                    this.clicking = false;
-                    this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-            //     }
-            // });
+            this.clicking = false;
+            this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
 
         } else {
-            this.game.dustEmitter.explode(5); // emit 10 particles
+            this.game.dustEmitter.explode(5);
             this.game.tweens.add({
                 targets: this.crackSprite,
                 alpha: 1 - health,

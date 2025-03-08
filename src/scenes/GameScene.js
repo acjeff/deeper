@@ -3,6 +3,8 @@ import LightingManager from "../services/lighting";
 import {db, doc, writeBatch} from "../firebaseconfig.js";
 import LZString from "lz-string";
 import ControlsManager from "../services/controls";
+import CameraManager from "../services/cameraManager";
+import PlayerManager from "../services/playerManager";
 
 export default class GameScene extends Phaser.Scene {
 
@@ -15,9 +17,6 @@ export default class GameScene extends Phaser.Scene {
     async create() {
         this.tileSize = window._tileSize;
         this.playerSize = window._playerSize;
-        this.digging = false;
-        this.drilling = false;
-
         this.soilGroup = this.physics.add.staticGroup();
         this.waterGroup = this.physics.add.group();
         this.physics.add.collider(this.waterGroup, this.soilGroup);
@@ -30,28 +29,13 @@ export default class GameScene extends Phaser.Scene {
         if (this.newGame) {
             this.mapService.generateMap();
         }
-        this.zoomAmount = 4;
 
-        this.createPlayer();
-        this.playerLight = this.lightingManager.addLight(this.player.x, this.player.y, this.playerSize * 10, 0.6, '253,196,124', true);
+        this.playerManager = new PlayerManager(this);
+        this.cameraManager = new CameraManager(this);
+
         this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255"];
         this.glowStickCol = 0;
-
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1, 0, 0);
-        this.cameras.main.setZoom(this.zoomAmount);
-        this.cameras.main.removeBounds();
-        this.fpsText = this.add.text(20, 50, "FPS: --", {
-            fontSize: "24px",
-            fill: "#ffffff"
-        });
-
-        this.energyText = this.add.text(20, 20, `Energy: ${this.energyCount} / ${this.totalEnergy}`, {
-            fontSize: "24px",
-            fill: "#a3ff5d"
-        });
-
         this.cameras.main.ignore([this.energyText]);
-
 
         this.addSaveButton();
         this.addBackToMenuButton();
@@ -203,49 +187,11 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    createPlayer() {
-        this.startPoint = {x: 300, y: 197};
-        let x = this.playerX || this.startPoint.x;
-        let y = this.playerY || this.startPoint.y;
-
-
-        this.player = this.physics.add.body(x, y, this.playerSize, this.playerSize);
-        this.player.setBounce(0.2);
-        this.playerRect = this.add.rectangle(x, y, this.playerSize, this.playerSize, 0xffb2fd);
-        this.playerRect.setOrigin(0, 0);
-        this.player.hitPower = 100;
-        // this.player.setCollideWorldBounds(true);
-
-        if (this.soilGroup) {
-            this.physics.add.collider(this.player, this.soilGroup, (player, soil) => this.digSoil(player, soil), null, this);
-        }
-    }
-
-    digSoil(player, soil) {
-        if (this.digging) {
-            if (soil.strength === 1) {
-                this.mapService.setTile(soil.x, soil.y, '0', soil);
-            }
-        }
-        if (this.drilling) {
-            if (this.energyCount >= soil.strength) {
-                this.mapService.setTile(soil.x, soil.y, '0', soil);
-                this.energyCount -= soil.strength;
-                // this.energyText.setText(`Energy: ${this.energyCount} / ${this.totalEnergy}`);
-            }
-        }
-    }
-
     update() {
         if (this.player) {
             this.controlsManager.handlePlayerMovement();
-            // ✅ Update player light position
             this.playerLight.setPosition(this.player.x, this.player.y);
-
-            // ✅ Update lighting
             this.lightingManager.updateLighting();
-
-            this.fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
 
             this.controlsManager.getInteractableBlock(15);
 
