@@ -28,6 +28,7 @@ export class Light extends Tile {
         let baseCell = {...window._tileTypes.empty};
         this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
         this.light.destroy();
+        this.lampSprite.destroy();
     }
 
 }
