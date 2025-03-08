@@ -35,7 +35,6 @@ export default class GameScene extends Phaser.Scene {
 
         this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255"];
         this.glowStickCol = 0;
-        this.cameras.main.ignore([this.energyText]);
 
         this.addSaveButton();
         this.addBackToMenuButton();
