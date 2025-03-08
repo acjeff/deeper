@@ -1,4 +1,4 @@
-import {Tile} from "./Tile";
+import {Tile} from "./tile";
 import {darkenColor} from "../services/colourManager";
 
 export class Soil extends Tile {

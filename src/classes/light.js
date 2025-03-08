@@ -1,4 +1,4 @@
-import {Tile} from "./Tile";
+import {Tile} from "./tile";
 export class Light extends Tile {
     constructor({game, worldX, worldY, chunkKey, cellX, cellY}) {
         super({game, worldX, worldY, chunkKey, cellX, cellY});
