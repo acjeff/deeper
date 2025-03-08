@@ -11,8 +11,6 @@ export default class GameScene extends Phaser.Scene {
 
     constructor() {
         super("GameScene");
-        this.energyCount = 50000;
-        this.totalEnergy = 200;
     }
 
     async create() {
@@ -31,19 +29,21 @@ export default class GameScene extends Phaser.Scene {
             this.mapService.generateMap();
         }
 
-        this.playerManager = new PlayerManager(this);
-        this.cameraManager = new CameraManager(this);
-        this.uiManager = new UiManager(this);
+        window.setTimeout(async () => {
+            this.playerManager = new PlayerManager(this);
+            this.cameraManager = new CameraManager(this);
+            this.uiManager = new UiManager(this);
 
-        this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255"];
-        this.glowStickCol = 0;
+            this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];
+            this.glowStickCol = 0;
 
-        this.saveButton = this.uiManager.addSaveButton();
-        this.backToMenuButton = this.uiManager.addBackToMenuButton();
+            this.saveButton = this.uiManager.addSaveButton();
+            this.backToMenuButton = this.uiManager.addBackToMenuButton();
 
-        if (this.newGame) {
-            await this.saveGame(this.user, this.grid);
-        }
+            if (this.newGame) {
+                await this.saveGame(this.user, this.grid);
+            }
+        });
 
     }
 
@@ -124,11 +124,8 @@ export default class GameScene extends Phaser.Scene {
     update() {
         if (this.player) {
             this.controlsManager.handlePlayerMovement();
-            this.playerLight.setPosition(this.player.x, this.player.y);
             this.lightingManager.updateLighting();
-
             this.controlsManager.getInteractableBlock(15);
-
         }
     }
 

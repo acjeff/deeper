@@ -11,10 +11,10 @@ export default class MapService {
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
         this.game.dustEmitter = this.game.add.particles(0, 0, 'dust', {
-            lifespan: { min: 200, max: 500 },
-            speed: { min: 20, max: 50 },
-            scale: { start: 0.1, end: 0.1 },
-            alpha: { start: 0.5, end: 0 },
+            lifespan: {min: 200, max: 500},
+            speed: {min: 20, max: 50},
+            scale: {start: 0.1, end: 0.1},
+            alpha: {start: 0.5, end: 0},
             quantity: 100,
             emitting: false,
             blendMode: 'NORMAL'
@@ -33,20 +33,18 @@ export default class MapService {
         return Math.floor(y / this.layerHeight);
     }
 
-    /** Generate the entire map but store it in chunks */
-    generateMap(emptyTopRows = 10) {
+    generateMap() {
         let map = new ROT.Map.Cellular(this.game.mapWidth, this.game.mapHeight);
 
         map.randomize(0.5);
 
-        // Initialize grid storage
         for (let y = 0; y < this.game.mapHeight; y += this.game.chunkSize) {
             for (let x = 0; x < this.game.mapWidth; x += this.game.chunkSize) {
                 let chunkKey = `${x}_${y}`;
                 this.game.grid[chunkKey] = Array.from({length: this.game.chunkSize}, () =>
                     Array(this.game.chunkSize).fill({
                         ...window._tileTypes.soil
-                    }) // Default soil
+                    })
                 );
             }
         }
@@ -59,7 +57,7 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                if (y > 20) {
+                if (y > window.aboveGround) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
                         ...window._tileTypes.soil
                     } : {
@@ -92,7 +90,6 @@ export default class MapService {
         return `${chunkX}_${chunkY}`;
     }
 
-    /** Randomly places empty tiles (energy spaces) */
     setRandomElement(element, count, widthRange = [1, 1], heightRange = [1, 1], edgeNoiseChance = 0.3, layerWeights = [1, 1, 1, 1, 1, 1, 1]) {
         let self = this;
         let placed = 0;
@@ -100,6 +97,7 @@ export default class MapService {
         let chunkKeys = Object.keys(this.game.grid);
 
         function placeBlock(x, y) {
+            if (y < 20) return false;
             let chunkKey = self.getChunkKey.call(this, x, y);
             if (!this.game.grid[chunkKey]) return false;
 
@@ -126,6 +124,7 @@ export default class MapService {
             // Choose a weighted layer
             let chosenLayer = weightedLayers[Math.floor(Math.random() * weightedLayers.length)];
             let startY = chosenLayer * this.layerHeight + Math.floor(Math.random() * this.layerHeight);
+            if (startY < 20) continue;
             let startX = chunkX + Math.floor(Math.random() * this.game.chunkSize);
 
             let key = `${startX}_${startY}`;
@@ -174,34 +173,6 @@ export default class MapService {
         }
     }
 
-    getClosestBlockInDirection(startX, startY, dirX, dirY, blocks) {
-        let closestBlock = null;
-        let closestT = Infinity;
-
-        blocks.forEach(block => {
-            let bx = block.x;
-            let by = block.y;
-
-            // Project the block's position onto the direction vector
-            let t = ((bx - startX) * dirX + (by - startY) * dirY);
-
-            if (t > 0) { // Ensure block is in front of the player
-                let projectedX = startX + t * dirX;
-                let projectedY = startY + t * dirY;
-                let perpendicularDistance = Math.sqrt((bx - projectedX) ** 2 + (by - projectedY) ** 2);
-
-                // If the block is close to the direction line and is the closest so far
-                if (perpendicularDistance < this.game.playerSize / 2 && t < closestT) {
-                    closestT = t;
-                    closestBlock = block;
-                }
-            }
-        });
-
-        return closestBlock;
-    }
-
-
     getEntitiesAround(x, y, radius) {
         let entities = [];
 
@@ -227,79 +198,12 @@ export default class MapService {
         return entities;
     }
 
-// Helper function to check if an entity is within the given radius
     isWithinRadius(entityX, entityY, centerX, centerY, radius) {
         let dx = entityX - centerX;
         let dy = entityY - centerY;
         return Math.sqrt(dx * dx + dy * dy) <= radius;
     }
 
-    getBlocksAround(x, y, radius) {
-        let blocks = [];
-
-        for (let dy = -radius; dy <= radius; dy++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-                let nx = x + dx;
-                let ny = y + dy;
-
-                // Ensure we don't include the center block itself
-                if (dx === 0 && dy === 0) continue;
-
-                // Determine the chunk key and local coordinates within the chunk
-                let chunkKey = this.getChunkKey(nx, ny);
-                let localX = nx % this.game.chunkSize;
-                let localY = ny % this.game.chunkSize;
-
-                if (this.game.grid[chunkKey] && this.game.grid[chunkKey][localY]) {
-                    let block = this.game.grid[chunkKey][localY][localX];
-                    blocks.push({x: nx, y: ny, block});
-                }
-            }
-        }
-
-        return blocks;
-    }
-
-    getGlobalRelativePosition(goalPosition, currentPosition) {
-        let x = Math.round((goalPosition.chunkX + goalPosition.x) - (currentPosition.chunkX + currentPosition.x));
-        let y = Math.round((goalPosition.chunkY + goalPosition.y) - (currentPosition.chunkY + currentPosition.y));
-
-        return {x, y};
-    }
-
-    // updateWorldBounds() {
-    //     if (this.game.loadedChunks.size === 0) return; // Avoid errors if no chunks are loaded
-    //
-    //     let minX = Infinity, minY = Infinity;
-    //     let maxX = -Infinity, maxY = -Infinity;
-    //
-    //     for (let key of this.game.loadedChunks.keys()) {
-    //         let [cx, cy] = key.split('_').map(Number);
-    //
-    //         // Convert chunk coordinates to pixel coordinates
-    //         let chunkStartX = cx * this.game.tileSize;
-    //         let chunkStartY = cy * this.game.tileSize;
-    //         let chunkEndX = chunkStartX + this.game.chunkSize * this.game.tileSize;
-    //         let chunkEndY = chunkStartY + this.game.chunkSize * this.game.tileSize;
-    //
-    //         // Track min/max bounds
-    //         minX = Math.min(minX, chunkStartX);
-    //         minY = Math.min(minY, chunkStartY);
-    //         maxX = Math.max(maxX, chunkEndX);
-    //         maxY = Math.max(maxY, chunkEndY);
-    //     }
-    //
-    //     // Set new bounds (width and height calculated from min/max)
-    //     let worldWidth = maxX - minX;
-    //     let worldHeight = maxY - minY;
-    //     this.game.wx = minX;
-    //     this.game.wy = minY;
-    //     this.game.ww = worldWidth;
-    //     this.game.wh = worldHeight;
-    //     //     ADD SHADOW LAYER
-    // }
-
-    /** Loads chunks around the player */
     loadChunks(playerX, playerY, renderDistance = window._renderDistance) {
         let chunkX = Math.floor(playerX / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
         let chunkY = Math.floor(playerY / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
@@ -335,21 +239,6 @@ export default class MapService {
         this.game.children.bringToTop(this.game.shadowGraphics);
     }
 
-    getRandomWaterColor(baseColor, variation = 15) {
-        // Extract RGB from base color
-        let r = (baseColor >> 16) & 0xFF;
-        let g = (baseColor >> 8) & 0xFF;
-        let b = baseColor & 0xFF;
-
-        // Apply small random variation (clamp to 0-255)
-        r = Phaser.Math.Clamp(r + Phaser.Math.Between(-variation, variation), 0, 255);
-        g = Phaser.Math.Clamp(g + Phaser.Math.Between(-variation, variation), 0, 255);
-        b = Phaser.Math.Clamp(b + Phaser.Math.Between(-variation, variation), 0, 255);
-
-        // Convert back to hex
-        return (r << 16) | (g << 8) | b;
-    }
-
     setTile(worldX, worldY, tileType, cellItem) {
         const {chunkKey, cellY, cellX} = cellItem;
 
@@ -365,49 +254,26 @@ export default class MapService {
 
     placeObject(tileType, worldX, worldY, cellDetails) {
         if (tileType.id === window._tileTypes.soil.id) {
-            new Soil({game: this.game, cellDetails: cellDetails, tileDetails: tileType, worldX: worldX, worldY: worldY});
+            new Soil({
+                game: this.game,
+                cellDetails: cellDetails,
+                tileDetails: tileType,
+                worldX: worldX,
+                worldY: worldY
+            });
         }
-        // if (tileData.id === window._tileTypes.light.id) {
-        //     this.game.lightingManager.addLight(worldX, worldY, 20, 0.8, this.game.glowStickCols[1], false, true);
-        // } else if (tileData.id === window._tileTypes.stone.id) {
-        //     // Place regular soil
-        //     groupAddFuncs.push((obj) => this.game.soilGroup.add(obj));
-        //     object = this.game.add.rectangle(worldX, worldY, this.game.tileSize, this.game.tileSize, this.getRandomWaterColor(0x969696, 5));
-        //     object.strength = 10;
-        // } else if (tileData.id === window._tileTypes.water.id) {
-        //     object = this.game.add.rectangle(worldX, worldY, this.game.tileSize * 1.3, this.game.tileSize, 0x89CFF0);
-        //     object.setAlpha(0.5);
-        //     const circleRadius = this.game.tileSize / 4;
-        //
-        //     // Add physics first so `object.body` exists
-        //     this.game.add.existing(object);
-        //
-        //     object.body.setCircle(circleRadius);
-        //     object.body.setBounce(0.05);
-        //     object.body.setFriction(0);
-        //     object.body.setDamping(true);
-        //     object.body.setDrag(0, 0);
-        //     object.body.setVelocityX(Phaser.Math.Between(-30, 30));
-        //     object.body.setMass(0.01);
-        //     object.body.allowGravity = true;
-        //     object.body.allowRotation = true;
-        //
-        //     groupAddFuncs.push(obj => this.game.waterGroup.add(obj));
-        // }
-        // if (groupAddFuncs.length && object) {
-        //     object.chunkKey = chunkKey;
-        //     object.cellX = cellX;
-        //     object.cellY = cellY;
-        //     groupAddFuncs.forEach(func => {
-        //         if (func) {
-        //             func(object)
-        //         }
-        //     });
-        // }
+        if (tileType.id === window._tileTypes.light.id) {
+            new Light({
+                game: this.game,
+                cellDetails: cellDetails,
+                tileDetails: tileType,
+                worldX: worldX,
+                worldY: worldY
+            })
+        }
 
     }
 
-    /** Render a chunk */
     renderChunk(cx, cy) {
         let chunkKey = `${cx}_${cy}`;
 
@@ -425,7 +291,6 @@ export default class MapService {
         }
     }
 
-    /** Remove chunk from rendering */
     unloadChunk(chunkKey) {
         const [chunkStartX, chunkStartY] = chunkKey.split('_').map(Number);
         const chunkPixelX = chunkStartX * this.game.tileSize;
@@ -436,7 +301,7 @@ export default class MapService {
             if (entityGroup.children) {
                 entityGroup.children.getArray().slice().forEach((tile) => {
                     if (!tile.active) return; // Skip already destroyed or inactive tiles
-                    const { x, y } = tile;
+                    const {x, y} = tile;
 
                     if (
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
@@ -448,7 +313,7 @@ export default class MapService {
             } else if (Array.isArray(entityGroup)) {
                 entityGroup.slice().forEach((tile) => {
                     if (!tile.active) return; // Check again for active tiles
-                    const { x, y } = tile;
+                    const {x, y} = tile;
 
                     if (
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
@@ -462,6 +327,5 @@ export default class MapService {
 
         this.game.loadedChunks.delete(chunkKey);
     }
-
 
 }

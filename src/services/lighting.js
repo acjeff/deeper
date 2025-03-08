@@ -28,7 +28,7 @@ export default class LightingManager {
             this.scene.lightCanvas.height = this.scene.cameras.main.height;
         });
 
-        this.initColorCaches(["163,255,93", "255,163,93", "163,93,255", "253,196,124"], 256, 10);
+        this.initColorCaches(window.lightColors, 256, 10);
     }
 
     initColorCaches(colorsArray, maxRadius = 256, blurAmount = 10) {
@@ -44,7 +44,8 @@ export default class LightingManager {
     }
 
     /** Adds a new light source to the system */
-    addLight(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false) {
+    addLight(x, y, radius = 20, intensity = 0.8, color = "255,255,255", raycast = false, neon = false) {
+        console.log('color in addLight: ', color);
         const light = new LightSource(x, y, radius, intensity, color, raycast, neon, this);
         this.lights.push(light);
         return light;

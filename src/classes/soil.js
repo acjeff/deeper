@@ -4,6 +4,7 @@ import {darkenColor} from "../services/colourManager";
 export class Soil extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
+        this.init();
     }
 
     addToGroup() {
@@ -24,7 +25,6 @@ export class Soil extends Tile {
 
     createSprite() {
         const baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
-
         this.crackSprite = this.game.add.image(this.worldX, this.worldY, 'crack');
         this.crackSprite.setDisplaySize(this.game.tileSize - 1, this.game.tileSize - 1);
         this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
@@ -41,14 +41,9 @@ export class Soil extends Tile {
         if (this.clicking) return;
         this.clicking = true;
         const hitPower = this.game.player.hitPower;
-        console.log(hitPower, ' : hitPower');
         let baseCell, damageAmount = this.tileDetails.damageAmount || 0;
-        console.log(damageAmount.toString(), ' : damageAmount');
         damageAmount += hitPower;
-        console.log(damageAmount.toString(), ' : damageAmount');
-        console.log(this.tileDetails.strength, ' : this.tileDetails.strength');
         let health = -(damageAmount / this.tileDetails.strength - 1);
-        console.log(health, ' : health')
         this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y);
         if (health <= 0) {
             this.game.physics.world.disable(this.sprite);

@@ -1,5 +1,6 @@
 export default class LightSource {
     constructor(x, y, radius = 200, intensity = 0.8, color = "255,255,255", raycast = false, neon = false, lightManager) {
+        console.log(color, ' : color');
         this.x = x; // World X position
         this.y = y; // World Y position
         this.radius = radius; // Light spread

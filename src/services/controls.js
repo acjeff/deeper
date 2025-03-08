@@ -46,15 +46,13 @@ export default class ControlsManager {
                 this.scene.glowStickCol = (this.scene.glowStickCol + 1) % this.scene.glowStickCols.length;
             }
             if (e.key === "l") {
-                this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 10, 0.8, this.scene.glowStickCols[this.scene.glowStickCol], false, true); // Orange torch light
+                this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 10, 0.8, this.scene.glowStickCols[this.scene.glowStickCol], false, true);
             }
             if (e.key === "t") {
                 this.scene.playerLight.off = !this.scene.playerLight.off;
             }
             if (e.key === "p") {
-                const relativePos = {x: this.scene.startPoint.x, y: this.scene.startPoint.y};
-                this.scene.player.x = relativePos.x;
-                this.scene.player.y = relativePos.y;
+                this.scene.playerManager.returnToBaseCamp()
             }
         });
         window.addEventListener("keyup", (e) => {
@@ -80,7 +78,10 @@ export default class ControlsManager {
         this.scene.playerRect.x = this.scene.player.x;
         this.scene.playerRect.y = this.scene.player.y;
         this.scene.mapService.loadChunks(this.scene.player.x, this.scene.player.y);
+        this.scene.playerLight.setPosition(this.scene.player.x, this.scene.player.y);
     }
+
+
 
     getInteractableBlock(interactionRange) {
         const player = this.scene.player;

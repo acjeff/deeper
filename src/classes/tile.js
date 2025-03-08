@@ -8,6 +8,10 @@ export class Tile {
         this.cellY = cellDetails.cellY;
         this.tileDetails = tileDetails;
         this.cellDetails = cellDetails;
+
+    }
+
+    init() {
         this.sprite = this.createSprite();
         this.sprite.tileRef = this;
         this.sprite.cellX = this.cellX;
@@ -30,10 +34,9 @@ export class Tile {
     }
 
     setupInteractions() {
-        this.sprite.setInteractive();
-        // this.sprite.on('pointerdown', () => {
-        //     this.onClick();
-        // });
+        if (this.sprite.setInteractive) {
+            this.sprite.setInteractive();
+        }
     }
 
     onClick() {}

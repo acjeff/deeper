@@ -3,7 +3,9 @@ import GameScene from "./scenes/GameScene.js";
 import MenuScene from "./scenes/MenuScene";
 import PreloadScene from "./scenes/PreloadScene";
 
+window.lightColors = ["163,255,93", "255,163,93", "163,93,255", "253,196,124", '255,255,255'];
 window._renderDistance = 1;
+window.aboveGround = 20;
 window._tileSize = 10;
 window._playerSize = 8;
 window._gridSize = 200;
@@ -38,26 +40,17 @@ window._randomElements = [
         heightRange: [20, 30],
         count: 5000,
         layerWeights: [10, 0, 0, 0, 0, 0, 0]
-    },
-    {
+    }, {
         tile: {
-            ...window._tileTypes.empty
+            ...window._tileTypes.soil,
+            strength: 1000
         },
-        count: 1000,
-        widthRange: [20, 30],
+        count: 5000,
+        widthRange: [50, 80],
         heightRange: [20, 30],
-        edgeNoiseChance: 0.5,
-        layerWeights: [10, 0, 0, 0, 0, 0, 0]
-    },
-    {
-        tile: {
-            ...window._tileTypes.stone
-        },
-        count: 1000,
-        widthRange: [10, 50],
-        heightRange: [5, 5],
         layerWeights: [0, 10, 0, 0, 0, 0, 0]
-    }];
+    }
+];
 
 const config = {
     type: Phaser.AUTO,
