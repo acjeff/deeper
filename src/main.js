@@ -3,7 +3,7 @@ import GameScene from "./scenes/GameScene.js";
 import MenuScene from "./scenes/MenuScene";
 import PreloadScene from "./scenes/PreloadScene";
 
-window.lightColors = ["163,255,93", "255,163,93", "163,93,255", "253,196,124", '255,255,255'];
+window.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
 window._renderDistance = 1;
 window.aboveGround = 20;
 window._tileSize = 10;
