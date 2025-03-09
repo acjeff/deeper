@@ -74,11 +74,14 @@ export default class ControlsManager {
         if (this.scene.keys.up.isDown && this.scene.player.blocked.down) {
             this.scene.player.setVelocityY(-150);
         }
+        const playerOffset = this.scene.playerSize / 2;
+        const playerX = this.scene.player.x + playerOffset;
+        const playerY = this.scene.player.y + playerOffset;
 
         this.scene.playerRect.x = this.scene.player.x;
         this.scene.playerRect.y = this.scene.player.y;
-        this.scene.mapService.loadChunks(this.scene.player.x, this.scene.player.y);
-        this.scene.playerLight.setPosition(this.scene.player.x, this.scene.player.y);
+        this.scene.mapService.loadChunks(playerX, playerY);
+        this.scene.playerLight.setPosition(playerX, playerY);
     }
 
     getInteractableBlock(interactionRange) {

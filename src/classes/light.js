@@ -21,7 +21,7 @@ export class Light extends Tile {
         this.lampSprite.setDepth(-1);
         baseSprite.setAlpha(0);
 
-        this.light = this.game.lightingManager.addLight(this.worldX, this.worldY, this.radius, this.intensity, this.color, false, this.neon);
+        this.light = this.game.lightingManager.addLight(this.worldX + this.game.tileSize / 2, this.worldY + this.game.tileSize / 2, this.radius, this.intensity, this.color, false, this.neon);
         return baseSprite;
     }
 
