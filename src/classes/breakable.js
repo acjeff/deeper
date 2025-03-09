@@ -77,7 +77,7 @@ export class Breakable extends Tile {
                 this.crackSprite.setAlpha(0);
                 this.sprite.setStrokeStyle(0, 0);
                 this.game.dustEmitter.explode(50);
-                baseCell = {...window._tileTypes.empty};
+                baseCell = this.tileDetails.trapped || {...window._tileTypes.empty};
                 this.clicking = false;
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
             } else {

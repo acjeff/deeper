@@ -47,7 +47,17 @@ export class Tile {
                 targets: this.fadeElements,
                 alpha: 1,
                 duration: window.fadeSpeed, // Duration in ms; adjust as needed
-                ease: 'ease-out'
+                ease: 'ease-out',
+                onComplete: () => {
+                    let insideSquare = this.game.mapService.areSquaresIntersecting(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2, this.game.playerSize, this.worldX, this.worldY, this.game.tileSize);
+                    if (this.tileDetails.caved) {
+                        console.log(insideSquare, ' : insideSquare');
+                        console.log(this.tileDetails.caved, ' : this.tileDetails.caved');
+                    }
+                    if (this.tileDetails.caved && insideSquare) {
+                        this.game.playerManager.returnToBaseCamp();
+                    }
+                }
             };
             // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
             if (this.tileDetails.caved) {
@@ -58,6 +68,21 @@ export class Tile {
                 this.game.dustEmitter.explode(50);
             }
             this.game.tweens.add(anims);
+        }
+    }
+
+    checkState() {
+        const blockAbove = this.game.mapService.getBlockAbove(this.worldX, this.worldY);
+        if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
+            let tileDetails= {
+                ...window._tileTypes.soil,
+                strength: 100,
+                caved: true
+            };
+            if (this.tileDetails.id !== 0) {
+                tileDetails.trapped = this.tileDetails;
+            }
+            this.game.mapService.setTile(this.worldX, this.worldY, tileDetails, this.sprite);
         }
     }
 

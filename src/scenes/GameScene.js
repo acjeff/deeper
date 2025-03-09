@@ -47,8 +47,7 @@ export default class GameScene extends Phaser.Scene {
 
             window.setInterval(async () => {
                 let processed = 0;
-                let softSoil = this.emptyGroup.getChildren();
-                console.log(softSoil.length);
+                let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren());
                 while (processed < batchSize && currentIndex < softSoil.length) {
                     const block = softSoil[currentIndex];
                     if (block.tileRef?.checkState) block.tileRef?.checkState();

@@ -183,6 +183,14 @@ export default class MapService {
             }
         }
     }
+    areSquaresIntersecting(square1X, square1Y, square1Size, square2X, square2Y, square2Size) {
+        return (
+            square1X < square2X + square2Size &&
+            square1X + square1Size > square2X &&
+            square1Y < square2Y + square2Size &&
+            square1Y + square1Size > square2Y
+        );
+    }
 
     getBlockAbove(x, y) {
         let blockAbove = null;
