@@ -4,7 +4,7 @@ import {darkenColor} from "../services/colourManager";
 export class Breakable extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
-        const randomDelay = Phaser.Math.Between(1000, 3000);
+        const randomDelay = Phaser.Math.Between(50, 100);
         if (this.tileDetails.caved) {
             this.game.time.delayedCall(randomDelay, () => {
                 this.init();

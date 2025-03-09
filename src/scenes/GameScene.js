@@ -45,8 +45,6 @@ export default class GameScene extends Phaser.Scene {
                 await this.saveGame(this.user, this.grid);
             }
 
-            console.log(this.grid, ' : grid');
-
             window.setInterval(async () => {
                 let processed = 0;
                 let softSoil = this.emptyGroup.getChildren();
@@ -60,7 +58,7 @@ export default class GameScene extends Phaser.Scene {
                 if (currentIndex >= softSoil.length) {
                     currentIndex = 0;
                 }
-            }, 1000);
+            }, 100);
         });
 
 

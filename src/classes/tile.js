@@ -52,6 +52,10 @@ export class Tile {
             // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
             if (this.tileDetails.caved) {
                 anims.y = '+=' + this.game.tileSize;
+                this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y + this.game.tileSize);
+                // this.game.dustEmitter.setAngle({ min: 85, max: 95 });
+// Optionally, apply a vertical gravity to simulate falling.
+                this.game.dustEmitter.explode(50);
             }
             this.game.tweens.add(anims);
         }
