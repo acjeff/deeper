@@ -6,6 +6,8 @@ import ControlsManager from "../services/controls";
 import CameraManager from "../services/cameraManager";
 import PlayerManager from "../services/playerManager";
 import UiManager from "../services/uiManager";
+const batchSize = 100;
+let currentIndex = 0;
 
 export default class GameScene extends Phaser.Scene {
 
@@ -42,7 +44,25 @@ export default class GameScene extends Phaser.Scene {
             if (this.newGame) {
                 await this.saveGame(this.user, this.grid);
             }
+
+            console.log(this.grid, ' : grid');
+
+            window.setInterval(async () => {
+                let processed = 0;
+                let softSoil = this.emptyGroup.getChildren();
+                console.log(softSoil.length);
+                while (processed < batchSize && currentIndex < softSoil.length) {
+                    const block = softSoil[currentIndex];
+                    if (block.tileRef?.checkState) block.tileRef?.checkState();
+                    currentIndex++;
+                    processed++;
+                }
+                if (currentIndex >= softSoil.length) {
+                    currentIndex = 0;
+                }
+            }, 1000);
         });
+
 
     }
 
@@ -120,7 +140,7 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    update() {
+    update(time, delta) {
         if (this.player) {
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting();

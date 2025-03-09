@@ -37,15 +37,23 @@ export class Tile {
         this.addToGroup();
         if (this.sprite && this.fadeElements && this.fadeElements.length > 0) {
             this.fadeElements.forEach(fe => {
-                fe.setAlpha(0);
-            })
-            // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
-            this.game.tweens.add({
+                if (this.tileDetails.caved) {
+                    fe.y -= this.game.tileSize;
+                } else {
+                    fe.setAlpha(0);
+                }
+            });
+            let anims = {
                 targets: this.fadeElements,
                 alpha: 1,
                 duration: window.fadeSpeed, // Duration in ms; adjust as needed
                 ease: 'ease-out'
-            });
+            };
+            // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
+            if (this.tileDetails.caved) {
+                anims.y = '+=' + this.game.tileSize;
+            }
+            this.game.tweens.add(anims);
         }
     }
 

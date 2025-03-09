@@ -11,6 +11,17 @@ export class Empty extends Tile {
         return this.game.emptyGroup.add(this.sprite);
     }
 
+    checkState() {
+        const blockAbove = this.game.mapService.getBlockAbove(this.worldX, this.worldY);
+        if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
+            this.game.mapService.setTile(this.worldX, this.worldY, {
+                ...window._tileTypes.soil,
+                strength: 100,
+                caved: true
+            }, this.sprite);
+        }
+    }
+
     removeFromGroup() {
         return this.game.emptyGroup.remove(this.sprite);
     }

@@ -4,7 +4,18 @@ import {darkenColor} from "../services/colourManager";
 export class Breakable extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
-        this.init();
+        const randomDelay = Phaser.Math.Between(1000, 3000);
+        if (this.tileDetails.caved) {
+            this.game.time.delayedCall(randomDelay, () => {
+                this.init();
+            });
+        } else {
+            this.init();
+        }
+    }
+
+    checkState() {
+        console.log('Check block');
     }
 
     addToGroup() {
@@ -30,6 +41,7 @@ export class Breakable extends Tile {
         this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
         this.crackSprite.setDepth(4);
         this.fadeElements = [baseSprite];
+
         return baseSprite;
     }
 
@@ -44,7 +56,7 @@ export class Breakable extends Tile {
     destroy() {
         if (!this.active) return;  // Guard against double-destroy
         if (this.clicking) {
-         this.removeElements()
+            this.removeElements()
         } else {
             this.animatedDestroy(this.removeElements.bind(this));
         }
@@ -60,15 +72,14 @@ export class Breakable extends Tile {
             let health = -(damageAmount / this.tileDetails.strength - 1);
             this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y);
             if (health <= 0) {
+                console.log('destory block');
                 this.game.physics.world.disable(this.sprite);
                 this.crackSprite.setAlpha(0);
                 this.sprite.setStrokeStyle(0, 0);
                 this.game.dustEmitter.explode(50);
-
                 baseCell = {...window._tileTypes.empty};
                 this.clicking = false;
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-
             } else {
                 this.game.dustEmitter.explode(5);
                 this.game.tweens.add({

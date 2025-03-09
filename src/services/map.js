@@ -20,11 +20,6 @@ export default class MapService {
             blendMode: 'NORMAL'
         });
         this.game.dustEmitter.setDepth(9999);
-
-        // this.waterSim = new WaterSimulation(this.game);
-
-        // this.game.physics.world.setBounds(0, 0, this.game.mapWidth, this.game.mapHeight);
-
         this.layerCount = 7;
         this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);
     }
@@ -189,6 +184,34 @@ export default class MapService {
         }
     }
 
+    getBlockAbove(x, y) {
+        let blockAbove = null;
+        const tileSize = this.game.tileSize;
+        // The target position for the block directly above
+        const targetX = x;
+        const targetY = y - tileSize;
+
+        this.game.entityChildren.forEach(group => {
+            if (group?.children) {
+                group.children.each(entity => {
+                    if (Math.abs(entity.x - targetX) < tileSize / 2 &&
+                        Math.abs(entity.y - targetY) < tileSize / 2) {
+                        blockAbove = entity;
+                    }
+                });
+            } else if (Array.isArray(group)) {
+                group.forEach(entity => {
+                    if (Math.abs(entity.x - targetX) < tileSize / 2 &&
+                        Math.abs(entity.y - targetY) < tileSize / 2) {
+                        blockAbove = entity;
+                    }
+                });
+            }
+        });
+
+        return blockAbove;
+    }
+
     getEntitiesAround(x, y, radius) {
         let entities = [];
 
@@ -267,6 +290,10 @@ export default class MapService {
 
         this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
 
+    }
+
+    getTileAt(chunkKey, cellY, cellX) {
+        return this.game.grid[chunkKey][cellY][cellX];
     }
 
     placeObject(tileType, worldX, worldY, cellDetails) {
