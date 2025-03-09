@@ -21,5 +21,13 @@ export default class PlayerManager {
         this.scene.player.x = relativePos.x;
         this.scene.player.y = relativePos.y;
         this.scene.playerLight.setPosition(this.scene.player.x, this.scene.player.y);
+        this.scene.freezePlayer = true;
+        // Stop following so the jump isn't overridden by the follow behavior
+        this.scene.cameras.main.stopFollow();
+        this.scene.cameras.main.setScroll(relativePos.x, relativePos.y);
+        this.scene.cameras.main.startFollow(this.scene.player);
+        window.setTimeout(() => {
+            this.scene.freezePlayer = false;
+        }, 500);
     }
 }
