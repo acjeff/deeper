@@ -10,6 +10,7 @@ export default class PlayerManager {
         this.scene.player.setBounce(0.2);
         this.scene.playerRect = this.scene.add.rectangle(x, y, this.scene.playerSize, this.scene.playerSize, 0xffb2fd);
         this.scene.playerRect.setOrigin(0, 0);
+        // this.scene.player.setGravity(0, 0);
         this.scene.player.hitPower = 100;
         this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2, this.scene.playerSize * 4, 0.6, window.lightColors[1], false);
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup);

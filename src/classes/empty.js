@@ -18,8 +18,10 @@ export class Empty extends Tile {
     }
 
     onClick() {
-        let baseCell = {...window._tileTypes.light, radius: 100, color: window.lightColors[1], neon: false};
-        this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+        this.onClickHandler(() => {
+            let baseCell = {...window._tileTypes.light, radius: 100, color: window.lightColors[1], neon: false};
+            this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+        })
     }
 
     destroy() {

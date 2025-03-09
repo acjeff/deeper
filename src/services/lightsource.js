@@ -19,6 +19,10 @@ export default class LightSource {
         this.y = y;
     }
 
+    turnOff() {
+
+    }
+
     destroy() {
         if (!this.active) return;  // Guard against double-destroy
         this.active = false;

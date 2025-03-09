@@ -13,6 +13,7 @@ export default class LightingManager {
         this.colorCaches = {};
         this.scene.lightCanvas = document.createElement("canvas");
         this.scene.lightCanvas.id = 'light_canvas';
+        this.initViewMask();
         this.scene.lightCanvas.width = this.scene.cameras.main.width;
         this.scene.lightCanvas.height = this.scene.cameras.main.height;
         this.scene.lightCanvas.style.position = "absolute";
@@ -71,7 +72,72 @@ export default class LightingManager {
 
         this.lights.forEach(light => !light.off && this.castLight(light));
 
+        this.updateViewMask();
+
         ctx.globalCompositeOperation = "source-over";
+    }
+
+    updateViewMask() {
+        const ctx = this.viewMaskCtx;
+        const canvas = this.viewMaskCanvas;
+
+        // Clear the mask canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Fill the entire canvas with black
+        ctx.fillStyle = "rgba(0,0,0,1)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Set composite mode to subtract from the black overlay
+        ctx.globalCompositeOperation = "destination-out";
+
+        // Get camera properties and compute the scaled view radius
+        const camera = this.scene.cameras.main;
+        const zoom = camera.zoom;
+        const baseViewRadius = window.renderviewDistance; // Base view distance in world units
+        const viewRadius = baseViewRadius * zoom; // Scale radius by the current zoom
+
+        // Define the center of the view mask (e.g., centered on the screen, or player's screen position)
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Create a radial gradient with a blurred edge:
+        // Inner circle (80% of the view radius) fully subtracts the black, fading to transparent at the outer edge.
+        const innerRadius = viewRadius * 0.8;
+        const gradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, viewRadius);
+        gradient.addColorStop(0, "rgba(0,0,0,1)"); // Fully subtract at the inner circle
+        gradient.addColorStop(1, "rgba(0,0,0,0)"); // No subtraction at the outer circle
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, viewRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Reset composite mode
+        ctx.globalCompositeOperation = "source-over";
+    }
+
+    initViewMask() {
+        // Create a new canvas for the view mask
+        this.viewMaskCanvas = document.createElement("canvas");
+        this.viewMaskCanvas.id = "view_mask_canvas";
+        this.viewMaskCanvas.width = this.scene.cameras.main.width;
+        this.viewMaskCanvas.height = this.scene.cameras.main.height;
+        this.viewMaskCanvas.style.position = "absolute";
+        this.viewMaskCanvas.style.top = "0";
+        this.viewMaskCanvas.style.left = "0";
+        // Ensure the mask canvas is on top
+        this.viewMaskCanvas.style.zIndex = "1000";
+        this.viewMaskCanvas.style.pointerEvents = "none";
+        document.body.appendChild(this.viewMaskCanvas);
+
+        this.viewMaskCtx = this.viewMaskCanvas.getContext("2d");
+
+        // Update size on resize
+        window.addEventListener("resize", () => {
+            this.viewMaskCanvas.width = this.scene.cameras.main.width;
+            this.viewMaskCanvas.height = this.scene.cameras.main.height;
+        });
     }
 
     createCachedLightTexture(color = '255,255,255', maxRadius = 500, blurAmount = 10) {

@@ -4,7 +4,7 @@ import {Breakable, Light, Empty} from "../classes/tiles";
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
         this.game = game;
-        this.game.chunkSize = 16;
+        this.game.chunkSize = 6;
         this.game.mapHeight = 1040;
         this.game.mapWidth = 320;
         this.game.loadedChunks = new Map();
@@ -91,7 +91,7 @@ export default class MapService {
         const cellX = globalCellX % this.game.chunkSize;
         const cellY = globalCellY % this.game.chunkSize;
 
-        return { cellX, cellY };
+        return {cellX, cellY};
     }
 
     getCellFromWorldPosition(worldX, worldY) {
@@ -297,7 +297,6 @@ export default class MapService {
                 worldY: worldY
             })
         }
-
     }
 
     renderChunk(cx, cy) {
@@ -333,7 +332,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.destroy();
+                        tile.tileRef.destroy();
                     }
                 });
             } else if (Array.isArray(entityGroup)) {
@@ -345,7 +344,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.destroy();
+                        tile.tileRef.destroy();
                     }
                 });
             }

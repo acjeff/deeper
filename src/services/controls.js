@@ -3,7 +3,7 @@ import {Light} from "../classes/light";
 export default class ControlsManager {
     constructor(scene) {
         this.scene = scene;
-        this.scene.mousePos = { x: 0, y: 0 };
+        this.scene.mousePos = {x: 0, y: 0};
         this.hoveredBlock = null;
 
         this.scene.keys = this.scene.input.keyboard.addKeys({
@@ -80,7 +80,17 @@ export default class ControlsManager {
 
         this.scene.playerRect.x = this.scene.player.x;
         this.scene.playerRect.y = this.scene.player.y;
-        this.scene.mapService.loadChunks(playerX, playerY);
+
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => {
+                // Render low-priority blocks here
+                this.scene.mapService.loadChunks(playerX, playerY);
+            });
+        } else {
+            // Fallback to requestAnimationFrame
+            requestAnimationFrame(() => this.scene.mapService.loadChunks(playerX, playerY));
+        }
+
         this.scene.playerLight.setPosition(playerX, playerY);
     }
 

@@ -13,7 +13,9 @@ export class Tile {
         this.cellY = cellDetails?.cellY;
         this.tileDetails = tileDetails;
         this.cellDetails = cellDetails;
-
+        this.active = true;
+        // Create an event emitter for this tile.
+        this.emitter = new Phaser.Events.EventEmitter();
     }
 
     init() {
@@ -33,6 +35,31 @@ export class Tile {
         this.borderGraphics.setAlpha(0);
         this.setupInteractions();
         this.addToGroup();
+        if (this.sprite && this.fadeElements && this.fadeElements.length > 0) {
+            this.fadeElements.forEach(fe => {
+                fe.setAlpha(0);
+            })
+            // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
+            this.game.tweens.add({
+                targets: this.fadeElements,
+                alpha: 1,
+                duration: window.fadeSpeed, // Duration in ms; adjust as needed
+                ease: 'ease-out'
+            });
+        }
+    }
+
+    animatedDestroy(cb) {
+        this.disabled = true;
+        if (this.sprite && this.fadeElements && this.fadeElements.length > 0) {
+            // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
+            this.game.tweens.add({
+                targets: this.fadeElements,
+                alpha: 0,
+                duration: window.fadeSpeed, // Duration in ms; adjust as needed
+                ease: 'ease-out',
+                onComplete: cb});
+        }
     }
 
     addToGroup() {}
@@ -46,7 +73,6 @@ export class Tile {
     }
 
     createSprite() {
-        return this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, 0xffffff);
     }
 
     setupInteractions() {
@@ -55,7 +81,12 @@ export class Tile {
         }
     }
 
-    onClick() {}
+    onClickHandler(cb) {
+        if (this.disabled) return;
+        cb();
+    }
+
+    onClick(cb) {}
 
     destroy() {
         this.sprite.destroy();

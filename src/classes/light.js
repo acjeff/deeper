@@ -20,16 +20,31 @@ export class Light extends Tile {
         this.lampSprite.setDisplaySize(this.game.tileSize - 3, this.game.tileSize - 3);
         this.lampSprite.setDepth(-1);
         baseSprite.setAlpha(0);
+        this.fadeElements = [this.lampSprite];
 
         this.light = this.game.lightingManager.addLight(this.worldX + this.game.tileSize / 2, this.worldY + this.game.tileSize / 2, this.radius, this.intensity, this.color, false, this.neon);
         return baseSprite;
     }
 
-    onClick() {
+    destroy() {
+        this.light.off = true;
+
+        this.animatedDestroy(() => {
+            if (!this.active) return;  // Guard against double-destroy
+            this.active = false;
+            this.sprite.destroy();
+            this.lampSprite.destroy();
+            this.light.destroy();
+        })
+    }
+
+    setAsEmpty() {
         let baseCell = {...window._tileTypes.empty};
         this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-        this.light.destroy();
-        this.lampSprite.destroy();
+    }
+
+    onClick() {
+        this.onClickHandler(this.setAsEmpty.bind(this));
     }
 
 }
