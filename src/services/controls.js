@@ -4,6 +4,7 @@ export default class ControlsManager {
     constructor(scene) {
         this.scene = scene;
         this.scene.mousePos = { x: 0, y: 0 };
+        this.hoveredBlock = null;
 
         this.scene.keys = this.scene.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -27,8 +28,8 @@ export default class ControlsManager {
         });
 
         window.addEventListener("mousedown", (e) => {
-            if (this.closestBlock) {
-                this.closestBlock.tileRef.onClick(e);
+            if (this.hoveredBlock) {
+                this.hoveredBlock.tileRef.onClick(e);
             }
         });
 
@@ -100,21 +101,21 @@ export default class ControlsManager {
         let hoveredBlock = nearbyBlocks.find(block => this.isMouseOverEntity(block, worldMouseX, worldMouseY));
 
         if (!hoveredBlock) {
-            if (this.closestBlock && this.closestBlock.setStrokeStyle) {
-                this.closestBlock.tileRef.onMouseLeave();
+            if (this.hoveredBlock && this.hoveredBlock.setStrokeStyle) {
+                this.hoveredBlock.tileRef.onMouseLeave();
             }
-            this.closestBlock = null;
+            this.hoveredBlock = null;
             return;
         }
 
         // Highlight the hovered block
-        if (hoveredBlock !== this.closestBlock) {
-            if (this.closestBlock && this.closestBlock.setStrokeStyle) {
-                this.closestBlock.tileRef.onMouseLeave();
+        if (hoveredBlock !== this.hoveredBlock) {
+            if (this.hoveredBlock && this.hoveredBlock.setStrokeStyle) {
+                this.hoveredBlock.tileRef.onMouseLeave();
             }
 
-            this.closestBlock = hoveredBlock;
-            this.closestBlock.tileRef.onMouseEnter();
+            this.hoveredBlock = hoveredBlock;
+            this.hoveredBlock.tileRef.onMouseEnter();
         }
     }
 
