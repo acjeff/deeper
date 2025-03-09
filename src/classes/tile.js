@@ -64,6 +64,8 @@ export class Tile {
 
     addToGroup() {}
 
+    removeFromGroup() {}
+
     onMouseLeave() {
         this.borderGraphics.setAlpha(0);
     }

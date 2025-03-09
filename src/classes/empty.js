@@ -11,6 +11,10 @@ export class Empty extends Tile {
         return this.game.emptyGroup.add(this.sprite);
     }
 
+    removeFromGroup() {
+        return this.game.emptyGroup.remove(this.sprite);
+    }
+
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
         baseSprite.setAlpha(0);
@@ -25,6 +29,7 @@ export class Empty extends Tile {
     }
 
     destroy() {
+        this.removeFromGroup();
         this.sprite.destroy();
     }
 }

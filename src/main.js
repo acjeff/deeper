@@ -4,9 +4,9 @@ import MenuScene from "./scenes/MenuScene";
 import PreloadScene from "./scenes/PreloadScene";
 
 window.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
-window._renderDistance = 6;
+window._renderDistance = 4;
 window.fadeSpeed = 200;
-window.renderviewDistance = 300;
+window.renderviewDistance = 250;
 window.aboveGround = 20;
 window._tileSize = 10;
 window._playerSize = 8;

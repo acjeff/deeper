@@ -270,33 +270,35 @@ export default class MapService {
     }
 
     placeObject(tileType, worldX, worldY, cellDetails) {
-        if (tileType.id === window._tileTypes.empty.id) {
-            new Empty({
-                game: this.game,
-                cellDetails: cellDetails,
-                tileDetails: tileType,
-                worldX: worldX,
-                worldY: worldY
-            });
-        }
-        if (tileType.id === window._tileTypes.soil.id) {
-            new Breakable({
-                game: this.game,
-                cellDetails: cellDetails,
-                tileDetails: tileType,
-                worldX: worldX,
-                worldY: worldY
-            });
-        }
-        if (tileType.id === window._tileTypes.light.id) {
-            new Light({
-                game: this.game,
-                cellDetails: cellDetails,
-                tileDetails: tileType,
-                worldX: worldX,
-                worldY: worldY
-            })
-        }
+        window.requestAnimationFrame(() => {
+            if (tileType.id === window._tileTypes.empty.id) {
+                new Empty({
+                    game: this.game,
+                    cellDetails: cellDetails,
+                    tileDetails: tileType,
+                    worldX: worldX,
+                    worldY: worldY
+                });
+            }
+            if (tileType.id === window._tileTypes.soil.id) {
+                new Breakable({
+                    game: this.game,
+                    cellDetails: cellDetails,
+                    tileDetails: tileType,
+                    worldX: worldX,
+                    worldY: worldY
+                });
+            }
+            if (tileType.id === window._tileTypes.light.id) {
+                new Light({
+                    game: this.game,
+                    cellDetails: cellDetails,
+                    tileDetails: tileType,
+                    worldX: worldX,
+                    worldY: worldY
+                })
+            }
+        });
     }
 
     renderChunk(cx, cy) {

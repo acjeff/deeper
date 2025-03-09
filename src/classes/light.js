@@ -14,6 +14,10 @@ export class Light extends Tile {
         return this.game.lightGroup.add(this.sprite);
     }
 
+    removeFromGroup() {
+        return this.game.lightGroup.add(this.sprite);
+    }
+
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
         this.lampSprite = this.game.add.image(this.worldX, this.worldY, 'lamp');
@@ -32,6 +36,7 @@ export class Light extends Tile {
         this.animatedDestroy(() => {
             if (!this.active) return;  // Guard against double-destroy
             this.active = false;
+            this.removeFromGroup();
             this.sprite.destroy();
             this.lampSprite.destroy();
             this.light.destroy();

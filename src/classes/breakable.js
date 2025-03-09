@@ -11,6 +11,10 @@ export class Breakable extends Tile {
         return this.game.soilGroup.add(this.sprite);
     }
 
+    removeFromGroup() {
+        return this.game.soilGroup.remove(this.sprite);
+    }
+
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
 
@@ -31,6 +35,7 @@ export class Breakable extends Tile {
 
     removeElements() {
         this.active = false;
+        this.removeFromGroup();
         this.crackSprite.destroy();
         this.sprite.destroy();
         if (this.overlaySprite) this.overlaySprite.destroy();
