@@ -11,20 +11,111 @@ export default class PlayerManager {
         this.scene.player.hitPower = 100;
         this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2, this.scene.playerSize * 4, 0.6, window.lightColors[1], false);
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup);
+
+        this.dialogueLayer = document.createElement("canvas");
+        this.dialogueLayer.id = "dialogue_canvas";
+        this.dialogueLayer.width = this.scene.cameras.main.width;
+        this.dialogueLayer.height = this.scene.cameras.main.height;
+        this.dialogueLayer.style.position = "absolute";
+        this.dialogueLayer.style.top = "0";
+        this.dialogueLayer.style.left = "0";
+        this.dialogueLayer.style.zIndex = "9999";
+        this.dialogueLayer.style.pointerEvents = "none";
+        document.body.appendChild(this.dialogueLayer);
+        this.viewMaskCtx = this.dialogueLayer.getContext("2d");
+        this.viewMaskCtx.font = "30px Arial";
+        this.viewMaskCtx.fillStyle = "white";
+        this.viewMaskCtx.textAlign = "center";
     }
 
+    // Called when the player "dies". Depending on the reason, it shows the appropriate message.
     die(reason) {
-        this.scene.playerRect.setAlpha(0);
+        // Create and set up the dialogue layer (canvas)
+        this.createDialogueLayer();
+
+        // Determine the message based on the reason.
+        let message = reason === 'crushed'
+            ? "Great job, you crushed it!"
+            : "You died!";
+
+        // Draw the dialogue (a black translucent rectangle with text)
+        this.drawDialogue(message);
+
+        // Fade the dialogue layer in
+        this.fadeInDialogue();
+
+        // Example additional game logic
+
         this.scene.freezePlayer = true;
-        this.scene.time.delayedCall(1000, () => {
-            if (reason === 'crushed') {
-                // Show some sort of crushed overlay
-            }
+
+        // After 2 seconds, fade out and remove the dialogue layer then return to base camp
+        this.scene.time.delayedCall(2000, () => {
+            this.fadeOutAndRemoveDialogue();
             this.returnToBaseCamp();
         });
     }
 
+// Creates a canvas element for the dialogue and sets its initial styles.
+    createDialogueLayer() {
+        this.dialogueLayer = document.createElement("canvas");
+        this.dialogueLayer.id = "dialogue_canvas";
+        this.dialogueLayer.width = this.scene.cameras.main.width;
+        this.dialogueLayer.height = this.scene.cameras.main.height;
+        this.dialogueLayer.style.position = "absolute";
+        this.dialogueLayer.style.top = "0";
+        this.dialogueLayer.style.left = "0";
+        this.dialogueLayer.style.zIndex = "9999";
+        this.dialogueLayer.style.pointerEvents = "none";
+        // Start with 0 opacity so we can fade in.
+        this.dialogueLayer.style.opacity = "0";
+        // CSS transition for opacity changes (fade in/out).
+        this.dialogueLayer.style.transition = "opacity 0.5s ease";
+        document.body.appendChild(this.dialogueLayer);
+        this.viewMaskCtx = this.dialogueLayer.getContext("2d");
+    }
+
+// Draws a black rectangle with 70% opacity and centers the given message over it.
+    drawDialogue(message) {
+        const _x = this.dialogueLayer.width / 2;
+        const _y = this.dialogueLayer.height / 2;
+
+        // Clear any previous drawing.
+        this.viewMaskCtx.clearRect(0, 0, this.dialogueLayer.width, this.dialogueLayer.height);
+
+        // Draw the black rectangle strip.
+        this.viewMaskCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        // Adjust the y position so the strip is centered (here _y - 55 positions it properly)
+        this.viewMaskCtx.fillRect(0, _y - 55, this.dialogueLayer.width, 100);
+
+        // Set text properties and draw the message.
+        this.viewMaskCtx.font = "30px Arial";
+        this.viewMaskCtx.fillStyle = "white";
+        this.viewMaskCtx.textAlign = "center";
+        this.viewMaskCtx.fillText(message, _x, _y);
+    }
+
+// Fades in the dialogue layer by transitioning the opacity from 0 to 1.
+    fadeInDialogue() {
+        // Use a slight delay to ensure the element is rendered.
+        setTimeout(() => {
+            this.dialogueLayer.style.opacity = "1";
+        }, 50);
+    }
+
+// Fades out the dialogue layer and removes it from the DOM once the transition is complete.
+    fadeOutAndRemoveDialogue() {
+        this.dialogueLayer.style.opacity = "0";
+        // Remove the element once the fade-out transition ends.
+        this.dialogueLayer.addEventListener("transitionend", () => {
+            if (this.dialogueLayer && this.dialogueLayer.parentNode) {
+                this.dialogueLayer.parentNode.removeChild(this.dialogueLayer);
+            }
+        }, { once: true }); // Use { once: true } so the listener is removed automatically.
+    }
+
+
     returnToBaseCamp() {
+        this.scene.playerRect.setAlpha(0);
         const relativePos = {x: this.scene.startPoint.x, y: this.scene.startPoint.y};
         this.scene.player.x = relativePos.x;
         this.scene.player.y = relativePos.y;
@@ -39,10 +130,7 @@ export default class PlayerManager {
                 targets: [this.scene.playerRect],
                 alpha: 1,
                 duration: 1000,
-                ease: 'ease-out',
-                onComplete: () => {
-
-                }
+                ease: 'ease-out'
             });
         }, 100);
     }
