@@ -1,5 +1,3 @@
-import {Light} from "../classes/light";
-
 export default class ControlsManager {
     constructor(scene) {
         this.scene = scene;
@@ -62,22 +60,39 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
+        let isFloating = false;
+        this.scene.physics.overlap(this.scene.player, this.scene.liquidGroup, () => {
+            isFloating = true;
+        });
         if (this.scene.freezePlayer){
-            this.scene.player.setVelocity(0, 0);
-            this.scene.player.setGravity(0);
+            this.scene.player.body.setVelocity(0, 0);
+            this.scene.player.body.setGravityY(0);
             return;
         }
+        if (isFloating) {
+            this.scene.player.body.setGravityY(0);
+            this.scene.player.body.setDrag(250);
+        } else {
+            this.scene.player.body.setGravityY(this.scene.defaultGravityY);
+        }
         const speed = 50;
+        let moveSpeed;
         if (this.scene.keys.left.isDown) {
-            this.scene.player.setVelocityX(-speed);
+            moveSpeed = isFloating ? -26 : -50;
+            this.scene.player.setVelocityX(moveSpeed);
         } else if (this.scene.keys.right.isDown) {
-            this.scene.player.setVelocityX(speed);
+            moveSpeed = isFloating ? 26 : 50;
+            this.scene.player.setVelocityX(moveSpeed);
         } else {
             this.scene.player.setVelocityX(0);
         }
 
-        if (this.scene.keys.up.isDown && this.scene.player.blocked.down) {
-            this.scene.player.setVelocityY(-100);
+        if (this.scene.keys.up.isDown) {
+            if (isFloating) {
+                this.scene.player.setVelocityY(-30);
+            } else if (this.scene.player.body.blocked.down) {
+                this.scene.player.setVelocityY(-100);
+            }
         }
         const playerOffset = this.scene.playerSize / 2;
         const playerX = this.scene.player.x + playerOffset;

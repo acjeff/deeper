@@ -59,13 +59,38 @@ export class Tile {
     }
 
     checkState() {
-        const blockAbove = this.game.mapService.getBlockAbove(this.worldX, this.worldY);
+        const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
+        const blockAbove = adjacentBlocks?.above;
+        const blockLeft = adjacentBlocks?.left;
+        const blockRight = adjacentBlocks?.right;
+        let tileDetails;
         if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
-            let tileDetails= {
+            tileDetails = {
                 ...window._tileTypes.soil,
                 strength: 100,
                 caved: true
             };
+        } else if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 2) {
+            tileDetails = {
+                ...window._tileTypes.liquid
+            };
+
+            this.game.mapService.setTile(blockAbove.tileRef?.worldX, blockAbove.tileRef?.worldY, {...window._tileTypes.empty}, blockAbove);
+        } else if (blockLeft && blockLeft.tileRef?.tileDetails?.id === 2) {
+            tileDetails = {
+                ...window._tileTypes.liquid
+            };
+
+            this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {...window._tileTypes.empty}, blockLeft);
+        } else if (blockRight && blockRight.tileRef?.tileDetails?.id === 2) {
+            tileDetails = {
+                ...window._tileTypes.liquid
+            };
+
+            this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {...window._tileTypes.empty}, blockRight);
+        }
+
+        if (tileDetails) {
             if (this.tileDetails.id !== 0) {
                 tileDetails.trapped = this.tileDetails;
             }
@@ -82,13 +107,16 @@ export class Tile {
                 alpha: 0,
                 duration: window.fadeSpeed, // Duration in ms; adjust as needed
                 ease: 'ease-out',
-                onComplete: cb});
+                onComplete: cb
+            });
         }
     }
 
-    addToGroup() {}
+    addToGroup() {
+    }
 
-    removeFromGroup() {}
+    removeFromGroup() {
+    }
 
     onMouseLeave() {
         this.borderGraphics.setAlpha(0);
@@ -112,7 +140,8 @@ export class Tile {
         cb();
     }
 
-    onClick(cb) {}
+    onClick(cb) {
+    }
 
     destroy() {
         this.sprite.destroy();

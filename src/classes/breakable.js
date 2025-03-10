@@ -19,9 +19,7 @@ export class Breakable extends Tile {
         }
     }
 
-    checkState() {
-        console.log('Check block');
-    }
+    checkState() {}
 
     addToGroup() {
         return this.game.soilGroup.add(this.sprite);
@@ -77,7 +75,6 @@ export class Breakable extends Tile {
             let health = -(damageAmount / this.tileDetails.strength - 1);
             this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y);
             if (health <= 0) {
-                console.log('destory block');
                 this.game.physics.world.disable(this.sprite);
                 this.crackSprite.setAlpha(0);
                 this.sprite.setStrokeStyle(0, 0);

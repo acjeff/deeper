@@ -1,5 +1,5 @@
 import * as ROT from "rot-js";
-import {Breakable, Light, Empty} from "../classes/tiles";
+import {Breakable, Light, Empty, Liquid} from "../classes/tiles";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -192,33 +192,55 @@ export default class MapService {
         );
     }
 
-    getBlockAbove(x, y) {
-        let blockAbove = null;
+    getAdjacentBlocks(x, y) {
         const tileSize = this.game.tileSize;
-        // The target position for the block directly above
-        const targetX = x;
-        const targetY = y - tileSize;
+        // Prepare an object to hold the adjacent blocks.
+        const blocks = {
+            left: null,
+            above: null,
+            right: null,
+            below: null,
+        };
 
+        // Define the target positions for each direction.
+        const targets = {
+            left: { x: x - tileSize, y: y },
+            above: { x: x, y: y - tileSize },
+            right: { x: x + tileSize, y: y },
+            below: { x: x, y: y + tileSize },
+        };
+
+        // Loop through each group in entityChildren.
         this.game.entityChildren.forEach(group => {
+            // If the group has a 'children' property (like a Phaser Group)
             if (group?.children) {
                 group.children.each(entity => {
-                    if (Math.abs(entity.x - targetX) < tileSize / 2 &&
-                        Math.abs(entity.y - targetY) < tileSize / 2) {
-                        blockAbove = entity;
+                    for (const direction in targets) {
+                        const target = targets[direction];
+                        // Check if the entity is within half a tile of the target.
+                        if (Math.abs(entity.x - target.x) < tileSize / 2 &&
+                            Math.abs(entity.y - target.y) < tileSize / 2) {
+                            blocks[direction] = entity;
+                        }
                     }
                 });
             } else if (Array.isArray(group)) {
+                // If the group is simply an array of entities.
                 group.forEach(entity => {
-                    if (Math.abs(entity.x - targetX) < tileSize / 2 &&
-                        Math.abs(entity.y - targetY) < tileSize / 2) {
-                        blockAbove = entity;
+                    for (const direction in targets) {
+                        const target = targets[direction];
+                        if (Math.abs(entity.x - target.x) < tileSize / 2 &&
+                            Math.abs(entity.y - target.y) < tileSize / 2) {
+                            blocks[direction] = entity;
+                        }
                     }
                 });
             }
         });
 
-        return blockAbove;
+        return blocks;
     }
+
 
     getEntitiesAround(x, y, radius) {
         let entities = [];
@@ -317,6 +339,15 @@ export default class MapService {
             }
             if (tileType.id === window._tileTypes.soil.id) {
                 new Breakable({
+                    game: this.game,
+                    cellDetails: cellDetails,
+                    tileDetails: tileType,
+                    worldX: worldX,
+                    worldY: worldY
+                });
+            }
+            if (tileType.id === window._tileTypes.liquid.id) {
+                new Liquid({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,

@@ -22,10 +22,11 @@ export default class GameScene extends Phaser.Scene {
         this.soilGroup = this.physics.add.staticGroup();
         this.emptyGroup = this.add.group();
         this.lightGroup = this.add.group();
+        this.liquidGroup = this.physics.add.staticGroup();
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.controlsManager = new ControlsManager(this);
-        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();
@@ -34,6 +35,7 @@ export default class GameScene extends Phaser.Scene {
         window.setTimeout(async () => {
             this.playerManager = new PlayerManager(this);
             this.cameraManager = new CameraManager(this);
+            this.defaultGravityY = this.player.body.gravity.y;
             this.uiManager = new UiManager(this);
 
             this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];
@@ -45,20 +47,24 @@ export default class GameScene extends Phaser.Scene {
             if (this.newGame) {
                 await this.saveGame(this.user, this.grid);
             }
-
-            window.setInterval(async () => {
-                let processed = 0;
-                let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren());
-                while (processed < batchSize && currentIndex < softSoil.length) {
-                    const block = softSoil[currentIndex];
-                    if (block.tileRef?.checkState) block.tileRef?.checkState();
-                    currentIndex++;
-                    processed++;
-                }
-                if (currentIndex >= softSoil.length) {
-                    currentIndex = 0;
-                }
-            }, 100);
+            this.checkBlocksInterval = this.time.addEvent({
+                delay: 100,
+                callback: () => {
+                    let processed = 0;
+                    let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren());
+                    while (processed < batchSize && currentIndex < softSoil.length) {
+                        const block = softSoil[currentIndex];
+                        if (block.tileRef?.checkState) block.tileRef?.checkState();
+                        currentIndex++;
+                        processed++;
+                    }
+                    if (currentIndex >= softSoil.length) {
+                        currentIndex = 0;
+                    }
+                },
+                callbackScope: this,
+                loop: true
+            });
         });
 
 
@@ -136,6 +142,10 @@ export default class GameScene extends Phaser.Scene {
 
             this.user = data.user;
         }
+    }
+
+    onSceneShutdown() {
+        this.checkBlocksInterval.remove();
     }
 
     update(time, delta) {

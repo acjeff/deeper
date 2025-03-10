@@ -35,7 +35,7 @@ window._tileTypes = {
         strength: 200,
         type: 1
     },
-    water: {
+    liquid: {
         id: 2
     },
     stone: {
@@ -49,22 +49,37 @@ window._tileTypes = {
 window._randomElements = [
     {
         tile: {
-            ...window._tileTypes.coal,
-            strength: 500
+            ...window._tileTypes.coal
         },
         widthRange: [20, 30],
         heightRange: [20, 30],
         count: 10000,
-        layerWeights: [10, 0, 0, 0, 0, 0, 0]
+        layerWeights: [0, 0, 0, 10, 0, 0, 0]
+    },{
+        tile: {
+            ...window._tileTypes.empty
+        },
+        widthRange: [5, 10],
+        heightRange: [5, 10],
+        count: 10000,
+        layerWeights: [0, 10, 0, 0, 0, 0, 0]
+    },{
+        tile: {
+            ...window._tileTypes.liquid
+        },
+        widthRange: [20, 30],
+        heightRange: [20, 30],
+        count: 10000,
+        layerWeights: [0, 10, 0, 0, 0, 0, 0]
     }, {
         tile: {
             ...window._tileTypes.soil,
-            strength: 1000
+            strength: 500
         },
         count: 10000,
         widthRange: [50, 80],
         heightRange: [20, 30],
-        layerWeights: [0, 10, 0, 0, 0, 0, 0]
+        layerWeights: [0, 0, 10, 0, 0, 0, 0]
     }
 ];
 
