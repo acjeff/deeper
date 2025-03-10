@@ -16,6 +16,16 @@ export default class PlayerManager {
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup);
     }
 
+    die(reason) {
+        this.scene.freezePlayer = true;
+        this.scene.time.delayedCall(1000, () => {
+            if (reason === 'crushed') {
+                // Show some sort of crushed overlay
+            }
+            this.returnToBaseCamp();
+        });
+    }
+
     returnToBaseCamp() {
         const relativePos = {x: this.scene.startPoint.x, y: this.scene.startPoint.y};
         this.scene.player.x = relativePos.x;

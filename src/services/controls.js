@@ -65,7 +65,7 @@ export default class ControlsManager {
         if (this.scene.freezePlayer){
             this.scene.player.setVelocity(0, 0);
             this.scene.player.setGravity(0);
-            // return;
+            return;
         }
         const speed = 100;
         if (this.scene.keys.left.isDown) {

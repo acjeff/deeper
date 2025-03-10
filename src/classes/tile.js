@@ -47,24 +47,11 @@ export class Tile {
                 targets: this.fadeElements,
                 alpha: 1,
                 duration: window.fadeSpeed, // Duration in ms; adjust as needed
-                ease: 'ease-out',
-                onComplete: () => {
-                    let insideSquare = this.game.mapService.areSquaresIntersecting(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2, this.game.playerSize, this.worldX, this.worldY, this.game.tileSize);
-                    if (this.tileDetails.caved) {
-                        console.log(insideSquare, ' : insideSquare');
-                        console.log(this.tileDetails.caved, ' : this.tileDetails.caved');
-                    }
-                    if (this.tileDetails.caved && insideSquare) {
-                        this.game.playerManager.returnToBaseCamp();
-                    }
-                }
+                ease: 'ease-out'
             };
-            // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
             if (this.tileDetails.caved) {
                 anims.y = '+=' + this.game.tileSize;
                 this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y + this.game.tileSize);
-                // this.game.dustEmitter.setAngle({ min: 85, max: 95 });
-// Optionally, apply a vertical gravity to simulate falling.
                 this.game.dustEmitter.explode(50);
             }
             this.game.tweens.add(anims);

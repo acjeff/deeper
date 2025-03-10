@@ -6,6 +6,7 @@ import ControlsManager from "../services/controls";
 import CameraManager from "../services/cameraManager";
 import PlayerManager from "../services/playerManager";
 import UiManager from "../services/uiManager";
+
 const batchSize = 100;
 let currentIndex = 0;
 
