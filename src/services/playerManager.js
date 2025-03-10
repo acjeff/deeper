@@ -85,7 +85,7 @@ export default class PlayerManager {
         // Draw the black rectangle strip.
         this.viewMaskCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
         // Adjust the y position so the strip is centered (here _y - 55 positions it properly)
-        this.viewMaskCtx.fillRect(0, _y - 55, this.dialogueLayer.width, 100);
+        this.viewMaskCtx.fillRect(0, _y - 60, this.dialogueLayer.width, 100);
 
         // Set text properties and draw the message.
         this.viewMaskCtx.font = "30px Arial";
