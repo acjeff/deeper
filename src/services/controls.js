@@ -67,7 +67,7 @@ export default class ControlsManager {
             this.scene.player.setGravity(0);
             return;
         }
-        const speed = 100;
+        const speed = 50;
         if (this.scene.keys.left.isDown) {
             this.scene.player.setVelocityX(-speed);
         } else if (this.scene.keys.right.isDown) {
@@ -77,7 +77,7 @@ export default class ControlsManager {
         }
 
         if (this.scene.keys.up.isDown && this.scene.player.blocked.down) {
-            this.scene.player.setVelocityY(-150);
+            this.scene.player.setVelocityY(-100);
         }
         const playerOffset = this.scene.playerSize / 2;
         const playerX = this.scene.player.x + playerOffset;
