@@ -80,6 +80,8 @@ export default class ControlsManager {
             this.scene.player.body.setDrag(250);
             this.scene.player.breath -= 0.1;
         } else {
+            this.scene.player.body.setGravityY(0);
+            this.scene.player.body.setDrag(0);
             this.scene.player.body.setGravityY(this.scene.defaultGravityY);
             if (this.scene.player.breath < 100) {
                 this.scene.player.breath += 0.1;
