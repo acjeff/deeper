@@ -11,7 +11,8 @@ export class Breakable extends Tile {
                 delete this.tileDetails.caved;
                 let insideSquare = this.game.mapService.areSquaresIntersecting(this.game.player.x + this.game.playerSize / 2 + 4, this.game.player.y + this.game.playerSize / 2 + 4, this.game.playerSize - 2, this.worldX, this.worldY, this.game.tileSize);
                 if (insideSquare) {
-                    this.game.playerManager.die('crushed');
+                    // this.game.playerManager.die('crushed');
+                    this.game.player.health = 0;
                 }
             });
         } else {
@@ -69,6 +70,7 @@ export class Breakable extends Tile {
         this.onClickHandler(() => {
             if (this.clicking) return;
             this.clicking = true;
+            this.game.player.energy -= 1;
             const hitPower = this.game.player.hitPower;
             let baseCell, damageAmount = this.tileDetails.damageAmount || 0;
             damageAmount += hitPower;

@@ -70,7 +70,7 @@ window._randomElements = [
         widthRange: [20, 30],
         heightRange: [20, 30],
         count: 10000,
-        layerWeights: [0, 10, 0, 0, 0, 0, 0]
+        layerWeights: [10, 0, 0, 0, 0, 0, 0]
     }, {
         tile: {
             ...window._tileTypes.soil,

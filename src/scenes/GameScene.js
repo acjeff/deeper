@@ -41,9 +41,6 @@ export default class GameScene extends Phaser.Scene {
             this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];
             this.glowStickCol = 0;
 
-            this.saveButton = this.uiManager.addSaveButton();
-            this.backToMenuButton = this.uiManager.addBackToMenuButton();
-
             if (this.newGame) {
                 await this.saveGame(this.user, this.grid);
             }
@@ -153,6 +150,7 @@ export default class GameScene extends Phaser.Scene {
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting();
             this.controlsManager.getInteractableBlock(15);
+            this.uiManager.updateUI();
         }
     }
 

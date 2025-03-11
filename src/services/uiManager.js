@@ -1,7 +1,11 @@
 export default class UiManager {
     constructor(scene) {
         this.scene = scene;
-
+        this.scene.saveButton = this.addSaveButton();
+        this.scene.backToMenuButton = this.addBackToMenuButton();
+        this.addHealthBar();
+        this.addEnergyBar();
+        this.addBreathBar();
     }
 
     addBackToMenuButton() {
@@ -25,6 +29,12 @@ export default class UiManager {
                 this['backToMenuButton'].remove();
                 this['saveButton'].remove();
                 this.scene.lightCanvas.remove();
+                this.healthBarFill.remove();
+                this.energyBarFill.remove();
+                this.breathBarFill.remove();
+                this.healthBarContainer.remove();
+                this.energyBarContainer.remove();
+                this.breathBarContainer.remove();
                 this.scene.scene.stop("GameScene"); // ✅ Stop the game scene
                 this.scene.scene.start("MenuScene");
             }, 100)
@@ -66,6 +76,114 @@ export default class UiManager {
         document.body.appendChild(this[buttonName]);
         this[buttonName].addEventListener("click", callback);
         return this[buttonName];
+    }
+
+    addEnergyBar() {
+        // Create the container for the health bar (the background)
+        this.energyBarContainer = document.createElement("div");
+        this.energyBarContainer.id = "energyBarContainer";
+        Object.assign(this.energyBarContainer.style, {
+            position: 'absolute',
+            left: '10px',
+            bottom: '35px',
+            width: '200px',
+            height: '20px',
+            backgroundColor: '#333',
+            border: '2px solid #000',
+            borderRadius: '5px',
+            zIndex: '1000',
+            overflow: 'hidden'
+        });
+        document.body.appendChild(this.energyBarContainer);
+
+        // Create the fill element representing the current health
+        this.energyBarFill = document.createElement("div");
+        this.energyBarFill.id = "energyBarFill";
+        Object.assign(this.energyBarFill.style, {
+            width: '100%', // Initially full health
+            height: '100%',
+            backgroundColor: '#a75928',
+            transition: 'width 0.2s ease-out'
+        });
+        this.energyBarContainer.appendChild(this.energyBarFill);
+    }
+
+    addHealthBar() {
+        // Create the container for the health bar (the background)
+        this.healthBarContainer = document.createElement("div");
+        this.healthBarContainer.id = "healthBarContainer";
+        Object.assign(this.healthBarContainer.style, {
+            position: 'absolute',
+            left: '10px',
+            bottom: '10px',
+            width: '200px',
+            height: '20px',
+            backgroundColor: '#333',
+            border: '2px solid #000',
+            borderRadius: '5px',
+            zIndex: '1000',
+            overflow: 'hidden'
+        });
+        document.body.appendChild(this.healthBarContainer);
+
+        // Create the fill element representing the current health
+        this.healthBarFill = document.createElement("div");
+        this.healthBarFill.id = "healthBarFill";
+        Object.assign(this.healthBarFill.style, {
+            width: '100%', // Initially full health
+            height: '100%',
+            backgroundColor: '#28a745',
+            transition: 'width 0.2s ease-out'
+        });
+        this.healthBarContainer.appendChild(this.healthBarFill);
+    }
+
+    addBreathBar() {
+        // Create the container for the breath bar (the background)
+        this.breathBarContainer = document.createElement("div");
+        this.breathBarContainer.id = "breathBarContainer";
+        Object.assign(this.breathBarContainer.style, {
+            position: 'absolute',
+            left: '10px',
+            bottom: '60px',
+            width: '200px',
+            height: '20px',
+            backgroundColor: '#333',
+            border: '2px solid #000',
+            borderRadius: '5px',
+            zIndex: '1000',
+            overflow: 'hidden'
+        });
+        document.body.appendChild(this.breathBarContainer);
+
+        // Create the fill element representing the current breath
+        this.breathBarFill = document.createElement("div");
+        this.breathBarFill.id = "breathBarFill";
+        Object.assign(this.breathBarFill.style, {
+            width: '100%', // Initially full breath
+            height: '100%',
+            backgroundColor: '#286ea7',
+            transition: 'width 0.2s ease-out'
+        });
+        this.breathBarContainer.appendChild(this.breathBarFill);
+    }
+
+    updateUI() {
+        const healthPercentage = Math.max(0, Math.min((this.scene.player.health / 100) * 100, 100));
+        const energyPercentage = Math.max(0, Math.min((this.scene.player.energy / 100) * 100, 100));
+        const breathPercentage = Math.max(0, Math.min((this.scene.player.breath / 100) * 100, 100));
+        this.healthBarFill.style.width = healthPercentage + "%";
+        this.energyBarFill.style.width = energyPercentage + "%";
+        this.breathBarFill.style.width = breathPercentage + "%";
+        if (energyPercentage <= 0) {
+            this.scene.playerManager.die('sleep');
+        }
+        if (healthPercentage <= 0) {
+            this.scene.playerManager.die();
+        }
+        if (breathPercentage <= 0) {
+            this.scene.playerManager.die('suffocate');
+        }
     }
 
 }

@@ -6,12 +6,24 @@ export default class PlayerManager {
         let y = this.scene.playerY || this.scene.startPoint.y;
         this.scene.player = this.scene.physics.add.sprite(x, y, 'player');
         this.scene.player.setBounce(0.2);
-        this.scene.player.body.setSize(this.scene.playerSize, this.scene.playerSize);
-        this.scene.playerRect = this.scene.add.rectangle(x, y, this.scene.playerSize, this.scene.playerSize, 0xffb2fd);
+        this.scene.player.setOrigin(0, 0);
+        this.scene.player.health = 100;
+        this.scene.player.energy = 100;
+        this.scene.player.breath = 100;
+        this.scene.player.setDisplaySize(this.scene.playerSize, this.scene.playerSize);
+        // this.scene.playerRect = this.scene.add.rectangle(x, y, this.scene.playerSize, this.scene.playerSize, 0xffb2fd);
         this.scene.player.hitPower = 100;
-        this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2, this.scene.playerSize * 4, 0.6, window.lightColors[1], false);
-        this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup);
+        this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 4, 0.6, window.lightColors[1], false);
+        this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup, () => {
+            const fallSpeed = this.scene.lastFallSpeed || 0; // use stored value
+            const safeSpeed = 180; // speeds below this cause no damage
 
+            if (fallSpeed > safeSpeed) {
+                const damageFactor = 0.8;
+                const damage = (fallSpeed - safeSpeed) * damageFactor;
+                this.scene.player.health -= damage;
+            }
+        });
         this.dialogueLayer = document.createElement("canvas");
         this.dialogueLayer.id = "dialogue_canvas";
         this.dialogueLayer.width = this.scene.cameras.main.width;
@@ -32,11 +44,28 @@ export default class PlayerManager {
     die(reason) {
         // Create and set up the dialogue layer (canvas)
         this.createDialogueLayer();
+        this.scene.player.energy = 1;
+        this.scene.player.health = 1;
+        this.scene.player.breath = 1;
 
         // Determine the message based on the reason.
-        let message = reason === 'crushed'
-            ? "Great job, you crushed it!"
-            : "You died!";
+        let message;
+        switch (reason) {
+            case 'crushed':
+                message = "Great job, you crushed it!"
+                break;
+            case 'fall':
+                message = "Aim for the bushes!"
+                break;
+            case 'sleep':
+                message = "You sleepy bear!"
+                break;
+            case 'suffocate':
+                message = "That's no way to go!"
+                break;
+            default:
+                message = 'You died!'
+        }
 
         // Draw the dialogue (a black translucent rectangle with text)
         this.drawDialogue(message);
@@ -50,9 +79,12 @@ export default class PlayerManager {
 
         // After 2 seconds, fade out and remove the dialogue layer then return to base camp
         this.scene.time.delayedCall(2000, () => {
+            this.scene.player.energy = 100;
+            this.scene.player.health = 100;
+            this.scene.player.breath = 100;
             this.fadeOutAndRemoveDialogue();
             this.returnToBaseCamp();
-        });
+        })
     }
 
 // Creates a canvas element for the dialogue and sets its initial styles.
@@ -99,7 +131,7 @@ export default class PlayerManager {
         // Use a slight delay to ensure the element is rendered.
         setTimeout(() => {
             this.dialogueLayer.style.opacity = "1";
-        }, 50);
+        }, 100);
     }
 
 // Fades out the dialogue layer and removes it from the DOM once the transition is complete.
@@ -110,16 +142,16 @@ export default class PlayerManager {
             if (this.dialogueLayer && this.dialogueLayer.parentNode) {
                 this.dialogueLayer.parentNode.removeChild(this.dialogueLayer);
             }
-        }, { once: true }); // Use { once: true } so the listener is removed automatically.
+        }, {once: true}); // Use { once: true } so the listener is removed automatically.
     }
 
 
     returnToBaseCamp() {
-        this.scene.playerRect.setAlpha(0);
+        this.scene.player.setAlpha(0);
         const relativePos = {x: this.scene.startPoint.x, y: this.scene.startPoint.y};
         this.scene.player.x = relativePos.x;
         this.scene.player.y = relativePos.y;
-        this.scene.playerLight.setPosition(this.scene.player.x, this.scene.player.y);
+        this.scene.playerLight.setPosition(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2);
         this.scene.freezePlayer = true;
         this.scene.cameras.main.stopFollow();
         this.scene.cameras.main.setScroll(relativePos.x, relativePos.y);
@@ -127,7 +159,7 @@ export default class PlayerManager {
         this.scene.freezePlayer = false;
         window.setTimeout(() => {
             this.scene.tweens.add({
-                targets: [this.scene.playerRect],
+                targets: [this.scene.player],
                 alpha: 1,
                 duration: 1000,
                 ease: 'ease-out'

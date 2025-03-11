@@ -60,35 +60,45 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
-        let isFloating = false;
+        this.scene.isFloating = false;
+        if (!this.scene.player.body) return;
+        if (this.scene.player?.body?.velocity?.y > 5) {
+            this.scene.lastFallSpeed = this.scene.player.body.velocity.y;
+        } else {
+            this.scene.lastFallSpeed = 0;
+        }
         this.scene.physics.overlap(this.scene.player, this.scene.liquidGroup, () => {
-            isFloating = true;
+            this.scene.isFloating = true;
         });
         if (this.scene.freezePlayer){
             this.scene.player.body.setVelocity(0, 0);
             this.scene.player.body.setGravityY(0);
             return;
         }
-        if (isFloating) {
+        if (this.scene.isFloating) {
             this.scene.player.body.setGravityY(0);
             this.scene.player.body.setDrag(250);
+            this.scene.player.breath -= 0.1;
         } else {
             this.scene.player.body.setGravityY(this.scene.defaultGravityY);
+            if (this.scene.player.breath < 100) {
+                this.scene.player.breath += 0.1;
+            }
         }
         const speed = 50;
         let moveSpeed;
         if (this.scene.keys.left.isDown) {
-            moveSpeed = isFloating ? -26 : -50;
+            moveSpeed = this.scene.isFloating ? -26 : -50;
             this.scene.player.setVelocityX(moveSpeed);
         } else if (this.scene.keys.right.isDown) {
-            moveSpeed = isFloating ? 26 : 50;
+            moveSpeed = this.scene.isFloating ? 26 : 50;
             this.scene.player.setVelocityX(moveSpeed);
         } else {
             this.scene.player.setVelocityX(0);
         }
 
         if (this.scene.keys.up.isDown) {
-            if (isFloating) {
+            if (this.scene.isFloating) {
                 this.scene.player.setVelocityY(-30);
             } else if (this.scene.player.body.blocked.down) {
                 this.scene.player.setVelocityY(-100);
@@ -97,9 +107,6 @@ export default class ControlsManager {
         const playerOffset = this.scene.playerSize / 2;
         const playerX = this.scene.player.x + playerOffset;
         const playerY = this.scene.player.y + playerOffset;
-
-        this.scene.playerRect.x = this.scene.player.x;
-        this.scene.playerRect.y = this.scene.player.y;
 
         if ('requestIdleCallback' in window) {
             requestIdleCallback(() => {
@@ -111,7 +118,7 @@ export default class ControlsManager {
             requestAnimationFrame(() => this.scene.mapService.loadChunks(playerX, playerY));
         }
 
-        this.scene.playerLight.setPosition(playerX, playerY);
+        this.scene.playerLight.setPosition(playerX - this.scene.playerSize / 2, playerY - this.scene.playerSize / 2);
     }
 
     getInteractableBlock(interactionRange) {
