@@ -84,7 +84,7 @@ export default class ControlsManager {
             this.scene.player.body.setDrag(0);
             this.scene.player.body.setGravityY(this.scene.defaultGravityY);
             if (this.scene.player.breath < 100) {
-                this.scene.player.breath += 0.1;
+                this.scene.player.breath += 0.8;
             }
         }
         const speed = 50;
