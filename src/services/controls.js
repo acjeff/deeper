@@ -7,7 +7,8 @@ export default class ControlsManager {
         this.scene.keys = this.scene.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
             left: Phaser.Input.Keyboard.KeyCodes.A,
-            right: Phaser.Input.Keyboard.KeyCodes.D
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            down: Phaser.Input.Keyboard.KeyCodes.S
         });
 
 
@@ -76,11 +77,10 @@ export default class ControlsManager {
             return;
         }
         if (this.scene.isFloating) {
-            this.scene.player.body.setGravityY(0);
-            this.scene.player.body.setDrag(250);
+            this.scene.player.body.setGravityY(-100);
+            this.scene.player.body.setDrag(500);
             this.scene.player.breath -= 0.1;
         } else {
-            this.scene.player.body.setGravityY(0);
             this.scene.player.body.setDrag(0);
             this.scene.player.body.setGravityY(this.scene.defaultGravityY);
             if (this.scene.player.breath < 100) {
@@ -105,6 +105,14 @@ export default class ControlsManager {
             } else if (this.scene.player.body.blocked.down) {
                 this.scene.player.setVelocityY(-100);
             }
+        }
+        if (this.scene.keys.down.isDown) {
+            if (this.scene.isFloating) {
+                this.scene.player.setVelocityY(30);
+            }
+        }
+        if (this.scene.isFloating && !this.scene.keys.down.isDown && !this.scene.keys.up.isDown) {
+            this.scene.player.setVelocityY(20);
         }
         const playerOffset = this.scene.playerSize / 2;
         const playerX = this.scene.player.x + playerOffset;
