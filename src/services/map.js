@@ -43,7 +43,6 @@ export default class MapService {
                 );
             }
         }
-
         map.create((x, y, wall) => {
             let chunkX = Math.floor(x / this.game.chunkSize) * this.game.chunkSize;
             let chunkY = Math.floor(y / this.game.chunkSize) * this.game.chunkSize;
@@ -52,7 +51,7 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                if (y > window.aboveGround) {
+                if (y > window.aboveGround && (x < window.chasmRange[0] || x > window.chasmRange[1])) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
                         ...window._tileTypes.soil
                     } : {
@@ -75,8 +74,24 @@ export default class MapService {
             this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
         })
 
+        // worldX, worldY, tileType, cellItem
+        // Update region: every cell in columns 40 through 48 gets updated to a new tile type.
+        // this.updateRegion(156, 164, window._tileTypes.empty);
 
         // this.setRandomElement(window._tileTypes.stone, 100000);
+    }
+
+    updateRegion(xStart, xEnd, tileType) {
+        // Loop over every cell column from xStart to xEnd.
+        for (let cellX = xStart; cellX <= xEnd; cellX++) {
+            // Loop over every row in the map.
+            for (let cellY = 0; cellY < this.game.mapHeight; cellY++) {
+                const worldX = cellX * this.game.tileSize;
+                const worldY = cellY * this.game.tileSize;
+                // Update the tile at the calculated world position.
+                this.setTile(worldX, worldY, tileType);
+            }
+        }
     }
 
     getLocalCellFromWorldPosition(worldX, worldY) {
@@ -108,15 +123,16 @@ export default class MapService {
         let chunkKeys = Object.keys(this.game.grid);
 
         function placeBlock(x, y) {
-            if (y < 20) return false;
-            let chunkKey = self.getChunkKey.call(this, x, y);
-            if (!this.game.grid[chunkKey]) return false;
+            if (y > window.aboveGround && (x < window.chasmRange[0] || x > window.chasmRange[1])) {
+                let chunkKey = self.getChunkKey.call(this, x, y);
+                if (!this.game.grid[chunkKey]) return false;
 
-            let localX = x % this.game.chunkSize;
-            let localY = y % this.game.chunkSize;
-            this.game.grid[chunkKey][localY][localX] = element;
-            filledPositions.add(`${x}_${y}`);
-            return true;
+                let localX = x % this.game.chunkSize;
+                let localY = y % this.game.chunkSize;
+                this.game.grid[chunkKey][localY][localX] = element;
+                filledPositions.add(`${x}_${y}`);
+                return true;
+            } else return false;
         }
 
         // Normalize layer weights
@@ -135,7 +151,6 @@ export default class MapService {
             // Choose a weighted layer
             let chosenLayer = weightedLayers[Math.floor(Math.random() * weightedLayers.length)];
             let startY = chosenLayer * this.layerHeight + Math.floor(Math.random() * this.layerHeight);
-            if (startY < 20) continue;
             let startX = chunkX + Math.floor(Math.random() * this.game.chunkSize);
 
             let key = `${startX}_${startY}`;
@@ -151,6 +166,7 @@ export default class MapService {
 
             while (queue.length > 0 && placed < count && added < clusterSize) {
                 let {x, y} = queue.shift();
+                if (y < 20 || (x > window.chasmRange[0] - 5 && x < window.chasmRange[1] + 5)) continue;
                 let posKey = `${x}_${y}`;
 
                 if (!filledPositions.has(posKey) && placeBlock.call(this, x, y)) {
@@ -240,7 +256,6 @@ export default class MapService {
 
         return blocks;
     }
-
 
     getEntitiesAround(x, y, radius) {
         let entities = [];

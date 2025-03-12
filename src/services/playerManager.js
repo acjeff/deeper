@@ -1,18 +1,22 @@
 export default class PlayerManager {
     constructor(scene) {
         this.scene = scene;
-        this.scene.startPoint = {x: 300, y: 197};
+        this.scene.startPoint = {x: 1610, y: 197};
         let x = this.scene.playerX || this.scene.startPoint.x;
         let y = this.scene.playerY || this.scene.startPoint.y;
         this.scene.player = this.scene.physics.add.sprite(x, y, 'player');
         this.scene.player.setBounce(0.2);
         this.scene.player.setOrigin(0, 0);
-        this.scene.player.health = 100;
-        this.scene.player.energy = 100;
-        this.scene.player.breath = 100;
+        this.scene.player.maxHealth = 100;
+        this.scene.player.maxEnergy = 100;
+        this.scene.player.maxBreath = 100;
+        this.scene.player.maxHitPower = 100;
+        this.scene.player.health = this.scene.player.maxHealth;
+        this.scene.player.energy = this.scene.player.maxEnergy;
+        this.scene.player.breath = this.scene.player.maxBreath;
+        this.scene.player.hitPower = this.scene.player.maxHitPower;
         this.scene.player.setDisplaySize(this.scene.playerSize, this.scene.playerSize);
         // this.scene.playerRect = this.scene.add.rectangle(x, y, this.scene.playerSize, this.scene.playerSize, 0xffb2fd);
-        this.scene.player.hitPower = 100;
         this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 4, 0.6, window.lightColors[1], false);
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup, () => {
             const fallSpeed = this.scene.lastFallSpeed || 0; // use stored value
@@ -45,9 +49,9 @@ export default class PlayerManager {
         this.alreadyDead = true;
 
         this.createDialogueLayer();
-        this.scene.player.energy = 100;
-        this.scene.player.health = 100;
-        this.scene.player.breath = 100;
+        this.scene.player.health = this.scene.player.maxHealth;
+        this.scene.player.energy = this.scene.player.maxEnergy;
+        this.scene.player.breath = this.scene.player.maxBreath;
 
         // Determine the message based on the reason.
         let message;

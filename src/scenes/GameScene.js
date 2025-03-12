@@ -134,6 +134,7 @@ export default class GameScene extends Phaser.Scene {
             }
 
             this.newGame = data.newGame;
+            console.log(data.playerData, ' : data.playerData');
             if (data.playerData?.length > 0 && !data.newGame) {
                 this.playerX = data.playerData[0].x;
                 this.playerY = data.playerData[0].y;
