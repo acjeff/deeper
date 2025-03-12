@@ -8,7 +8,8 @@ export default class CameraManager {
         const zoomX = width / baseWidth;
         const zoomY = height / baseHeight;
 
-        const zoom = Math.min(zoomX, zoomY) + 4;
+        // const zoom = Math.min(zoomX, zoomY) + 5;
+        const zoom = Math.min(zoomX, zoomY) + 5;
 
         this.scene.cameras.main.setZoom(zoom);
 

@@ -37,11 +37,11 @@ export default class ControlsManager {
             this.scene.mousePos.y = event.clientY
         });
 
-        window.addEventListener("wheel", (e) => {
-            const zoomSpeed = 0.1;
-            this.scene.zoomAmount = Phaser.Math.Clamp(this.scene.cameras.main.zoom + (e.deltaY * -zoomSpeed * 0.01), 0.5, 5);
-            this.scene.cameras.main.setZoom(this.scene.zoomAmount);
-        });
+        // window.addEventListener("wheel", (e) => {
+        //     const zoomSpeed = 0.1;
+        //     this.scene.zoomAmount = Phaser.Math.Clamp(this.scene.cameras.main.zoom + (e.deltaY * -zoomSpeed * 0.01), 0.5, 5);
+        //     this.scene.cameras.main.setZoom(this.scene.zoomAmount);
+        // });
 
         window.addEventListener("keypress", (e) => {
             if (e.key === "c") {

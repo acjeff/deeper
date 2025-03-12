@@ -40,9 +40,10 @@ export default class PlayerManager {
         this.viewMaskCtx.textAlign = "center";
     }
 
-    // Called when the player "dies". Depending on the reason, it shows the appropriate message.
     die(reason) {
-        // Create and set up the dialogue layer (canvas)
+        if (this.alreadyDead) return;
+        this.alreadyDead = true;
+
         this.createDialogueLayer();
         this.scene.player.energy = 100;
         this.scene.player.health = 100;
@@ -82,12 +83,12 @@ export default class PlayerManager {
             this.scene.player.energy = 100;
             this.scene.player.health = 100;
             this.scene.player.breath = 100;
+            this.alreadyDead = false;
             this.fadeOutAndRemoveDialogue();
             this.returnToBaseCamp();
         })
     }
 
-// Creates a canvas element for the dialogue and sets its initial styles.
     createDialogueLayer() {
         this.dialogueLayer = document.createElement("canvas");
         this.dialogueLayer.id = "dialogue_canvas";
@@ -106,35 +107,27 @@ export default class PlayerManager {
         this.viewMaskCtx = this.dialogueLayer.getContext("2d");
     }
 
-// Draws a black rectangle with 70% opacity and centers the given message over it.
     drawDialogue(message) {
         const _x = this.dialogueLayer.width / 2;
         const _y = this.dialogueLayer.height / 2;
 
-        // Clear any previous drawing.
         this.viewMaskCtx.clearRect(0, 0, this.dialogueLayer.width, this.dialogueLayer.height);
 
-        // Draw the black rectangle strip.
         this.viewMaskCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        // Adjust the y position so the strip is centered (here _y - 55 positions it properly)
         this.viewMaskCtx.fillRect(0, _y - 60, this.dialogueLayer.width, 100);
 
-        // Set text properties and draw the message.
         this.viewMaskCtx.font = "30px Arial";
         this.viewMaskCtx.fillStyle = "white";
         this.viewMaskCtx.textAlign = "center";
         this.viewMaskCtx.fillText(message, _x, _y);
     }
 
-// Fades in the dialogue layer by transitioning the opacity from 0 to 1.
     fadeInDialogue() {
-        // Use a slight delay to ensure the element is rendered.
         setTimeout(() => {
             this.dialogueLayer.style.opacity = "1";
         }, 100);
     }
 
-// Fades out the dialogue layer and removes it from the DOM once the transition is complete.
     fadeOutAndRemoveDialogue() {
         this.dialogueLayer.style.opacity = "0";
         // Remove the element once the fade-out transition ends.
@@ -144,7 +137,6 @@ export default class PlayerManager {
             }
         }, {once: true}); // Use { once: true } so the listener is removed automatically.
     }
-
 
     returnToBaseCamp() {
         this.scene.player.setAlpha(0);

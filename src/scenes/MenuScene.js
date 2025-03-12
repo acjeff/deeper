@@ -8,11 +8,11 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.text(300, 50, "Deeper", {fontSize: "32px", fill: "#ffffff"});
+        this.add.text(100, 100, "Deeper", {fontSize: "32px", fill: "#ffffff"});
 
 
         // ✅ Google Sign-In Button
-        this.googleSignInButton = this.add.text(300, 200, "Sign in with Google", {
+        this.googleSignInButton = this.add.text(100, 200, "Sign in with Google", {
             fontSize: "24px",
             fill: "#ff0",
             cursor: 'pointer'
@@ -32,7 +32,7 @@ export default class MenuScene extends Phaser.Scene {
             });
 
         // ✅ Logout Button (Initially Hidden)
-        this.logoutButton = this.add.text(300, 250, "Logout", {fontSize: "24px", fill: "#f00", cursor: 'pointer'})
+        this.logoutButton = this.add.text(window.innerWidth - 200, 100, "Logout", {fontSize: "24px", fill: "#f00", cursor: 'pointer'})
             .setInteractive()
             .setVisible(false)
             .on("pointerover", () => {
@@ -49,7 +49,7 @@ export default class MenuScene extends Phaser.Scene {
             });
 
         // ✅ Load Game Button (Initially Hidden)
-        this.loadGameButton = this.add.text(300, 300, "Continue", {fontSize: "24px", fill: "#0f0", cursor: 'pointer'})
+        this.loadGameButton = this.add.text(100, 300, "Continue", {fontSize: "24px", fill: "#0f0", cursor: 'pointer'})
             .setInteractive()
             .setVisible(false)
             .on("pointerover", () => {
@@ -66,7 +66,7 @@ export default class MenuScene extends Phaser.Scene {
             });
 
         // ✅ Load Game Button (Initially Hidden)
-        this.deleteSaveButton = this.add.text(300, 350, "Start New Game", {
+        this.deleteSaveButton = this.add.text(100, 350, "Start New Game", {
             fontSize: "24px",
             fill: "#0f0",
             cursor: 'pointer'
@@ -88,7 +88,7 @@ export default class MenuScene extends Phaser.Scene {
             });
 
         // ✅ New Game Button (Initially Hidden)
-        this.newGameButton = this.add.text(300, 350, "New Game", {fontSize: "24px", fill: "#00f", cursor: 'pointer'})
+        this.newGameButton = this.add.text(100, 350, "New Game", {fontSize: "24px", fill: "#00f", cursor: 'pointer'})
             .setInteractive()
             .setVisible(false)
             .on("pointerover", () => {
