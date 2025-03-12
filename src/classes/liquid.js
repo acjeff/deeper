@@ -7,8 +7,6 @@ export class Liquid extends Tile {
         this.sprite.setAlpha(0.5);
     }
 
-    checkState() {}
-
     addToGroup() {
         return this.game.liquidGroup.add(this.sprite);
     }

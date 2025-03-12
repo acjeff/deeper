@@ -45,10 +45,10 @@ export default class GameScene extends Phaser.Scene {
                 await this.saveGame(this.user, this.grid);
             }
             this.checkBlocksInterval = this.time.addEvent({
-                delay: 100,
+                delay: 10,
                 callback: () => {
                     let processed = 0;
-                    let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren());
+                    let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren()).concat(this.liquidGroup.getChildren());
                     while (processed < batchSize && currentIndex < softSoil.length) {
                         const block = softSoil[currentIndex];
                         if (block.tileRef?.checkState) block.tileRef?.checkState();

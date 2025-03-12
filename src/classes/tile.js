@@ -61,33 +61,54 @@ export class Tile {
     checkState() {
         const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
         const blockAbove = adjacentBlocks?.above;
+        const blockBelow = adjacentBlocks?.below;
         const blockLeft = adjacentBlocks?.left;
         const blockRight = adjacentBlocks?.right;
         let tileDetails;
-        if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
-            tileDetails = {
-                ...window._tileTypes.soil,
-                strength: 100,
-                caved: true
-            };
-        } else if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 2) {
-            tileDetails = {
-                ...window._tileTypes.liquid
-            };
+        if (this.tileDetails.id !== 2) {
+            if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
+                tileDetails = {
+                    ...window._tileTypes.soil,
+                    strength: 100,
+                    caved: true
+                };
+            }
+        }
+        if (this.tileDetails.id === 2) {
+            if (blockBelow && (blockBelow.tileRef?.tileDetails?.id === 0 || blockBelow.tileRef?.tileDetails?.id === 4)) {
+                tileDetails = {...window._tileTypes.empty};
 
-            this.game.mapService.setTile(blockAbove.tileRef?.worldX, blockAbove.tileRef?.worldY, {...window._tileTypes.empty}, blockAbove);
-        } else if (blockLeft && blockLeft.tileRef?.tileDetails?.id === 2) {
-            tileDetails = {
-                ...window._tileTypes.liquid
-            };
+                this.game.mapService.setTile(blockBelow.tileRef?.worldX, blockBelow.tileRef?.worldY, {
+                    ...window._tileTypes.liquid
+                }, blockBelow);
+                //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
+            }  else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && blockLeft.tileRef?.tileDetails?.lm === 'left') {
+                tileDetails = {...window._tileTypes.empty};
 
-            this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {...window._tileTypes.empty}, blockLeft);
-        } else if (blockRight && blockRight.tileRef?.tileDetails?.id === 2) {
-            tileDetails = {
-                ...window._tileTypes.liquid
-            };
+                this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'left'
+                }, blockLeft);
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && blockRight.tileRef?.tileDetails?.lm === 'right') {
+                tileDetails = {...window._tileTypes.empty};
 
-            this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {...window._tileTypes.empty}, blockRight);
+                this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'right'
+                }, blockRight);
+            }  else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
+                tileDetails = {...window._tileTypes.empty};
+                this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'left'
+                }, blockLeft);
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4)) {
+                tileDetails = {...window._tileTypes.empty};
+                this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'right'
+                }, blockRight);
+            }
         }
 
         if (tileDetails) {
