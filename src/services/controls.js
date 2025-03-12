@@ -71,7 +71,7 @@ export default class ControlsManager {
         this.scene.physics.overlap(this.scene.player, this.scene.liquidGroup, () => {
             this.scene.isFloating = true;
         });
-        if (this.scene.freezePlayer){
+        if (this.scene.freezePlayer) {
             this.scene.player.body.setVelocity(0, 0);
             this.scene.player.body.setGravityY(0);
             return;
@@ -118,15 +118,17 @@ export default class ControlsManager {
         const playerX = this.scene.player.x + playerOffset;
         const playerY = this.scene.player.y + playerOffset;
 
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => {
-                // Render low-priority blocks here
+        // if ('requestIdleCallback' in window) {
+        //     requestIdleCallback(() => {
+        //         Render low-priority blocks here
+                // this.scene.mapService.loadChunks(playerX, playerY);
+            // });
+        // } else {
+            // Fallback to requestAnimationFrame
+            requestAnimationFrame(() => {
                 this.scene.mapService.loadChunks(playerX, playerY);
             });
-        } else {
-            // Fallback to requestAnimationFrame
-            requestAnimationFrame(() => this.scene.mapService.loadChunks(playerX, playerY));
-        }
+        // }
 
         this.scene.playerLight.setPosition(playerX - this.scene.playerSize / 2, playerY - this.scene.playerSize / 2);
     }

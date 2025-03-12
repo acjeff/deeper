@@ -45,19 +45,21 @@ export default class GameScene extends Phaser.Scene {
                 await this.saveGame(this.user, this.grid);
             }
             this.checkBlocksInterval = this.time.addEvent({
-                delay: 10,
+                delay: 100,
                 callback: () => {
-                    let processed = 0;
-                    let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren()).concat(this.liquidGroup.getChildren());
-                    while (processed < batchSize && currentIndex < softSoil.length) {
-                        const block = softSoil[currentIndex];
-                        if (block.tileRef?.checkState) block.tileRef?.checkState();
-                        currentIndex++;
-                        processed++;
-                    }
-                    if (currentIndex >= softSoil.length) {
-                        currentIndex = 0;
-                    }
+                    requestAnimationFrame(() => {
+                        let processed = 0;
+                        let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren()).concat(this.liquidGroup.getChildren());
+                        while (processed < batchSize && currentIndex < softSoil.length) {
+                            const block = softSoil[currentIndex];
+                            if (block.tileRef?.checkState) block.tileRef?.checkState();
+                            currentIndex++;
+                            processed++;
+                        }
+                        if (currentIndex >= softSoil.length) {
+                            currentIndex = 0;
+                        }
+                    })
                 },
                 callbackScope: this,
                 loop: true
