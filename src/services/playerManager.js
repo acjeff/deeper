@@ -17,7 +17,8 @@ export default class PlayerManager {
         this.scene.player.hitPower = this.scene.player.maxHitPower;
         this.scene.player.setDisplaySize(this.scene.playerSize, this.scene.playerSize);
         // this.scene.playerRect = this.scene.add.rectangle(x, y, this.scene.playerSize, this.scene.playerSize, 0xffb2fd);
-        this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 4, 0.6, window.lightColors[1], false);
+        this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 8, 1, window.lightColors[1], false);
+        this.scene.playerLight.off = true;
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup, () => {
             const fallSpeed = this.scene.lastFallSpeed || 0; // use stored value
             const safeSpeed = 180; // speeds below this cause no damage

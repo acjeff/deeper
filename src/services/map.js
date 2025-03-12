@@ -58,6 +58,21 @@ export default class MapService {
                         ...window._tileTypes.soil,
                         strength: 100
                     };
+                } else if (((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) {
+                    console.log('Place block')
+                    this.game.grid[chunkKey][localY][localX] = {
+                        ...window._tileTypes.soil,
+                        strength: 999999,
+                        type: 1
+                    }
+                } else if ((x === window.chasmRange[0] && y === window.aboveGround) || (x === window.chasmRange[1] && y === window.aboveGround) || (x === window.chasmRange[1] && y % 20 === 0) || (x === window.chasmRange[0] && y % 20 === 0)) {
+                    console.log('Place block')
+                    this.game.grid[chunkKey][localY][localX] = {
+                        ...window._tileTypes.light,
+                        color: window.lightColors[2],
+                        neon: true,
+                        radius: 30
+                    }
                 } else {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.empty
