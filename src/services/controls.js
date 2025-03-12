@@ -130,7 +130,7 @@ export default class ControlsManager {
             });
         // }
 
-        this.scene.playerLight.setPosition(playerX - this.scene.playerSize / 2, playerY - this.scene.playerSize / 2);
+        this.scene.playerLight.setPosition(playerX, playerY);
     }
 
     getInteractableBlock(interactionRange) {
