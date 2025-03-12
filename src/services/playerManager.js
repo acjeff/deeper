@@ -44,9 +44,9 @@ export default class PlayerManager {
     die(reason) {
         // Create and set up the dialogue layer (canvas)
         this.createDialogueLayer();
-        this.scene.player.energy = 1;
-        this.scene.player.health = 1;
-        this.scene.player.breath = 1;
+        this.scene.player.energy = 100;
+        this.scene.player.health = 100;
+        this.scene.player.breath = 100;
 
         // Determine the message based on the reason.
         let message;
