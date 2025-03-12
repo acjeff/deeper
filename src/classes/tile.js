@@ -82,14 +82,14 @@ export class Tile {
                     ...window._tileTypes.liquid
                 }, blockBelow);
                 //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
-            }  else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && blockLeft.tileRef?.tileDetails?.lm === 'left') {
+            }  else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'left') {
                 tileDetails = {...window._tileTypes.empty};
 
                 this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
                     ...window._tileTypes.liquid,
                     lm: 'left'
                 }, blockLeft);
-            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && blockRight.tileRef?.tileDetails?.lm === 'right') {
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'right') {
                 tileDetails = {...window._tileTypes.empty};
 
                 this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
