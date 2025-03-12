@@ -51,14 +51,14 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                if (y > window.aboveGround && (x < window.chasmRange[0] || x > window.chasmRange[1])) {
+                if (y > window.aboveGround && (x < window.chasmRange[0] || x > window.chasmRange[1]) && x !== 0 && x !== this.game.mapWidth - 1) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
                         ...window._tileTypes.soil
                     } : {
                         ...window._tileTypes.soil,
                         strength: 100
                     };
-                } else if (((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) {
+                } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0)|| (x === this.game.mapWidth - 1)) {
                     console.log('Place block')
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
