@@ -82,7 +82,7 @@ export class Tile {
                     ...window._tileTypes.liquid
                 }, blockBelow);
                 //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
-            }  else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'left') {
+            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'left') {
                 tileDetails = {...window._tileTypes.empty};
 
                 this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
@@ -96,7 +96,7 @@ export class Tile {
                     ...window._tileTypes.liquid,
                     lm: 'right'
                 }, blockRight);
-            }  else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
+            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
                 tileDetails = {...window._tileTypes.empty};
                 this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
                     ...window._tileTypes.liquid,
@@ -144,7 +144,13 @@ export class Tile {
     }
 
     onMouseEnter(hoveredBlock) {
-        this.borderGraphics.setAlpha(1);
+        const metadata = this.game.selectedTool?.metadata;
+        if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id) || (metadata?.reclaimFrom?.id === this.tileDetails.id)) {
+            console.log(this.tileDetails.id, ' : this.tileDetails.id');
+            console.log(this.game.selectedTool?.metadata?.interactsWith, ' : this.game.selectedTool?.interactsWith');
+            console.log('Hovering over block');
+            this.borderGraphics.setAlpha(1);
+        }
     }
 
     createSprite() {
@@ -158,7 +164,18 @@ export class Tile {
 
     onClickHandler(cb) {
         if (this.disabled) return;
-        cb();
+        const metadata = this.game.selectedTool?.metadata;
+        if (metadata.interactsWith?.find(tile => tile.id === this.tileDetails.id) && (!metadata.limited || metadata.number)) {
+            cb();
+            if (metadata.number) {
+                this.game.selectedTool.updateMetaData({...metadata, number: metadata.number - 1});
+                this.game.toolBarManager.render();
+            }
+        } else if (metadata.reclaimFrom?.id === this.tileDetails?.id) {
+            cb();
+            this.game.selectedTool.updateMetaData({...metadata, number: metadata.number + 1});
+            this.game.toolBarManager.render();
+        }
     }
 
     onClick(cb) {

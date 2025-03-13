@@ -6,6 +6,9 @@ import ControlsManager from "../services/controls";
 import CameraManager from "../services/cameraManager";
 import PlayerManager from "../services/playerManager";
 import UiManager from "../services/uiManager";
+import ToolbarManager from "../services/toolbarManager";
+import InventoryManager from "../services/inventoryManager";
+import InventoryItem from "../classes/inventoryItem";
 
 const batchSize = 100;
 let currentIndex = 0;
@@ -26,6 +29,19 @@ export default class GameScene extends Phaser.Scene {
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.controlsManager = new ControlsManager(this);
+
+        this.toolBarManager = new ToolbarManager(this);
+        this.inventoryManager = new InventoryManager(this);
+
+        const pickaxe = new InventoryItem('1', 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [window._tileTypes.soil]});
+        const glowStick = new InventoryItem('2', 'Glow-stick', 'tool', 'images/glow-stick.png', {throwable: true, number: 20, limited: true});
+        const lamp = new InventoryItem('3', 'Lamp', 'tool', 'images/lamp.png', {interactsWith: [window._tileTypes.empty], number: 10, limited: true, reclaimFrom: window._tileTypes.light});
+        const coal = new InventoryItem('3', 'Coal', 'material', 'images/coal.png');
+        const wood = new InventoryItem('3', 'Wood', 'material', 'images/wood.png');
+
+        this.inventoryManager.addItem(coal);
+        this.inventoryManager.addItem(wood);
+
         this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
@@ -35,8 +51,13 @@ export default class GameScene extends Phaser.Scene {
         window.setTimeout(async () => {
             this.playerManager = new PlayerManager(this);
             this.cameraManager = new CameraManager(this);
+            this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;
             this.uiManager = new UiManager(this);
+            this.toolBarManager.addItemToSlot(0, pickaxe);
+            this.toolBarManager.addItemToSlot(1, glowStick);
+            this.toolBarManager.addItemToSlot(2, lamp);
+            this.toolBarManager.setSelected(0);
 
             this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];
             this.glowStickCol = 0;
@@ -67,6 +88,11 @@ export default class GameScene extends Phaser.Scene {
         });
 
 
+    }
+
+    getItemById(itemId) {
+        // You could also import and use the itemRegistry directly.
+        return itemRegistry.getItem(itemId);
     }
 
     async saveGame(user, gridData) {

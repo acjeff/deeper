@@ -50,6 +50,25 @@ window._tileTypes = {
     }
 }
 
+window.availableTools = {
+    1: {
+        label: "Pickaxe",
+        image: 'pickaxe'
+    },
+    2: {
+        label: "Glowstick",
+        image: 'glowstick'
+    },
+    3: {
+        label: "Lamp",
+        image: 'lamp'
+    },
+    4: {
+        label: "Buttress",
+        image: 'buttress'
+    }
+}
+
 window._randomElements = [
     {
         tile: {
@@ -59,7 +78,7 @@ window._randomElements = [
         heightRange: [20, 30],
         count: 10000,
         layerWeights: [0, 0, 0, 10, 0, 0, 0]
-    },{
+    }, {
         tile: {
             ...window._tileTypes.empty
         },
@@ -67,7 +86,7 @@ window._randomElements = [
         heightRange: [5, 10],
         count: 10000,
         layerWeights: [0, 10, 0, 0, 0, 0, 0]
-    },{
+    }, {
         tile: {
             ...window._tileTypes.liquid
         },

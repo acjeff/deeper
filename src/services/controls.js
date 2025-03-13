@@ -24,6 +24,9 @@ export default class ControlsManager {
                     }, block);
                 })
             }
+            if (typeof e.key === 'number') {
+                console.log(e.key, ' : key');
+            }
         });
 
         window.addEventListener("mousedown", (e) => {
