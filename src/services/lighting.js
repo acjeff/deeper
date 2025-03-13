@@ -8,6 +8,13 @@ export default class LightingManager {
         this.initLighting();
     }
 
+    updateLightPosition(light, x, y) {
+        if (light) {
+            light.x = x;
+            light.y = y;
+        }
+    }
+
     initLighting() {
         this.cachedCanvases = {};
         this.colorCaches = {};

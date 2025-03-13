@@ -1,3 +1,4 @@
+import MouseManager from "./MouseManager";
 export default class ControlsManager {
     constructor(scene) {
         this.scene = scene;
@@ -61,6 +62,8 @@ export default class ControlsManager {
             this.scene.digging = false;
             this.scene.drilling = false;
         });
+        this.mouseManager = new MouseManager(this.scene);
+
     }
 
     handlePlayerMovement() {
