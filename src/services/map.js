@@ -47,13 +47,13 @@ export default class MapService {
             let chunkX = Math.floor(x / this.game.chunkSize) * this.game.chunkSize;
             let chunkY = Math.floor(y / this.game.chunkSize) * this.game.chunkSize;
             let chunkKey = `${chunkX}_${chunkY}`;
+            const entryEvery = 10;
+            const blockEvery = 9;
 
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                // const EveryNinteenthDownAndOneSideOfColumn = ((x > window.chasmRange[1] + 1 && x < window.chasmRange[1] + 4) && y % 17 === 0) || ((x < window.chasmRange[1] - 1 && x > window.chasmRange[0] - 4) && y % 17 === 0);
-                const EveryNinteenthDownAndOneSideOfColumn = ((x < window.chasmRange[0] || x > window.chasmRange[1]) && y % 17 === 0);
-                // const EveryNinteenthDownAndOneSideOfColumn = ((x > window.chasmRange[1] + 1 && x < window.chasmRange[1] + 4) && y % 17 === 0);
+                const EveryNinteenthDownAndOneSideOfColumn = ((x < window.chasmRange[0] || x > window.chasmRange[1]) && y % blockEvery === 0);
                 if (y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5) && x !== 0 && x !== this.game.mapWidth - 1) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
                         ...window._tileTypes.soil
@@ -61,7 +61,7 @@ export default class MapService {
                         ...window._tileTypes.soil,
                         strength: 100
                     };
-                } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0) || (x === this.game.mapWidth - 1)) {
+                } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % entryEvery !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0) || (x === this.game.mapWidth - 1)) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
                         strength: 999999,
@@ -78,7 +78,7 @@ export default class MapService {
                         ...window._tileTypes.soil,
                         strength: 100
                     }
-                } else if ((x === window.chasmRange[0] && y === window.aboveGround) || (x === window.chasmRange[1] && y === window.aboveGround) || (x === window.chasmRange[1] && y % 20 === 0) || (x === window.chasmRange[0] && y % 20 === 0)) {
+                } else if ((x === window.chasmRange[0] && y === window.aboveGround) || (x === window.chasmRange[1] && y === window.aboveGround) || (x === window.chasmRange[1] && y % entryEvery === 0) || (x === window.chasmRange[0] && y % entryEvery === 0)) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.light,
                         radius: 100,
