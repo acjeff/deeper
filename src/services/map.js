@@ -51,7 +51,10 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                if (y > window.aboveGround && (x < window.chasmRange[0] || x > window.chasmRange[1]) && x !== 0 && x !== this.game.mapWidth - 1) {
+                // const EveryNinteenthDownAndOneSideOfColumn = ((x > window.chasmRange[1] + 1 && x < window.chasmRange[1] + 4) && y % 17 === 0) || ((x < window.chasmRange[1] - 1 && x > window.chasmRange[0] - 4) && y % 17 === 0);
+                const EveryNinteenthDownAndOneSideOfColumn = ((x < window.chasmRange[0] || x > window.chasmRange[1]) && y % 17 === 0);
+                // const EveryNinteenthDownAndOneSideOfColumn = ((x > window.chasmRange[1] + 1 && x < window.chasmRange[1] + 4) && y % 17 === 0);
+                if (y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5) && x !== 0 && x !== this.game.mapWidth - 1) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
                         ...window._tileTypes.soil
                     } : {
@@ -59,14 +62,23 @@ export default class MapService {
                         strength: 100
                     };
                 } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0) || (x === this.game.mapWidth - 1)) {
-                    console.log('Place block')
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
                         strength: 999999,
                         type: 2
                     }
+                } else if (EveryNinteenthDownAndOneSideOfColumn && y > window.aboveGround) {
+                    this.game.grid[chunkKey][localY][localX] = {
+                        ...window._tileTypes.soil,
+                        strength: 999999,
+                        type: 2
+                    }
+                } else if (((x < window.chasmRange[0] || x > window.chasmRange[1]) && y > window.aboveGround) && !EveryNinteenthDownAndOneSideOfColumn) {
+                    this.game.grid[chunkKey][localY][localX] = {
+                        ...window._tileTypes.soil,
+                        strength: 100
+                    }
                 } else if ((x === window.chasmRange[0] && y === window.aboveGround) || (x === window.chasmRange[1] && y === window.aboveGround) || (x === window.chasmRange[1] && y % 20 === 0) || (x === window.chasmRange[0] && y % 20 === 0)) {
-                    console.log('Place block')
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.light,
                         radius: 100,
@@ -138,7 +150,7 @@ export default class MapService {
         let chunkKeys = Object.keys(this.game.grid);
 
         function placeBlock(x, y) {
-            if (y > window.aboveGround && (x < window.chasmRange[0] || x > window.chasmRange[1])) {
+            if (y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5)) {
                 let chunkKey = self.getChunkKey.call(this, x, y);
                 if (!this.game.grid[chunkKey]) return false;
 
