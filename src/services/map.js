@@ -58,20 +58,20 @@ export default class MapService {
                         ...window._tileTypes.soil,
                         strength: 100
                     };
-                } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0)|| (x === this.game.mapWidth - 1)) {
+                } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % 20 !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0) || (x === this.game.mapWidth - 1)) {
                     console.log('Place block')
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
                         strength: 999999,
-                        type: 1
+                        type: 2
                     }
                 } else if ((x === window.chasmRange[0] && y === window.aboveGround) || (x === window.chasmRange[1] && y === window.aboveGround) || (x === window.chasmRange[1] && y % 20 === 0) || (x === window.chasmRange[0] && y % 20 === 0)) {
                     console.log('Place block')
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.light,
-                        color: window.lightColors[2],
-                        neon: true,
-                        radius: 30
+                        radius: 100,
+                        color: window.lightColors[1],
+                        neon: false
                     }
                 } else {
                     this.game.grid[chunkKey][localY][localX] = {
@@ -214,6 +214,7 @@ export default class MapService {
             }
         }
     }
+
     areSquaresIntersecting(square1X, square1Y, square1Size, square2X, square2Y, square2Size) {
         return (
             square1X < square2X + square2Size &&
@@ -235,10 +236,10 @@ export default class MapService {
 
         // Define the target positions for each direction.
         const targets = {
-            left: { x: x - tileSize, y: y },
-            above: { x: x, y: y - tileSize },
-            right: { x: x + tileSize, y: y },
-            below: { x: x, y: y + tileSize },
+            left: {x: x - tileSize, y: y},
+            above: {x: x, y: y - tileSize},
+            right: {x: x + tileSize, y: y},
+            below: {x: x, y: y + tileSize},
         };
 
         // Loop through each group in entityChildren.

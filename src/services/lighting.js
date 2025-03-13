@@ -147,14 +147,22 @@ export default class LightingManager {
 
         const ctx = cachedCanvas.getContext('2d');
 
-        const gradient = ctx.createRadialGradient(maxRadius, maxRadius, 0, maxRadius, maxRadius, maxRadius);
+        const gradient = ctx.createRadialGradient(maxRadius, maxRadius, 30, maxRadius, maxRadius, maxRadius);
         gradient.addColorStop(0, `rgba(${color},1)`);
-        gradient.addColorStop(0.7, `rgba(${color},1)`);
-        gradient.addColorStop(1, `rgba(${color},0)`);
+        gradient.addColorStop(0.1, `rgba(${color},0)`);
+
+        const _gradient = ctx.createRadialGradient(maxRadius, maxRadius, 30, maxRadius, maxRadius, maxRadius);
+        _gradient.addColorStop(0.2, `rgba(${color},0.3)`);
+        _gradient.addColorStop(1, `rgba(${color},0)`);
 
         ctx.clearRect(0, 0, maxRadius * 2, maxRadius * 2);
         ctx.filter = `blur(${blurAmount}px)`;
         ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(maxRadius, maxRadius, maxRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = _gradient;
         ctx.beginPath();
         ctx.arc(maxRadius, maxRadius, maxRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -187,8 +195,8 @@ export default class LightingManager {
             screenX - radius, screenY - radius, radius * 2, radius * 2
         );
 
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = light.neon ? 0.3 : 0.1;
+        ctx.globalCompositeOperation = "normal";
+        ctx.globalAlpha = light.neon ? 0.6 : 0.1;
 
         ctx.drawImage(
             cachedCanvas,

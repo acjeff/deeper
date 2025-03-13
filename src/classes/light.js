@@ -20,7 +20,7 @@ export class Light extends Tile {
 
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
-        this.lampSprite = this.game.add.image(this.worldX, this.worldY, 'lamp');
+        this.lampSprite = this.game.add.image(this.worldX, this.worldY + 2, 'lamp');
         this.lampSprite.setDisplaySize(this.game.tileSize - 3, this.game.tileSize - 3);
         this.lampSprite.setDepth(-1);
         baseSprite.setAlpha(0);

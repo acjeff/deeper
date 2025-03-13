@@ -12,7 +12,6 @@ window._renderDistance = 3;
 window.fadeSpeed = 200;
 window.renderviewDistance = 250;
 window.aboveGround = 20;
-// window.chasmRange = [156, 164];
 window.chasmRange = [150, 160];
 window._tileSize = 10;
 window._playerSize = 8;
@@ -22,6 +21,9 @@ window._height = window._tileSize * window._gridSize;
 window._soilTypes = {
     1: {
         image: 'coal'
+    },
+    2: {
+        image: 'wood'
     }
 }
 window._tileTypes = {

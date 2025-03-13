@@ -5,7 +5,7 @@ export default class ControlsManager {
         this.hoveredBlock = null;
 
         this.scene.keys = this.scene.input.keyboard.addKeys({
-            up: Phaser.Input.Keyboard.KeyCodes.W,
+            up: Phaser.Input.Keyboard.KeyCodes.SPACE,
             left: Phaser.Input.Keyboard.KeyCodes.A,
             right: Phaser.Input.Keyboard.KeyCodes.D,
             down: Phaser.Input.Keyboard.KeyCodes.S
