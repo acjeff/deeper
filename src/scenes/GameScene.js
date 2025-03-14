@@ -6,10 +6,9 @@ import ControlsManager from "../services/controls";
 import CameraManager from "../services/cameraManager";
 import PlayerManager from "../services/playerManager";
 import UiManager from "../services/uiManager";
-import ToolbarManager from "../services/toolbarManager";
+import ToolbarManager from "../services/toolBarManager";
 import InventoryManager from "../services/inventoryManager";
 import InventoryItem from "../classes/inventoryItem";
-import MouseManager from "../services/MouseManager";
 
 const batchSize = 100;
 let currentIndex = 0;
