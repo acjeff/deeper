@@ -42,7 +42,6 @@ export default class ToolbarManager {
 
     render() {
         this.container.innerHTML = '';
-        console.log(this.slots)
         for (let i = 0; i < this.numSlots; i++) {
             const slotEl = document.createElement('div');
             slotEl.classList.add('toolbar-slot');
@@ -153,8 +152,6 @@ export default class ToolbarManager {
 
     addItemToSlot(index, item) {
         if (index >= 0 && index < this.numSlots) {
-            console.log(index, ' : index');
-            console.log(item, ' : item');
             this.slots[index] = item;
             this.render();
             // Optionally, if you want to auto-select the first added item:

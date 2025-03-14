@@ -31,13 +31,13 @@ export default class GameScene extends Phaser.Scene {
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.controlsManager = new ControlsManager(this);
-        this.physics.add.collider(this.glowStickGroup, this.soilGroup);
+
 
         this.toolBarManager = new ToolbarManager(this);
         this.inventoryManager = new InventoryManager(this);
 
         const pickaxe = new InventoryItem('1', 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [window._tileTypes.soil]});
-        const glowStick = new InventoryItem('2', 'Glow-stick', 'tool', 'images/glow-stick.png', {throwable: true, number: 10, limited: true});
+        const glowStick = new InventoryItem('2', 'Glow-stick', 'tool', 'images/glow-stick.png', {throwable: true, number: 100, limited: true});
         const lamp = new InventoryItem('3', 'Lamp', 'tool', 'images/lamp.png', {interactsWith: [window._tileTypes.empty], number: 3, limited: true, reclaimFrom: window._tileTypes.light});
         const coal = new InventoryItem('4', 'Coal', 'material', 'images/coal.png');
         const wood = new InventoryItem('5', 'Wood', 'material', 'images/wood.png');
@@ -54,6 +54,8 @@ export default class GameScene extends Phaser.Scene {
         window.setTimeout(async () => {
             this.playerManager = new PlayerManager(this);
             this.cameraManager = new CameraManager(this);
+            this.physics.add.collider(this.glowStickGroup, this.soilGroup);
+            // this.physics.add.collider(this.player, this.glowStickGroup);
             this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;
             this.uiManager = new UiManager(this);

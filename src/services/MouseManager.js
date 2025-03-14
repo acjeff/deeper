@@ -23,7 +23,6 @@ export default class MouseManager {
     handleMouseDown(event) {
         // Check if the selected tool is a throwable glowstick.
         const selectedTool = this.scene.selectedTool;
-        console.log(selectedTool);
         if (
             selectedTool &&
             selectedTool.metadata &&

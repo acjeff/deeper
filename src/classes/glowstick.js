@@ -8,35 +8,28 @@ export class GlowStick {
      */
     constructor(scene, x, y, textureKey = 'glowstick', options = {}) {
         this.scene = scene;
-        this.fadeTime = options.fadeTime || 100000; // Fade duration in ms
+        this.fadeTime = options.fadeTime || 100000;
+        // this.fadeTime = options.fadeTime || 1000;
         this.throwSpeed = options.throwSpeed || 200;
 
-        // Create the physics-enabled sprite (composition, not inheritance)
         this.sprite = this.scene.physics.add.sprite(x, y, 'glowstick');
         const newSizeW = this.sprite.width / 5;
         const newSizeH = this.sprite.height / 5;
         this.scene.glowStickGroup.add(this.sprite);
-        this.sprite.body.allowRotate = true;
-        // this.sprite.setTint(0xff0000);
+        this.sprite.body.setAllowRotation(true);
         this.sprite.setDepth(999);
-        this.sprite.setAlpha(0.9);
+        this.sprite.setAlpha(1);
         this.sprite.body.setSize(newSizeW, newSizeH);
         this.sprite.setDisplaySize(newSizeW, newSizeH);
-        // this.sprite.setOrigin(0.5, 0.5);
-        // this.sprite.body.setOrigin(0.5, 0.5);
-        // this.sprite.body.setOffset(0, 0);
-        // this.sprite.setCollideWorldBounds(true);
         this.sprite.setBounce(0.6);
         this.sprite.setDrag(200);
         this.sprite.body.setGravityY(options.gravityY || 300);
 
-        // Light properties
         this.intensity = options.intensity || 0.8;
         this.color = window.lightColors[0];
         this.radius = options.radius || 50;
         this.neon = options.neon !== undefined ? options.neon : true;
 
-        // Create a dynamic light if a lighting manager exists.
         this.glowLight = null;
         if (scene.lightingManager) {
             this.glowLight = scene.lightingManager.addLight(
@@ -50,33 +43,28 @@ export class GlowStick {
             );
         }
 
-        // Start the fade-out tween on the sprite's alpha.
+        this.sprite.dummyTween = 1;
+
         scene.tweens.add({
             targets: this.sprite,
-            alpha: 0,
-            duration: this.fadeTime,
-            onUpdate: () => {
-                // Optionally update the light's intensity based on the sprite's alpha.
+            dummyTween: 0, // Tween this value from 1 to 0
+            duration: this.fadeTime, // Duration of the effect
+            onUpdate: (tween, target) => {
+                const progress = target.dummyTween; // Progress from 1 to 0
+
+                // Lower the light radius
                 if (this.glowLight) {
-                    this.glowLight.intensity = this.intensity * this.sprite.alpha;
+                    if (this.glowLight.radius > 0) {
+                        this.glowLight.radius = this.radius * progress; // Reduce radius over time
+                    }
                 }
             },
             onComplete: () => {
-                this.destroy();
+                // this.destroy();
             }
         });
     }
 
-    /**
-     * Creates a new GlowStick at the player's position and throws it in the direction
-     * from the player to the current mouse pointer world coordinates.
-     *
-     * @param {Phaser.Scene} scene - The current game scene.
-     * @param {Phaser.GameObjects.Sprite} player - The player object (must have x and y properties).
-     * @param {string} textureKey - The key for the glowstick image.
-     * @param {Object} options - Optional settings for physics, lighting, fade, and throw speed.
-     * @returns {GlowStick} - The created GlowStick instance.
-     */
     static throwFromPlayer(scene, player, textureKey = 'glowStick', options = {}) {
         // Get the pointer's world coordinates.
         const pointer = scene.input.activePointer;

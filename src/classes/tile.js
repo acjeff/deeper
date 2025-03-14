@@ -146,9 +146,6 @@ export class Tile {
     onMouseEnter(hoveredBlock) {
         const metadata = this.game.selectedTool?.metadata;
         if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id) || (metadata?.reclaimFrom?.id === this.tileDetails.id)) {
-            console.log(this.tileDetails.id, ' : this.tileDetails.id');
-            console.log(this.game.selectedTool?.metadata?.interactsWith, ' : this.game.selectedTool?.interactsWith');
-            console.log('Hovering over block');
             this.borderGraphics.setAlpha(1);
         }
     }
