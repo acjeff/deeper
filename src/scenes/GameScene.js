@@ -38,10 +38,10 @@ export default class GameScene extends Phaser.Scene {
 
         const pickaxe = new InventoryItem('1', 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [window._tileTypes.soil]});
         const glowStick = new InventoryItem('2', 'Glow-stick', 'tool', 'images/glow-stick.png', {throwable: true, number: 100, limited: true});
-        const lamp = new InventoryItem('3', 'Lamp', 'tool', 'images/lamp.png', {interactsWith: [window._tileTypes.empty], number: 3, limited: true, reclaimFrom: window._tileTypes.light});
+        const lamp = new InventoryItem('3', 'Lamp', 'tool', 'images/lamp.png', {interactsWith: [window._tileTypes.empty], number: 50, limited: true, reclaimFrom: window._tileTypes.light});
         const coal = new InventoryItem('4', 'Coal', 'material', 'images/coal.png');
         const wood = new InventoryItem('5', 'Wood', 'material', 'images/wood.png');
-        const buttress = new InventoryItem('6', 'Buttress', 'tool', 'images/buttress.png', {interactsWith: [window._tileTypes.empty, {...window._tileTypes.soil, additionalChecks: {strength: 100}}], number: 5, limited: true, reclaimFrom: window._tileTypes.buttress});
+        const buttress = new InventoryItem('6', 'Buttress', 'tool', 'images/buttress.png', {interactsWith: [window._tileTypes.empty, {...window._tileTypes.soil, additionalChecks: {strength: 100}}], number: 50, limited: true, reclaimFrom: window._tileTypes.buttress});
 
         this.inventoryManager.addItem(coal);
         this.inventoryManager.addItem(wood);
