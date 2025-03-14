@@ -7,11 +7,11 @@ export class Buttress extends Tile {
     }
 
     addToGroup() {
-        return this.game.lightGroup.add(this.sprite);
+        return this.game.buttressGroup.add(this.sprite);
     }
 
     removeFromGroup() {
-        return this.game.lightGroup.add(this.sprite);
+        return this.game.buttressGroup.add(this.sprite);
     }
 
     createSprite() {

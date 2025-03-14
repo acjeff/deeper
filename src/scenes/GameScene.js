@@ -23,6 +23,7 @@ export default class GameScene extends Phaser.Scene {
         this.tileSize = window._tileSize;
         this.playerSize = window._playerSize;
         this.soilGroup = this.physics.add.staticGroup();
+        this.buttressGroup = this.physics.add.staticGroup();
         this.glowStickGroup = this.physics.add.group();
         this.glowSticks = [];
         this.emptyGroup = this.add.group();
@@ -46,7 +47,7 @@ export default class GameScene extends Phaser.Scene {
         this.inventoryManager.addItem(coal);
         this.inventoryManager.addItem(wood);
 
-        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();
@@ -56,6 +57,7 @@ export default class GameScene extends Phaser.Scene {
             this.playerManager = new PlayerManager(this);
             this.cameraManager = new CameraManager(this);
             this.physics.add.collider(this.glowStickGroup, this.soilGroup);
+            this.physics.add.collider(this.buttressGroup, this.player);
             // this.physics.add.collider(this.player, this.glowStickGroup);
             this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;
