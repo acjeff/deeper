@@ -77,6 +77,7 @@ export default class ControlsManager {
         this.scene.physics.overlap(this.scene.player, this.scene.liquidGroup, () => {
             this.scene.isFloating = true;
         });
+
         if (this.scene.freezePlayer) {
             this.scene.player.body.setVelocity(0, 0);
             this.scene.player.body.setGravityY(0);

@@ -8,24 +8,32 @@ export class GlowStick {
      */
     constructor(scene, x, y, textureKey = 'glowstick', options = {}) {
         this.scene = scene;
-        this.fadeTime = options.fadeTime || 3000; // Fade duration in ms
-        this.throwSpeed = options.throwSpeed || 400;
+        this.fadeTime = options.fadeTime || 100000; // Fade duration in ms
+        this.throwSpeed = options.throwSpeed || 200;
 
         // Create the physics-enabled sprite (composition, not inheritance)
-        this.sprite = this.scene.glowStickGroup.create(x, y, textureKey);
-        this.sprite.setTint(0xff0000);
-        this.sprite.setDepth(1);
+        this.sprite = this.scene.physics.add.sprite(x, y, 'glowstick');
+        const newSizeW = this.sprite.width / 5;
+        const newSizeH = this.sprite.height / 5;
+        this.scene.glowStickGroup.add(this.sprite);
+        this.sprite.body.allowRotate = true;
+        // this.sprite.setTint(0xff0000);
+        this.sprite.setDepth(999);
+        this.sprite.setAlpha(0.9);
+        this.sprite.body.setSize(newSizeW, newSizeH);
+        this.sprite.setDisplaySize(newSizeW, newSizeH);
         // this.sprite.setOrigin(0.5, 0.5);
-        // this.sprite.body.setSize(this.sprite.width, this.sprite.height);
+        // this.sprite.body.setOrigin(0.5, 0.5);
         // this.sprite.body.setOffset(0, 0);
         // this.sprite.setCollideWorldBounds(true);
-        // this.sprite.setBounce(0.6);
-        // this.sprite.body.setGravityY(options.gravityY || 300);
+        this.sprite.setBounce(0.6);
+        this.sprite.setDrag(200);
+        this.sprite.body.setGravityY(options.gravityY || 300);
 
         // Light properties
-        this.intensity = options.intensity || 1;
+        this.intensity = options.intensity || 0.8;
         this.color = window.lightColors[0];
-        this.radius = options.radius || 30;
+        this.radius = options.radius || 50;
         this.neon = options.neon !== undefined ? options.neon : true;
 
         // Create a dynamic light if a lighting manager exists.
@@ -100,9 +108,22 @@ export class GlowStick {
      * Call this method from the scene's update loop if needed.
      */
     update() {
-        if (this.glowLight) {
-            this.glowLight.x = this.sprite.x;
-            this.glowLight.y = this.sprite.y;
+        this.isFloating = false;
+        if (this.sprite.body) {
+            this.sprite.body.setGravityY(300);
+            this.sprite.body.setDrag(200);
+            if (this.glowLight) {
+                this.glowLight.x = this.sprite.x;
+                this.glowLight.y = this.sprite.y;
+            }
+            this.scene.physics.overlap(this.sprite, this.scene.liquidGroup, () => {
+                this.isFloating = true;
+                this.sprite.body.setVelocity(0, 10);
+            });
+            if (this.isFloating) {
+                this.sprite.body.setGravityY(50);
+                this.sprite.body.setDrag(300);
+            }
         }
     }
 

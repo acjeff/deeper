@@ -28,10 +28,14 @@ export default class MouseManager {
             selectedTool &&
             selectedTool.metadata &&
             selectedTool.metadata.throwable &&
-            selectedTool.id === '2'
+            selectedTool.id === '2' &&
+            selectedTool.metadata.number
         ) {
             // Create and throw a new glow stick from the player's position.
-            GlowStick.throwFromPlayer(this.scene, this.scene.player);
+            const glowStick = GlowStick.throwFromPlayer(this.scene, this.scene.player);
+            selectedTool.metadata.number = selectedTool.metadata.number - 1;
+            this.scene.glowSticks.push(glowStick);
+            this.scene.toolBarManager.render();
         }
     }
 }
