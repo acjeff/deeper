@@ -41,6 +41,7 @@ export default class GameScene extends Phaser.Scene {
         const lamp = new InventoryItem('3', 'Lamp', 'tool', 'images/lamp.png', {interactsWith: [window._tileTypes.empty], number: 3, limited: true, reclaimFrom: window._tileTypes.light});
         const coal = new InventoryItem('4', 'Coal', 'material', 'images/coal.png');
         const wood = new InventoryItem('5', 'Wood', 'material', 'images/wood.png');
+        const buttress = new InventoryItem('6', 'Buttress', 'tool', 'images/buttress.png', {interactsWith: [window._tileTypes.empty, {...window._tileTypes.soil, additionalChecks: {strength: 100}}], number: 5, limited: true, reclaimFrom: window._tileTypes.buttress});
 
         this.inventoryManager.addItem(coal);
         this.inventoryManager.addItem(wood);
@@ -62,6 +63,7 @@ export default class GameScene extends Phaser.Scene {
             this.toolBarManager.addItemToSlot(0, pickaxe);
             this.toolBarManager.addItemToSlot(1, glowStick);
             this.toolBarManager.addItemToSlot(2, lamp);
+            this.toolBarManager.addItemToSlot(3, buttress);
             this.toolBarManager.setSelected(0);
 
             this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];

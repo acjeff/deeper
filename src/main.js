@@ -47,25 +47,9 @@ window._tileTypes = {
     },
     light: {
         id: 4
-    }
-}
-
-window.availableTools = {
-    1: {
-        label: "Pickaxe",
-        image: 'pickaxe'
     },
-    2: {
-        label: "Glowstick",
-        image: 'glowstick'
-    },
-    3: {
-        label: "Lamp",
-        image: 'lamp'
-    },
-    4: {
-        label: "Buttress",
-        image: 'buttress'
+    buttress: {
+        id: 5
     }
 }
 

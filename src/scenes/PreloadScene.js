@@ -13,6 +13,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('lamp', 'images/lamp.png');
         this.load.image('coal', 'images/coal.png');
         this.load.image('wood', 'images/wood.png');
+        this.load.image('buttress', 'images/buttress.png');
         this.load.image('glowstick', 'images/glow-stick.png');
     }
 

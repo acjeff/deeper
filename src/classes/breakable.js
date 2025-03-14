@@ -20,7 +20,8 @@ export class Breakable extends Tile {
         }
     }
 
-    checkState() {}
+    checkState() {
+    }
 
     addToGroup() {
         return this.game.soilGroup.add(this.sprite);
@@ -68,35 +69,40 @@ export class Breakable extends Tile {
 
     onClick() {
         this.onClickHandler(() => {
-            if (this.clicking) return;
-            this.clicking = true;
-            this.game.player.energy -= 1;
-            const hitPower = this.game.player.hitPower;
-            let baseCell, damageAmount = this.tileDetails.damageAmount || 0;
-            damageAmount += hitPower;
-            let health = -(damageAmount / this.tileDetails.strength - 1);
-            this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y);
-            if (health <= 0) {
-                this.game.physics.world.disable(this.sprite);
-                this.crackSprite.setAlpha(0);
-                this.sprite.setStrokeStyle(0, 0);
-                this.game.dustEmitter.explode(50);
-                baseCell = this.tileDetails.trapped || {...window._tileTypes.empty};
-                this.clicking = false;
+            if (this.game.selectedTool.id === '6' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
+                let baseCell = {...window._tileTypes.buttress};
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-            } else {
-                this.game.dustEmitter.explode(5);
-                this.game.tweens.add({
-                    targets: this.crackSprite,
-                    alpha: 1 - health,
-                    duration: 50,
-                    ease: 'Cubic.easeOut',
-                    onComplete: () => {
-                        baseCell = {...this.tileDetails, health: health, damageAmount: damageAmount};
-                        this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-                        this.clicking = false;
-                    }
-                });
+            } else if (this.game.selectedTool.id === '1') {
+                if (this.clicking) return;
+                this.clicking = true;
+                this.game.player.energy -= 1;
+                const hitPower = this.game.player.hitPower;
+                let baseCell, damageAmount = this.tileDetails.damageAmount || 0;
+                damageAmount += hitPower;
+                let health = -(damageAmount / this.tileDetails.strength - 1);
+                this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y);
+                if (health <= 0) {
+                    this.game.physics.world.disable(this.sprite);
+                    this.crackSprite.setAlpha(0);
+                    this.sprite.setStrokeStyle(0, 0);
+                    this.game.dustEmitter.explode(50);
+                    baseCell = this.tileDetails.trapped || {...window._tileTypes.empty};
+                    this.clicking = false;
+                    this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+                } else {
+                    this.game.dustEmitter.explode(5);
+                    this.game.tweens.add({
+                        targets: this.crackSprite,
+                        alpha: 1 - health,
+                        duration: 50,
+                        ease: 'Cubic.easeOut',
+                        onComplete: () => {
+                            baseCell = {...this.tileDetails, health: health, damageAmount: damageAmount};
+                            this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+                            this.clicking = false;
+                        }
+                    });
+                }
             }
         });
     }

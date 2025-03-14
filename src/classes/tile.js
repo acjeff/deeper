@@ -65,7 +65,7 @@ export class Tile {
         const blockLeft = adjacentBlocks?.left;
         const blockRight = adjacentBlocks?.right;
         let tileDetails;
-        if (this.tileDetails.id !== 2) {
+        if (this.tileDetails.id !== 2 && this.tileDetails.id !== 5) {
             if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
                 tileDetails = {
                     ...window._tileTypes.soil,
@@ -145,7 +145,12 @@ export class Tile {
 
     onMouseEnter(hoveredBlock) {
         const metadata = this.game.selectedTool?.metadata;
-        if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id) || (metadata?.reclaimFrom?.id === this.tileDetails.id)) {
+        if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id && ((
+            !tile.additionalChecks ||
+            Object.entries(tile.additionalChecks).filter(
+                ([key, value]) => this.tileDetails[key] !== value
+            ).length === 0
+        ))) || (metadata?.reclaimFrom?.id === this.tileDetails.id)) {
             this.borderGraphics.setAlpha(1);
         }
     }
@@ -160,9 +165,18 @@ export class Tile {
     }
 
     onClickHandler(cb) {
+        // if (this.game.selectedTool.id === '6' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
+        //     let baseCell = {...window._tileTypes.buttress};
+        //     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+        // } else if (this.game.selectedTool.id === '1') {
         if (this.disabled) return;
         const metadata = this.game.selectedTool?.metadata;
-        if (metadata.interactsWith?.find(tile => tile.id === this.tileDetails.id) && (!metadata.limited || metadata.number)) {
+        if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id && ((
+            !tile.additionalChecks ||
+            Object.entries(tile.additionalChecks).filter(
+                ([key, value]) => this.tileDetails[key] !== value
+            ).length === 0
+        ))) && (!metadata.limited || metadata.number)) {
             cb();
             if (metadata.number) {
                 this.game.selectedTool.updateMetaData({...metadata, number: metadata.number - 1});
@@ -173,6 +187,7 @@ export class Tile {
             this.game.selectedTool.updateMetaData({...metadata, number: metadata.number + 1});
             this.game.toolBarManager.render();
         }
+        // }
     }
 
     onClick(cb) {
