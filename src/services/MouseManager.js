@@ -1,5 +1,5 @@
 // MouseManager.js
-import { GlowStick } from "../classes/glowStick"; // adjust the path as needed
+import { GlowStick } from "../classes/glowstick"; // adjust the path as needed
 
 export default class MouseManager {
     /**
