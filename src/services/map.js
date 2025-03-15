@@ -361,7 +361,7 @@ export default class MapService {
         this.game.grid[chunkKey][cellY][cellX] = {...tileType};
         if (cellItem?.tileRef) cellItem.tileRef.destroy(prefs);
         if (this.game.loadedChunks.has(chunkKey)) {
-            return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
+            return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX}, prefs);
         }
     }
 
@@ -369,7 +369,7 @@ export default class MapService {
         return this.game.grid[chunkKey][cellY][cellX];
     }
 
-    placeObject(tileType, worldX, worldY, cellDetails) {
+    placeObject(tileType, worldX, worldY, cellDetails, prefs) {
         let newTile;
         window.requestAnimationFrame(() => {
             if (tileType.id === window._tileTypes.empty.id) {
@@ -378,7 +378,8 @@ export default class MapService {
                     cellDetails: cellDetails,
                     tileDetails: tileType,
                     worldX: worldX,
-                    worldY: worldY
+                    worldY: worldY,
+                    prefs: prefs
                 });
             }
             if (tileType.id === window._tileTypes.soil.id) {
@@ -387,7 +388,8 @@ export default class MapService {
                     cellDetails: cellDetails,
                     tileDetails: tileType,
                     worldX: worldX,
-                    worldY: worldY
+                    worldY: worldY,
+                    prefs: prefs
                 });
             }
             if (tileType.id === window._tileTypes.liquid.id) {
@@ -396,7 +398,8 @@ export default class MapService {
                     cellDetails: cellDetails,
                     tileDetails: tileType,
                     worldX: worldX,
-                    worldY: worldY
+                    worldY: worldY,
+                    prefs: prefs
                 });
             }
             if (tileType.id === window._tileTypes.light.id) {
@@ -405,7 +408,8 @@ export default class MapService {
                     cellDetails: cellDetails,
                     tileDetails: tileType,
                     worldX: worldX,
-                    worldY: worldY
+                    worldY: worldY,
+                    prefs: prefs
                 })
             }
             if (tileType.id === window._tileTypes.buttress.id) {
@@ -414,7 +418,8 @@ export default class MapService {
                     cellDetails: cellDetails,
                     tileDetails: tileType,
                     worldX: worldX,
-                    worldY: worldY
+                    worldY: worldY,
+                    prefs: prefs
                 })
             }
         });

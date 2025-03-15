@@ -3,9 +3,10 @@ const uuid = function () {
 }
 
 export class Tile {
-    constructor({game, worldX, worldY, tileDetails, cellDetails}) {
+    constructor({game, worldX, worldY, tileDetails, cellDetails, prefs}) {
         this.game = game;
         this.worldX = worldX;
+        this.prefs = prefs;
         this.worldY = worldY;
         // getCellFromWorldPosition
         // getChunkKey
@@ -39,7 +40,7 @@ export class Tile {
         this.borderGraphics.setAlpha(0);
         this.setupInteractions();
         this.addToGroup();
-        if (this.sprite && this.fadeElements && this.fadeElements.length > 0) {
+        if (this.sprite && this.fadeElements && this.fadeElements.length > 0 && !this.prefs?.noAnimation) {
             this.fadeElements.forEach(fe => {
                 if (this.tileDetails.caved) {
                     fe.y -= this.game.tileSize;
@@ -134,7 +135,6 @@ export class Tile {
             const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
             if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
                 Object.entries(adjacentBlocks).forEach(([direction, block]) => {
-                    console.log(block.tileRef.tileDetails.attachedTo, ' : block.tileRef.tileDetails.attachedTo');
                     if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
                         let baseCell = {...window._tileTypes.empty};
                         this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
@@ -175,7 +175,6 @@ export class Tile {
                 Object.entries(adjacentBlocks).forEach(([key, block]) => {
                     const direction = metadata?.mustBeGroundedTo.sides.find(s => key === s);
                     if (metadata?.mustBeGroundedTo.tiles.find(t => t.id === block?.tileRef?.tileDetails?.id) && direction) {
-                        console.log(block, ' : block__')
                         result = {block: block, direction: direction};
                     }
                 });
@@ -210,7 +209,6 @@ export class Tile {
         }
     }
 
-
     onClickHandler(cb) {
         if (this.disabled) return;
         const metadata = this.game.selectedTool?.metadata;
@@ -226,14 +224,13 @@ export class Tile {
             if (adj.block) {
                 const _uuid = uuid();
                 const originalTileDetails = {...adj.block.tileRef.tileDetails};
-                console.log(originalTileDetails.uuid, ' : originalTileDetails.uuid');
                 let newTileDetails = {
                     ...originalTileDetails
                 };
                 if (!originalTileDetails.uuid) {
                     newTileDetails.uuid = _uuid;
                 }
-                this.game.mapService.setTile(adj.block.tileRef.worldX, adj.block.tileRef.worldY, newTileDetails, adj.block, {preserveAttached: true, noAnimation: true});
+                this.game.mapService.setTile(adj.block.tileRef.worldX, adj.block.tileRef.worldY, newTileDetails, adj.block, {preserveAttached: true});
                 _adj.block = newTileDetails.uuid;
             }
 

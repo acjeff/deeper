@@ -1,17 +1,8 @@
 export class GlowStick {
-    /**
-     * @param {Phaser.Scene} scene - The current game scene.
-     * @param {number} x - The initial x-coordinate for the sprite.
-     * @param {number} y - The initial y-coordinate for the sprite.
-     * @param {string} textureKey - The key for the glowstick image.
-     * @param {Object} options - Optional settings for physics, lighting, fade, and throw speed.
-     */
     constructor(scene, x, y, textureKey = 'glowstick', options = {}) {
         this.scene = scene;
         this.fadeTime = options.fadeTime || 100000;
-        // this.fadeTime = options.fadeTime || 1000;
         this.throwSpeed = options.throwSpeed || 200;
-
         this.sprite = this.scene.physics.add.sprite(x, y, 'glowstick');
         const newSizeW = this.sprite.width / 5;
         const newSizeH = this.sprite.height / 5;
@@ -24,7 +15,6 @@ export class GlowStick {
         this.sprite.setBounce(1, 1);
         this.sprite.setDrag(200);
         this.sprite.body.setGravityY(options.gravityY || 300);
-
         this.intensity = options.intensity || 0.8;
         this.color = window.lightColors[0];
         this.radius = options.radius || 50;
@@ -91,10 +81,6 @@ export class GlowStick {
         return glowStick;
     }
 
-    /**
-     * Updates the glow light's position to match the sprite.
-     * Call this method from the scene's update loop if needed.
-     */
     update() {
         this.isFloating = false;
         if (this.sprite.body) {
