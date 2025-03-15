@@ -58,26 +58,28 @@ window._randomElements = [
         tile: {
             ...window._tileTypes.coal
         },
-        widthRange: [10, 30],
+        widthRange: [2, 3],
         heightRange: [2, 3],
-        count: 5000,
-        layerWeights: [10, 0, 0, 0, 0, 0, 0]
-    }, {
+        count: 1000,
+        layerWeights: [1, 0, 0, 0, 0, 0, 0],
+        columnWeights: [0, 1, 0, 0, 0, 1, 0]
+    },
+    {
         tile: {
             ...window._tileTypes.empty
         },
-        widthRange: [5, 10],
-        heightRange: [5, 10],
+        widthRange: [5, 5],
+        heightRange: [5, 5],
         count: 10000,
-        layerWeights: [0, 10, 0, 0, 0, 0, 0]
+        layerWeights: [1, 1, 1, 1, 1, 1, 1]
     }, {
         tile: {
             ...window._tileTypes.liquid
         },
         widthRange: [2, 5],
         heightRange: [5, 10],
-        count: 10000,
-        layerWeights: [0, 5, 4, 0, 0, 0, 0]
+        count: 1000,
+        layerWeights: [0, 1, 1, 0, 0, 0, 0]
     }
 ];
 

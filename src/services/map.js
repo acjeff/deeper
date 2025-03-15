@@ -5,8 +5,8 @@ export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
         this.game = game;
         this.game.chunkSize = 6;
-        this.game.mapHeight = 1040;
-        this.game.mapWidth = 320;
+        this.game.mapHeight = 1043;
+        this.game.mapWidth = 322;
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
@@ -98,7 +98,7 @@ export default class MapService {
 
         // Randomly place water
         window._randomElements.forEach(element => {
-            this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights);
+            this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights, element.columnWeights);
         })
 
         // worldX, worldY, tileType, cellItem
@@ -143,27 +143,28 @@ export default class MapService {
         return `${chunkX}_${chunkY}`;
     }
 
-    setRandomElement(element, count, widthRange = [1, 1], heightRange = [1, 1], edgeNoiseChance = 0.3, layerWeights = [1, 1, 1, 1, 1, 1, 1]) {
+    setRandomElement(
+        element,
+        count,
+        widthRange = [1, 1],
+        heightRange = [1, 1],
+        edgeNoiseChance = 0.3,
+        layerWeights = [1, 1, 1, 1, 1, 1, 1],
+        columnWeights = [1, 1, 1, 1, 1, 1, 1, 1],
+        debug = false // Set to true to log debug details
+    ) {
+        // Compute layer and column dimensions based on game dimensions and weight arrays.
+        // Assumes that this.game.gameHeight and this.game.gameWidth are defined.
+        const computedLayerHeight = this.game.mapHeight / layerWeights.length;
+        const computedColumnWidth = this.game.mapWidth / columnWeights.length;
+
         let self = this;
         let placed = 0;
         let filledPositions = new Set();
-        let chunkKeys = Object.keys(this.game.grid);
+        let iterations = 0;
+        const maxIterations = 10000; // Safety counter
 
-        function placeBlock(x, y) {
-            if (y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5)) {
-                let chunkKey = self.getChunkKey.call(this, x, y);
-                if (!this.game.grid[chunkKey]) return false;
-
-                let localX = x % this.game.chunkSize;
-                let localY = y % this.game.chunkSize;
-                this.game.grid[chunkKey][localY][localX] = element;
-                filledPositions.add(`${x}_${y}`);
-                return true;
-            } else return false;
-        }
-
-        // Normalize layer weights
-        let totalWeight = layerWeights.reduce((sum, w) => sum + w, 0);
+        // Build weighted arrays for layers and columns.
         let weightedLayers = [];
         layerWeights.forEach((weight, index) => {
             for (let i = 0; i < weight; i++) {
@@ -171,50 +172,106 @@ export default class MapService {
             }
         });
 
-        while (placed < count) {
-            let chunkKey = chunkKeys[Math.floor(Math.random() * chunkKeys.length)];
-            let [chunkX, chunkY] = chunkKey.split("_").map(Number);
+        let weightedColumns = [];
+        columnWeights.forEach((weight, index) => {
+            for (let i = 0; i < weight; i++) {
+                weightedColumns.push(index);
+            }
+        });
 
-            // Choose a weighted layer
+        function placeBlock(x, y) {
+            if (debug) {
+                console.log("Attempting to place block at:", x, y);
+            }
+            // Only place if y is above the ground threshold and x is outside the chasm.
+            if (
+                y > window.aboveGround &&
+                (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5)
+            ) {
+                let chunkKey = self.getChunkKey.call(this, x, y);
+                if (!this.game.grid[chunkKey]) {
+                    if (debug) {
+                        console.log("Invalid chunk:", chunkKey, "for x:", x, "y:", y);
+                    }
+                    return false;
+                }
+                let localX = x % this.game.chunkSize;
+                let localY = y % this.game.chunkSize;
+                this.game.grid[chunkKey][localY][localX] = element;
+                filledPositions.add(`${x}_${y}`);
+                if (debug) {
+                    console.log("Placed block at:", x, y, "in chunk", chunkKey);
+                }
+                return true;
+            } else {
+                if (debug) {
+                    console.log("Position", x, y, "fails block conditions.");
+                }
+                return false;
+            }
+        }
+
+        // Outer loop with a safety counter.
+        while (placed < count && iterations < maxIterations) {
+            iterations++;
+
+            // Choose a weighted layer and compute a random y coordinate within that layer.
             let chosenLayer = weightedLayers[Math.floor(Math.random() * weightedLayers.length)];
-            let startY = chosenLayer * this.layerHeight + Math.floor(Math.random() * this.layerHeight);
-            let startX = chunkX + Math.floor(Math.random() * this.game.chunkSize);
+            let startY = chosenLayer * computedLayerHeight + Math.floor(Math.random() * computedLayerHeight);
+
+            // Choose a weighted column and compute a random x coordinate within that column.
+            let chosenColumn = weightedColumns[Math.floor(Math.random() * weightedColumns.length)];
+            let startX = chosenColumn * computedColumnWidth + Math.floor(Math.random() * computedColumnWidth);
+
+            // Validate that the computed starting position maps to a valid chunk.
+            let chunkKey = self.getChunkKey.call(this, startX, startY);
+            if (!this.game.grid[chunkKey]) {
+                if (debug) {
+                    console.log("Skipping invalid starting chunk:", chunkKey, "at", startX, startY);
+                }
+                continue;
+            }
 
             let key = `${startX}_${startY}`;
-            if (filledPositions.has(key)) continue;
+            if (filledPositions.has(key)) {
+                if (debug) {
+                    console.log("Skipping already filled position:", key);
+                }
+                continue;
+            }
 
+            // Determine cluster dimensions.
             let clusterWidth = Math.floor(Math.random() * (widthRange[1] - widthRange[0] + 1)) + widthRange[0];
             let clusterHeight = Math.floor(Math.random() * (heightRange[1] - heightRange[0] + 1)) + heightRange[0];
-
             let clusterSize = clusterWidth * clusterHeight;
             let aspectRatio = clusterWidth / clusterHeight;
-            let queue = [{x: startX, y: startY}];
+            let queue = [{ x: startX, y: startY }];
             let added = 0;
 
             while (queue.length > 0 && placed < count && added < clusterSize) {
-                let {x, y} = queue.shift();
-                if (y < 20 || (x > window.chasmRange[0] - 5 && x < window.chasmRange[1] + 5)) continue;
+                let { x, y } = queue.shift();
+                // Skip positions below threshold or inside the chasm.
+                if (y < 20 || (x > window.chasmRange[0] - 5 && x < window.chasmRange[1] + 5))
+                    continue;
                 let posKey = `${x}_${y}`;
-
                 if (!filledPositions.has(posKey) && placeBlock.call(this, x, y)) {
                     placed++;
                     added++;
 
                     let expandDirections = [];
-
+                    // Expand preferentially in X or Y based on the aspect ratio.
                     if (Math.random() < aspectRatio) {
-                        expandDirections.push({x: x + 1, y});
-                        expandDirections.push({x: x - 1, y});
+                        expandDirections.push({ x: x + 1, y });
+                        expandDirections.push({ x: x - 1, y });
                     } else {
-                        expandDirections.push({x, y: y + 1});
-                        expandDirections.push({x, y: y - 1});
+                        expandDirections.push({ x, y: y + 1 });
+                        expandDirections.push({ x, y: y - 1 });
                     }
-
+                    // Optionally add diagonal expansion.
                     if (Math.random() < edgeNoiseChance) {
-                        expandDirections.push({x: x + 1, y: y + 1});
-                        expandDirections.push({x: x - 1, y: y - 1});
+                        expandDirections.push({ x: x + 1, y: y + 1 });
+                        expandDirections.push({ x: x - 1, y: y - 1 });
                     }
-
                     Phaser.Utils.Array.Shuffle(expandDirections);
                     for (let neighbor of expandDirections) {
                         let neighborKey = `${neighbor.x}_${neighbor.y}`;
@@ -225,7 +282,14 @@ export default class MapService {
                 }
             }
         }
+
+        if (iterations >= maxIterations) {
+            console.warn("Max iterations reached without placing all blocks. Placed:", placed, "of", count);
+        } else if (debug) {
+            console.log("Finished placing blocks. Total placed:", placed);
+        }
     }
+
 
     areSquaresIntersecting(square1X, square1Y, square1Size, square2X, square2Y, square2Size) {
         return (
