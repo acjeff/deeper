@@ -78,12 +78,12 @@ export default class MapService {
                         ...window._tileTypes.soil,
                         strength: 100
                     }
-                } else if (((x === window.chasmRange[0] && y === window.aboveGround) || (x === window.chasmRange[1] && y === window.aboveGround) || (x === window.chasmRange[1] && y % entryEvery === 0) || (x === window.chasmRange[0] && y % entryEvery === 0)) && y > window.aboveGround - 1) {
+                } else if (((x === window.chasmRange[1] && y % entryEvery === 0) || (x === window.chasmRange[0] && y % entryEvery === 0)) && y > window.aboveGround + 1) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.light,
-                        radius: 100,
-                        color: window.lightColors[1],
-                        neon: false
+                        radius: 50,
+                        color: window.lightColors[2],
+                        neon: true
                     }
                 } else {
                     this.game.grid[chunkKey][localY][localX] = {

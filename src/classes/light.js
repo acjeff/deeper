@@ -45,7 +45,7 @@ export class Light extends Tile {
             this.lampSprite.y = this.lampSprite.y + 2;
         }
 
-        this.light = this.game.lightingManager.addLight(this.worldX, this.worldY, this.radius, this.intensity, this.color, false, this.neon);
+        this.light = this.game.lightingManager.addLight(this.worldX, this.worldY, this.radius, this.intensity, this.color, !this.neon, this.neon);
         return baseSprite;
     }
 
