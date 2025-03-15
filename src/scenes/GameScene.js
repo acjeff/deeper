@@ -64,7 +64,7 @@ export default class GameScene extends Phaser.Scene {
             }], mustBeGroundedTo: {
                 tiles: [window._tileTypes.soil, window._tileTypes.buttress],
                 sides: ['left', 'above', 'below', 'right']
-            }, number: 50, limited: true, reclaimFrom: window._tileTypes.buttress
+            }, number: 0, limited: true, reclaimFrom: window._tileTypes.buttress
         });
 
         this.inventoryManager.addItem(coal);
@@ -81,6 +81,7 @@ export default class GameScene extends Phaser.Scene {
             this.cameraManager = new CameraManager(this);
             this.physics.add.collider(this.glowStickGroup, this.soilGroup);
             this.physics.add.collider(this.buttressGroup, this.player);
+            this.physics.add.collider(this.buttressGroup, this.glowStickGroup);
             // this.physics.add.collider(this.player, this.glowStickGroup);
             this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;

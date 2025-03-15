@@ -36,7 +36,7 @@ window._tileTypes = {
     },
     coal: {
         id: 1,
-        strength: 200,
+        strength: 5000,
         type: 1
     },
     liquid: {
@@ -58,10 +58,10 @@ window._randomElements = [
         tile: {
             ...window._tileTypes.coal
         },
-        widthRange: [20, 30],
-        heightRange: [20, 30],
-        count: 10000,
-        layerWeights: [0, 0, 0, 10, 0, 0, 0]
+        widthRange: [10, 30],
+        heightRange: [2, 3],
+        count: 5000,
+        layerWeights: [10, 0, 0, 0, 0, 0, 0]
     }, {
         tile: {
             ...window._tileTypes.empty
@@ -74,19 +74,10 @@ window._randomElements = [
         tile: {
             ...window._tileTypes.liquid
         },
-        widthRange: [20, 30],
-        heightRange: [20, 30],
+        widthRange: [2, 5],
+        heightRange: [5, 10],
         count: 10000,
-        layerWeights: [10, 0, 0, 0, 0, 0, 0]
-    }, {
-        tile: {
-            ...window._tileTypes.soil,
-            strength: 500
-        },
-        count: 10000,
-        widthRange: [50, 80],
-        heightRange: [20, 30],
-        layerWeights: [0, 0, 10, 0, 0, 0, 0]
+        layerWeights: [0, 5, 4, 0, 0, 0, 0]
     }
 ];
 
