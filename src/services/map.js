@@ -523,7 +523,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.tileRef.destroy();
+                        tile.tileRef.destroy({preserveAttached: true});
                     }
                 });
             } else if (Array.isArray(entityGroup)) {

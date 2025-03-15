@@ -15,7 +15,7 @@ export class Light extends Tile {
     }
 
     removeFromGroup() {
-        return this.game.lightGroup.add(this.sprite);
+        return this.game.lightGroup.remove(this.sprite);
     }
 
     createSprite() {
