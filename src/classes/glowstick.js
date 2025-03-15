@@ -21,7 +21,7 @@ export class GlowStick {
         this.sprite.setAlpha(1);
         this.sprite.body.setSize(newSizeW, newSizeH);
         this.sprite.setDisplaySize(newSizeW, newSizeH);
-        this.sprite.setBounce(0.6);
+        this.sprite.setBounce(1, 1);
         this.sprite.setDrag(200);
         this.sprite.body.setGravityY(options.gravityY || 300);
 
@@ -98,6 +98,8 @@ export class GlowStick {
     update() {
         this.isFloating = false;
         if (this.sprite.body) {
+            this.sprite.rotation = this.sprite.body.angle;
+
             this.sprite.body.setGravityY(300);
             this.sprite.body.setDrag(200);
             if (this.glowLight) {
