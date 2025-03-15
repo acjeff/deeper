@@ -236,6 +236,51 @@ export default class MapService {
         );
     }
 
+    getAdjacentGridCells(worldX, worldY) {
+        const tileSize = this.game.tileSize;
+        // Determine global cell coordinates (based on tileSize)
+        const globalCellX = Math.floor(worldX / tileSize);
+        const globalCellY = Math.floor(worldY / tileSize);
+
+        // Define adjacent directions with their respective cell offsets
+        const directions = {
+            left: { dx: -1, dy: 0 },
+            above: { dx: 0, dy: -1 },
+            right: { dx: 1, dy: 0 },
+            below: { dx: 0, dy: 1 }
+        };
+
+        const adjacent = {};
+
+        // For each direction, compute the adjacent cell's global coordinates,
+        // convert those to world positions, and then use getChunkKey and
+        // getLocalCellFromWorldPosition to retrieve the cell from the grid.
+        for (const [dir, { dx, dy }] of Object.entries(directions)) {
+            const adjacentGlobalX = globalCellX + dx;
+            const adjacentGlobalY = globalCellY + dy;
+            // Convert back to world coordinates (pixels)
+            const adjacentWorldX = adjacentGlobalX * tileSize;
+            const adjacentWorldY = adjacentGlobalY * tileSize;
+            // Determine the chunk key for the adjacent cell
+            const chunkKey = this.getChunkKey(adjacentWorldX, adjacentWorldY);
+            // Get the cell's local indices within its chunk
+            const local = this.getLocalCellFromWorldPosition(adjacentWorldX, adjacentWorldY);
+            // Safely retrieve the cell from the grid if it exists
+            if (
+                this.game.grid[chunkKey] &&
+                this.game.grid[chunkKey][local.cellY] &&
+                typeof this.game.grid[chunkKey][local.cellY][local.cellX] !== 'undefined'
+            ) {
+                adjacent[dir] = this.game.grid[chunkKey][local.cellY][local.cellX];
+            } else {
+                adjacent[dir] = null;
+            }
+        }
+
+        return adjacent;
+    }
+
+
     getAdjacentBlocks(x, y) {
         const tileSize = this.game.tileSize;
         // Prepare an object to hold the adjacent blocks.
@@ -316,7 +361,7 @@ export default class MapService {
     loadChunks(playerX, playerY, renderDistance = window._renderDistance) {
         let chunkX = Math.floor(playerX / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
         let chunkY = Math.floor(playerY / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
-        let newChunks = new Map(); // Keep existing chunks
+        let newChunks = new Map();
 
         for (let dx = -renderDistance; dx <= renderDistance; dx++) {
             for (let dy = -renderDistance; dy <= renderDistance; dy++) {

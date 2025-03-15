@@ -98,28 +98,113 @@ export default class GameScene extends Phaser.Scene {
                 await this.saveGame(this.user, this.grid);
             }
             this.checkBlocksInterval = this.time.addEvent({
-                delay: 50,
+                delay: 5000,
                 callback: () => {
                     requestAnimationFrame(() => {
-                        let processed = 0;
-                        let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren()).concat(this.liquidGroup.getChildren());
-                        while (processed < batchSize && currentIndex < softSoil.length) {
-                            const block = softSoil[currentIndex];
-                            if (block.tileRef?.checkState) block.tileRef?.checkState();
-                            currentIndex++;
-                            processed++;
-                        }
-                        if (currentIndex >= softSoil.length) {
-                            currentIndex = 0;
-                        }
-                    })
+                        // Iterate over every chunk in the grid.
+                        Object.keys(this.grid).forEach(chunkKey => {
+                            const chunk = this.grid[chunkKey];
+                            // Loop over each cell in the chunk.
+                            chunk.forEach((row, cellY) => {
+                                row.forEach((cell, cellX) => {
+                                    // If the cell has a tileRef with a checkState method, call it.
+                                    const [chunkStartX, chunkStartY] = chunkKey.split("_").map(Number);
+                                    const worldX = (chunkStartX + cellX) * this.game.tileSize;
+                                    const worldY = (chunkStartY + cellY) * this.game.tileSize;
+                                    this.checkState(worldX, worldY, cell);
+                                });
+                            });
+                        });
+                    });
                 },
                 callbackScope: this,
                 loop: true
             });
+
+            // this.checkBlocksInterval = this.time.addEvent({
+            //     delay: 50,
+            //     callback: () => {
+            //         requestAnimationFrame(() => {
+            //             let processed = 0;
+            //             let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren()).concat(this.liquidGroup.getChildren());
+            //             while (processed < batchSize && currentIndex < softSoil.length) {
+            //                 const block = softSoil[currentIndex];
+            //                 if (block.tileRef?.checkState) block.tileRef?.checkState();
+            //                 currentIndex++;
+            //                 processed++;
+            //             }
+            //             if (currentIndex >= softSoil.length) {
+            //                 currentIndex = 0;
+            //             }
+            //         })
+            //     },
+            //     callbackScope: this,
+            //     loop: true
+            // });
         });
 
 
+    }
+
+    checkState(worldX, worldY, _tileDetails) {
+        const adjacentBlocks = this.mapService.getAdjacentGridCells(worldX, worldY);
+        const blockAbove = adjacentBlocks?.above;
+        const blockBelow = adjacentBlocks?.below;
+        const blockLeft = adjacentBlocks?.left;
+        const blockRight = adjacentBlocks?.right;
+        let tileDetails;
+        if (_tileDetails.id !== 2 && _tileDetails.id !== 5) {
+            if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
+                tileDetails = {
+                    ...window._tileTypes.soil,
+                    strength: 100,
+                    caved: true
+                };
+            }
+        }
+        if (_tileDetails.id === 2) {
+            if (blockBelow && (blockBelow.tileRef?.tileDetails?.id === 0 || blockBelow.tileRef?.tileDetails?.id === 4)) {
+                tileDetails = {...window._tileTypes.empty};
+
+                this.mapService.setTile(blockBelow.tileRef?.worldX, blockBelow.tileRef?.worldY, {
+                    ...window._tileTypes.liquid
+                }, blockBelow);
+                //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
+            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && _tileDetails?.lm === 'left') {
+                tileDetails = {...window._tileTypes.empty};
+
+                this.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'left'
+                }, blockLeft);
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && _tileDetails?.lm === 'right') {
+                tileDetails = {...window._tileTypes.empty};
+
+                this.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'right'
+                }, blockRight);
+            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
+                tileDetails = {...window._tileTypes.empty};
+                this.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'left'
+                }, blockLeft);
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4)) {
+                tileDetails = {...window._tileTypes.empty};
+                this.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
+                    ...window._tileTypes.liquid,
+                    lm: 'right'
+                }, blockRight);
+            }
+        }
+
+        if (tileDetails) {
+            if (_tileDetails.id !== 0) {
+                tileDetails.trapped = _tileDetails;
+            }
+            this.mapService.setTile(worldX, worldY, tileDetails, this.sprite);
+        }
     }
 
     getItemById(itemId) {
