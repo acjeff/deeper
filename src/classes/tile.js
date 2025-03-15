@@ -1,3 +1,7 @@
+const uuid = function () {
+    return Math.random().toString(36).substr(2);
+}
+
 export class Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         this.game = game;
@@ -129,7 +133,8 @@ export class Tile {
         const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
         if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
             Object.entries(adjacentBlocks).forEach(([direction, block]) => {
-                if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block.tileRef && block.tileRef.tileDetails.attachedTo.block.tileRef.tileDetails.uuid === this.tileDetails.uuid) {
+                console.log(block.tileRef.tileDetails.attachedTo, ' : block.tileRef.tileDetails.attachedTo');
+                if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
                     let baseCell = {...window._tileTypes.empty};
                     this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
                 }
@@ -168,6 +173,7 @@ export class Tile {
                 Object.entries(adjacentBlocks).forEach(([key, block]) => {
                     const direction = metadata?.mustBeGroundedTo.sides.find(s => key === s);
                     if (metadata?.mustBeGroundedTo.tiles.find(t => t.id === block?.tileRef?.tileDetails?.id) && direction) {
+                        console.log(block, ' : block__')
                         result = {block: block, direction: direction};
                     }
                 });
@@ -207,19 +213,33 @@ export class Tile {
         if (this.disabled) return;
         const metadata = this.game.selectedTool?.metadata;
         const adj = this.checkAdjacentBlocks(metadata);
+        let _adj = adj;
         if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id && ((
             !tile.additionalChecks ||
             Object.entries(tile.additionalChecks).filter(
                 ([key, value]) => this.tileDetails[key] !== value
             ).length === 0
         ))) && (!metadata.limited || metadata.number) && adj) {
-            cb(adj);
+            // SET ADJ to have a UUID and then use that UUID in the attached to logic
+            if (adj.block) {
+                const originalTileDetails = {...adj.block.tileRef.tileDetails};
+                console.log(adj, ' : adj');
+                const _uuid = uuid();
+                this.game.mapService.setTile(adj.block.tileRef.worldX, adj.block.tileRef.worldY, {
+                    ...originalTileDetails,
+                    uuid: _uuid
+                }, adj.block);
+                _adj.block = _uuid;
+            }
+            console.log(_adj, ' : adj');
+
+            cb(_adj);
             if (metadata.number) {
                 this.game.selectedTool.updateMetaData({...metadata, number: metadata.number - 1});
                 this.game.toolBarManager.render();
             }
         } else if (metadata.reclaimFrom?.id === this.tileDetails?.id) {
-            cb(adj);
+            cb(_adj);
             this.game.selectedTool.updateMetaData({...metadata, number: metadata.number + 1});
             this.game.toolBarManager.render();
         }

@@ -349,6 +349,7 @@ export default class MapService {
     }
 
     setTile(worldX, worldY, tileType, cellItem) {
+
         let _cellItem = {
             chunkKey: this.game.mapService.getChunkKey(worldX, worldY),
             ...this.game.mapService.getLocalCellFromWorldPosition(worldX, worldY)
@@ -357,11 +358,12 @@ export default class MapService {
 
         if (!this.game.grid[chunkKey] || !this.game.grid[chunkKey][cellY] || !this.game.grid[chunkKey][cellX]) return; // Ensure chunk exists
 
-        this.game.grid[chunkKey][cellY][cellX] = tileType;
+        this.game.grid[chunkKey][cellY][cellX] = {...tileType};
 
         if (cellItem?.tileRef) cellItem.tileRef.destroy();
-
-        return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
+        if (this.game.loadedChunks.has(chunkKey)) {
+            return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
+        }
 
     }
 
@@ -371,7 +373,6 @@ export default class MapService {
 
     placeObject(tileType, worldX, worldY, cellDetails) {
         let newTile;
-        tileType = {...tileType, uuid: tileType.uuid || Math.random().toString(16).substr(2, 8)}
         window.requestAnimationFrame(() => {
             if (tileType.id === window._tileTypes.empty.id) {
                 newTile = new Empty({

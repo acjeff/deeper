@@ -98,7 +98,7 @@ export default class GameScene extends Phaser.Scene {
                 await this.saveGame(this.user, this.grid);
             }
             this.checkBlocksInterval = this.time.addEvent({
-                delay: 100,
+                delay: 50,
                 callback: () => {
                     requestAnimationFrame(() => {
                         let processed = 0;
