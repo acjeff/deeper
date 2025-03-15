@@ -60,15 +60,18 @@ export class Breakable extends Tile {
 
     destroy() {
         if (!this.active) return;  // Guard against double-destroy
+        if (this.tileDetails.destroyOnDestroy) {
+            this.tileDetails.destroyOnDestroy.forEach(tile => tile.destroy())
+        }
         if (this.clicking) {
             this.removeElements()
         } else {
-            this.animatedDestroy(this.removeElements.bind(this));
+            this.destroyHandler(this.removeElements.bind(this));
         }
     }
 
     onClick() {
-        this.onClickHandler(() => {
+        this.onClickHandler((adj) => {
             if (this.game.selectedTool.id === '6' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
                 let baseCell = {...window._tileTypes.buttress};
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);

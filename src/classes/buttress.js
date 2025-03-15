@@ -25,14 +25,12 @@ export class Buttress extends Tile {
     }
 
     destroy() {
+        if (this.tileDetails.destroyOnDestroy) {
+            this.tileDetails.destroyOnDestroy.forEach(tile => tile.destroy())
+        }
         this.removeFromGroup();
         this.sprite.destroy();
         this.buttressSprite.destroy();
-    }
-
-    setAsEmpty() {
-        let baseCell = {...window._tileTypes.empty};
-        this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
     }
 
     onClick() {

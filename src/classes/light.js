@@ -20,11 +20,30 @@ export class Light extends Tile {
 
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
-        this.lampSprite = this.game.add.image(this.worldX, this.worldY + 2, 'lamp');
+        this.lampSprite = this.game.add.image(this.worldX, this.worldY, 'lamp');
         this.lampSprite.setDisplaySize(this.game.tileSize - 3, this.game.tileSize - 3);
         this.lampSprite.setDepth(-1);
         baseSprite.setAlpha(0);
         this.fadeElements = [this.lampSprite];
+
+        if (this.tileDetails.attachedTo) {
+            const degreesToRadians = (deg) => deg * (Math.PI / 180);
+
+            if (this.tileDetails.attachedTo.direction === 'above') {
+                this.lampSprite.rotation = degreesToRadians(180);
+                this.lampSprite.y = this.lampSprite.y - 2;
+            } else if (this.tileDetails.attachedTo.direction === 'right') {
+                this.lampSprite.rotation = degreesToRadians(-90);
+                this.lampSprite.x = this.lampSprite.x + 2;
+            } else if (this.tileDetails.attachedTo.direction === 'left') {
+                this.lampSprite.rotation = degreesToRadians(90);
+                this.lampSprite.x = this.lampSprite.x - 2;
+            } else {
+                this.lampSprite.y = this.lampSprite.y + 2;
+            }
+        } else {
+            this.lampSprite.y = this.lampSprite.y + 2;
+        }
 
         this.light = this.game.lightingManager.addLight(this.worldX, this.worldY, this.radius, this.intensity, this.color, false, this.neon);
         return baseSprite;
@@ -33,7 +52,7 @@ export class Light extends Tile {
     destroy() {
         this.light.off = true;
 
-        this.animatedDestroy(() => {
+        this.destroyHandler(() => {
             if (!this.active) return;  // Guard against double-destroy
             this.active = false;
             this.removeFromGroup();
@@ -41,11 +60,6 @@ export class Light extends Tile {
             this.lampSprite.destroy();
             this.light.destroy();
         })
-    }
-
-    setAsEmpty() {
-        let baseCell = {...window._tileTypes.empty};
-        this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
     }
 
     onClick() {

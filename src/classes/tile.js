@@ -119,8 +119,23 @@ export class Tile {
         }
     }
 
-    animatedDestroy(cb) {
+    setAsEmpty() {
+        let baseCell = {...window._tileTypes.empty};
+        this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+    }
+
+    destroyHandler(cb) {
         this.disabled = true;
+        const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
+        if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
+            Object.entries(adjacentBlocks).forEach(([direction, block]) => {
+                if (block && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block.tileRef.tileDetails.uuid === this.tileDetails.uuid) {
+                    let baseCell = {...window._tileTypes.empty};
+                    this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
+                }
+            });
+        }
+
         if (this.sprite && this.fadeElements && this.fadeElements.length > 0) {
             // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
             this.game.tweens.add({
@@ -130,6 +145,8 @@ export class Tile {
                 ease: 'ease-out',
                 onComplete: cb
             });
+        } else {
+            cb();
         }
     }
 
@@ -143,6 +160,24 @@ export class Tile {
         this.borderGraphics.setAlpha(0);
     }
 
+    checkAdjacentBlocks(metadata) {
+        let result = false;
+        if (metadata?.mustBeGroundedTo) {
+            const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
+            if (Object.values(adjacentBlocks).find(b => b)) {
+                Object.entries(adjacentBlocks).forEach(([key, block]) => {
+                    const direction = metadata?.mustBeGroundedTo.sides.find(s => key === s);
+                    if (metadata?.mustBeGroundedTo.tiles.find(t => t.id === block?.tileRef?.tileDetails?.id) && direction) {
+                        result = {block: block, direction: direction};
+                    }
+                });
+            }
+        } else {
+            result = true;
+        }
+        return result;
+    }
+
     onMouseEnter(hoveredBlock) {
         const metadata = this.game.selectedTool?.metadata;
         if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id && ((
@@ -151,7 +186,10 @@ export class Tile {
                 ([key, value]) => this.tileDetails[key] !== value
             ).length === 0
         ))) || (metadata?.reclaimFrom?.id === this.tileDetails.id)) {
-            this.borderGraphics.setAlpha(1);
+            const adj = this.checkAdjacentBlocks(metadata);
+            if (adj) {
+                this.borderGraphics.setAlpha(1);
+            }
         }
     }
 
@@ -164,30 +202,27 @@ export class Tile {
         }
     }
 
+
     onClickHandler(cb) {
-        // if (this.game.selectedTool.id === '6' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
-        //     let baseCell = {...window._tileTypes.buttress};
-        //     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-        // } else if (this.game.selectedTool.id === '1') {
         if (this.disabled) return;
         const metadata = this.game.selectedTool?.metadata;
+        const adj = this.checkAdjacentBlocks(metadata);
         if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id && ((
             !tile.additionalChecks ||
             Object.entries(tile.additionalChecks).filter(
                 ([key, value]) => this.tileDetails[key] !== value
             ).length === 0
-        ))) && (!metadata.limited || metadata.number)) {
-            cb();
+        ))) && (!metadata.limited || metadata.number) && adj) {
+            cb(adj);
             if (metadata.number) {
                 this.game.selectedTool.updateMetaData({...metadata, number: metadata.number - 1});
                 this.game.toolBarManager.render();
             }
         } else if (metadata.reclaimFrom?.id === this.tileDetails?.id) {
-            cb();
+            cb(adj);
             this.game.selectedTool.updateMetaData({...metadata, number: metadata.number + 1});
             this.game.toolBarManager.render();
         }
-        // }
     }
 
     onClick(cb) {

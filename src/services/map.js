@@ -361,7 +361,7 @@ export default class MapService {
 
         if (cellItem?.tileRef) cellItem.tileRef.destroy();
 
-        this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
+        return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
 
     }
 
@@ -370,9 +370,11 @@ export default class MapService {
     }
 
     placeObject(tileType, worldX, worldY, cellDetails) {
+        let newTile;
+        tileType = {...tileType, uuid: tileType.uuid || Math.random().toString(16).substr(2, 8)}
         window.requestAnimationFrame(() => {
             if (tileType.id === window._tileTypes.empty.id) {
-                new Empty({
+                newTile = new Empty({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,
@@ -381,7 +383,7 @@ export default class MapService {
                 });
             }
             if (tileType.id === window._tileTypes.soil.id) {
-                new Breakable({
+                newTile = new Breakable({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,
@@ -390,7 +392,7 @@ export default class MapService {
                 });
             }
             if (tileType.id === window._tileTypes.liquid.id) {
-                new Liquid({
+                newTile = new Liquid({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,
@@ -399,7 +401,7 @@ export default class MapService {
                 });
             }
             if (tileType.id === window._tileTypes.light.id) {
-                new Light({
+                newTile = new Light({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,
@@ -408,7 +410,7 @@ export default class MapService {
                 })
             }
             if (tileType.id === window._tileTypes.buttress.id) {
-                new Buttress({
+                newTile = new Buttress({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,
@@ -417,6 +419,7 @@ export default class MapService {
                 })
             }
         });
+        return newTile;
     }
 
     renderChunk(cx, cy) {
