@@ -60,9 +60,6 @@ export class Breakable extends Tile {
 
     destroy() {
         if (!this.active) return;  // Guard against double-destroy
-        if (this.tileDetails.destroyOnDestroy) {
-            this.tileDetails.destroyOnDestroy.forEach(tile => tile.destroy())
-        }
         if (this.clicking) {
             this.removeElements()
         } else {

@@ -23,13 +23,20 @@ export class Buttress extends Tile {
         return baseSprite;
     }
 
-    destroy() {
-        if (this.tileDetails.destroyOnDestroy) {
-            this.tileDetails.destroyOnDestroy.forEach(tile => tile.destroy())
-        }
+    removeElements() {
+        this.active = false;
         this.removeFromGroup();
-        this.sprite.destroy();
         this.buttressSprite.destroy();
+        this.sprite.destroy();
+    }
+
+    destroy() {
+        if (!this.active) return;  // Guard against double-destroy
+        if (this.clicking) {
+            this.removeElements()
+        } else {
+            this.destroyHandler(this.removeElements.bind(this));
+        }
     }
 
     onClick() {

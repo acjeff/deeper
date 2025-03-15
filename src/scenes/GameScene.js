@@ -61,7 +61,10 @@ export default class GameScene extends Phaser.Scene {
             interactsWith: [window._tileTypes.empty, {
                 ...window._tileTypes.soil,
                 additionalChecks: {strength: 100}
-            }], number: 50, limited: true, reclaimFrom: window._tileTypes.buttress
+            }], mustBeGroundedTo: {
+                tiles: [window._tileTypes.soil, window._tileTypes.buttress],
+                sides: ['left', 'above', 'below', 'right']
+            }, number: 50, limited: true, reclaimFrom: window._tileTypes.buttress
         });
 
         this.inventoryManager.addItem(coal);
