@@ -24,7 +24,7 @@ export class Rail extends Tile {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
         this.railSprite = this.game.add.image(this.worldX, this.worldY, 'rail');
         if (this.tileDetails.type?.id) {
-            this.railSprite.setOrigin(0.5, 0.);
+            this.railSprite.setOrigin(0.5, 0.55);
             this.railSprite.setDisplaySize(this.game.tileSize + 4, this.game.tileSize - 0.5);
             this.railSprite.setRotation(degrees_to_radians(this.tileDetails.type.rotate));
         } else {
