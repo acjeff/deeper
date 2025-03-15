@@ -24,6 +24,7 @@ export default class GameScene extends Phaser.Scene {
         this.playerSize = window._playerSize;
         this.soilGroup = this.physics.add.staticGroup();
         this.buttressGroup = this.physics.add.staticGroup();
+        this.railGroup = this.add.group();
         this.glowStickGroup = this.physics.add.group();
         this.glowSticks = [];
         this.emptyGroup = this.add.group();
@@ -67,10 +68,31 @@ export default class GameScene extends Phaser.Scene {
             }, number: 50, limited: true, reclaimFrom: window._tileTypes.buttress
         });
 
+        const rail = new InventoryItem('7', 'Rail', 'tool', 'images/rail.png', {
+            interactsWith: [window._tileTypes.empty], mustBeGroundedTo: {
+                tiles: [window._tileTypes.buttress, window._tileTypes.soil],
+                sides: ['below']
+            }, number: 50, limited: true, reclaimFrom: window._tileTypes.rail
+        });
+
+        const railDiagonalLeft = new InventoryItem('8', 'Rail Left', 'tool', 'images/rail.png', {
+            interactsWith: [window._tileTypes.empty], mustBeGroundedTo: {
+                tiles: [window._tileTypes.buttress, window._tileTypes.soil],
+                sides: ['below']
+            }, number: 50, limited: true, reclaimFrom: window._tileTypes.rail
+        }, {rotate: window.railRotate});
+
+        const railDiagonalRight = new InventoryItem('9', 'Rail Right', 'tool', 'images/rail.png', {
+            interactsWith: [window._tileTypes.empty], mustBeGroundedTo: {
+                tiles: [window._tileTypes.buttress, window._tileTypes.soil],
+                sides: ['below']
+            }, number: 50, limited: true, reclaimFrom: window._tileTypes.rail
+        }, {rotate: -window.railRotate});
+
         this.inventoryManager.addItem(coal);
         this.inventoryManager.addItem(wood);
 
-        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();
@@ -90,6 +112,9 @@ export default class GameScene extends Phaser.Scene {
             this.toolBarManager.addItemToSlot(1, glowStick);
             this.toolBarManager.addItemToSlot(2, lamp);
             this.toolBarManager.addItemToSlot(3, buttress);
+            this.toolBarManager.addItemToSlot(4, rail);
+            this.toolBarManager.addItemToSlot(5, railDiagonalLeft);
+            this.toolBarManager.addItemToSlot(6, railDiagonalRight);
             this.toolBarManager.setSelected(0);
 
             this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];

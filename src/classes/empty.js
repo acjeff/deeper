@@ -38,6 +38,18 @@ export class Empty extends Tile {
                 let baseCell = {...window._tileTypes.buttress};
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
             }
+            if (this.game.selectedTool.id === '7') {
+                let baseCell = {...window._tileTypes.rail};
+                this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+            }
+            if (this.game.selectedTool.id === '8') {
+                let baseCell = {...window._tileTypes.rail, type: window._railTypes[1]};
+                this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+            }
+            if (this.game.selectedTool.id === '9') {
+                let baseCell = {...window._tileTypes.rail, type: window._railTypes[2]};
+                this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
+            }
         })
     }
 

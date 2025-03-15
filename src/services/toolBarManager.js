@@ -4,7 +4,7 @@ export default class ToolbarManager {
      * @param {string} containerId - The DOM element ID for the toolbar container.
      * @param {number} numSlots - Number of toolbar slots (default 9).
      */
-    constructor(scene, containerId = 'toolbarContainer', numSlots = 5) {
+    constructor(scene, containerId = 'toolbarContainer', numSlots = 7) {
         this.scene = scene;
         this.numSlots = numSlots;
 
@@ -100,6 +100,7 @@ export default class ToolbarManager {
             // Render an item if present.
             const item = this.slots[i];
             if (item) {
+                console.log(item.rotate, ' : item');
                 const img = document.createElement('img');
                 img.src = item.imageUrl;
                 img.alt = item.name;
@@ -107,7 +108,8 @@ export default class ToolbarManager {
                 Object.assign(img.style, {
                     width: '80%',
                     height: '80%',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
+                    transform: `rotate(${item.rotate}deg)`
                 });
                 // When dragging an item from the toolbar, include the source slot index.
                 img.addEventListener('dragstart', (e) => {

@@ -15,7 +15,11 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('wood', 'images/wood.png');
         this.load.image('buttress', 'images/buttress.png');
         this.load.image('glowstick', 'images/glow-stick.png');
+        this.load.image('rail', 'images/rail.png');
     }
+    // flat
+    // diagonal_left
+    // diagonal_right
 
     create() {
         this.scene.start("MenuScene");

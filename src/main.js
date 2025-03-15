@@ -9,6 +9,7 @@ import PreloadScene from "./scenes/PreloadScene";
 
 window.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
 window._renderDistance = 3;
+window.railRotate = 45;
 window.fadeSpeed = 200;
 window.renderviewDistance = 250;
 window.aboveGround = 20;
@@ -26,6 +27,19 @@ window._soilTypes = {
         image: 'wood'
     }
 }
+window._railTypes = {
+    1: {
+        id: 1,
+        image: 'rail',
+        rotate: window.railRotate
+    },
+    2: {
+        id: 2,
+        image: 'rail',
+        rotate: -window.railRotate
+    }
+}
+
 window._tileTypes = {
     empty: {
         id: 0
@@ -50,6 +64,9 @@ window._tileTypes = {
     },
     buttress: {
         id: 5
+    },
+    rail: {
+        id: 6
     }
 }
 

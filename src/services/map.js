@@ -1,5 +1,5 @@
 import * as ROT from "rot-js";
-import {Breakable, Light, Empty, Liquid, Buttress} from "../classes/tiles";
+import {Breakable, Light, Empty, Liquid, Buttress, Rail} from "../classes/tiles";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -478,6 +478,16 @@ export default class MapService {
             }
             if (tileType.id === window._tileTypes.buttress.id) {
                 newTile = new Buttress({
+                    game: this.game,
+                    cellDetails: cellDetails,
+                    tileDetails: tileType,
+                    worldX: worldX,
+                    worldY: worldY,
+                    prefs: prefs
+                })
+            }
+            if (tileType.id === window._tileTypes.rail.id) {
+                newTile = new Rail({
                     game: this.game,
                     cellDetails: cellDetails,
                     tileDetails: tileType,

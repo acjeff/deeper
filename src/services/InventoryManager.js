@@ -157,6 +157,7 @@ export default class InventoryManager {
             // Render the item image if this slot has an item.
             const item = this.slots[i];
             if (item) {
+                console.log(item.rotate);
                 const img = document.createElement('img');
                 img.src = item.imageUrl;
                 img.alt = item.name;
@@ -164,7 +165,8 @@ export default class InventoryManager {
                 Object.assign(img.style, {
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
+                    transform: `rotate(${item.rotate}deg)`
                 });
                 // Set up the drag event for items in the inventory.
                 img.addEventListener('dragstart', (e) => {
