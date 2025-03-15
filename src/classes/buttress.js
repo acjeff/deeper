@@ -30,12 +30,12 @@ export class Buttress extends Tile {
         this.sprite.destroy();
     }
 
-    destroy() {
+    destroy(prefs) {
         if (!this.active) return;  // Guard against double-destroy
         if (this.clicking) {
             this.removeElements()
         } else {
-            this.destroyHandler(this.removeElements.bind(this));
+            this.destroyHandler(this.removeElements.bind(this), prefs);
         }
     }
 

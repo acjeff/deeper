@@ -49,7 +49,7 @@ export class Light extends Tile {
         return baseSprite;
     }
 
-    destroy() {
+    destroy(prefs) {
         this.light.off = true;
 
         this.destroyHandler(() => {
@@ -59,7 +59,7 @@ export class Light extends Tile {
             this.sprite.destroy();
             this.lampSprite.destroy();
             this.light.destroy();
-        })
+        }, prefs)
     }
 
     onClick() {

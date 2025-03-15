@@ -128,20 +128,22 @@ export class Tile {
         this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
     }
 
-    destroyHandler(cb) {
+    destroyHandler(cb, prefs) {
         this.disabled = true;
-        const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
-        if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
-            Object.entries(adjacentBlocks).forEach(([direction, block]) => {
-                console.log(block.tileRef.tileDetails.attachedTo, ' : block.tileRef.tileDetails.attachedTo');
-                if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
-                    let baseCell = {...window._tileTypes.empty};
-                    this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
-                }
-            });
+        if (!prefs?.preserveAttached) {
+            const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
+            if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
+                Object.entries(adjacentBlocks).forEach(([direction, block]) => {
+                    console.log(block.tileRef.tileDetails.attachedTo, ' : block.tileRef.tileDetails.attachedTo');
+                    if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
+                        let baseCell = {...window._tileTypes.empty};
+                        this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
+                    }
+                });
+            }
         }
 
-        if (this.sprite && this.fadeElements && this.fadeElements.length > 0) {
+        if (this.sprite && this.fadeElements && this.fadeElements.length > 0 && !prefs?.noAnimation) {
             // Tween the sprite's alpha from 0 to 1 to create the fade-in effect.
             this.game.tweens.add({
                 targets: this.fadeElements,
@@ -222,16 +224,18 @@ export class Tile {
         ))) && (!metadata.limited || metadata.number) && adj) {
             // SET ADJ to have a UUID and then use that UUID in the attached to logic
             if (adj.block) {
-                const originalTileDetails = {...adj.block.tileRef.tileDetails};
-                console.log(adj, ' : adj');
                 const _uuid = uuid();
-                this.game.mapService.setTile(adj.block.tileRef.worldX, adj.block.tileRef.worldY, {
-                    ...originalTileDetails,
-                    uuid: _uuid
-                }, adj.block);
-                _adj.block = _uuid;
+                const originalTileDetails = {...adj.block.tileRef.tileDetails};
+                console.log(originalTileDetails.uuid, ' : originalTileDetails.uuid');
+                let newTileDetails = {
+                    ...originalTileDetails
+                };
+                if (!originalTileDetails.uuid) {
+                    newTileDetails.uuid = _uuid;
+                }
+                this.game.mapService.setTile(adj.block.tileRef.worldX, adj.block.tileRef.worldY, newTileDetails, adj.block, {preserveAttached: true, noAnimation: true});
+                _adj.block = newTileDetails.uuid;
             }
-            console.log(_adj, ' : adj');
 
             cb(_adj);
             if (metadata.number) {

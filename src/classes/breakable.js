@@ -58,12 +58,12 @@ export class Breakable extends Tile {
         if (this.overlaySprite) this.overlaySprite.destroy();
     }
 
-    destroy() {
+    destroy(prefs) {
         if (!this.active) return;  // Guard against double-destroy
         if (this.clicking) {
             this.removeElements()
         } else {
-            this.destroyHandler(this.removeElements.bind(this));
+            this.destroyHandler(this.removeElements.bind(this), prefs);
         }
     }
 

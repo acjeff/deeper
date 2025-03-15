@@ -348,7 +348,7 @@ export default class MapService {
         this.game.children.bringToTop(this.game.shadowGraphics);
     }
 
-    setTile(worldX, worldY, tileType, cellItem) {
+    setTile(worldX, worldY, tileType, cellItem, prefs) {
 
         let _cellItem = {
             chunkKey: this.game.mapService.getChunkKey(worldX, worldY),
@@ -359,12 +359,10 @@ export default class MapService {
         if (!this.game.grid[chunkKey] || !this.game.grid[chunkKey][cellY] || !this.game.grid[chunkKey][cellX]) return; // Ensure chunk exists
 
         this.game.grid[chunkKey][cellY][cellX] = {...tileType};
-
-        if (cellItem?.tileRef) cellItem.tileRef.destroy();
+        if (cellItem?.tileRef) cellItem.tileRef.destroy(prefs);
         if (this.game.loadedChunks.has(chunkKey)) {
             return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX});
         }
-
     }
 
     getTileAt(chunkKey, cellY, cellX) {
