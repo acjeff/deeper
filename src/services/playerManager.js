@@ -1,8 +1,7 @@
 export default class PlayerManager {
     constructor(scene) {
         this.scene = scene;
-        this.scene.startPoint = {x: 1500, y: 197};
-        // this.scene.startPoint = {x: 3100, y: 197};
+        this.scene.startPoint = {x: 1500, y: 180};
         let x = this.scene.playerX || this.scene.startPoint.x;
         let y = this.scene.playerY || this.scene.startPoint.y;
         this.scene.player = this.scene.physics.add.sprite(x, y, 'player');
@@ -17,11 +16,10 @@ export default class PlayerManager {
         this.scene.player.breath = this.scene.player.maxBreath;
         this.scene.player.hitPower = this.scene.player.maxHitPower;
         this.scene.player.setDisplaySize(this.scene.playerSize, this.scene.playerSize);
-        // this.scene.playerRect = this.scene.add.rectangle(x, y, this.scene.playerSize, this.scene.playerSize, 0xffb2fd);
         this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 8, 1, window.lightColors[1], false);
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup, () => {
-            const fallSpeed = this.scene.lastFallSpeed || 0; // use stored value
-            const safeSpeed = 180; // speeds below this cause no damage
+            const fallSpeed = this.scene.lastFallSpeed || 0;
+            const safeSpeed = 180;
 
             if (fallSpeed > safeSpeed) {
                 const damageFactor = 0.8;

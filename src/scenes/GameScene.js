@@ -241,6 +241,7 @@ export default class GameScene extends Phaser.Scene {
             this.lightingManager.updateLighting();
             this.controlsManager.getInteractableBlock(15);
             this.uiManager.updateUI();
+            // this.craneManager.update();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
             }

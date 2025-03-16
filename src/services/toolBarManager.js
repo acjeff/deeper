@@ -100,7 +100,6 @@ export default class ToolbarManager {
             // Render an item if present.
             const item = this.slots[i];
             if (item) {
-                console.log(item.rotate, ' : item');
                 const img = document.createElement('img');
                 img.src = item.imageUrl;
                 img.alt = item.name;

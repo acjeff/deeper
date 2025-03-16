@@ -27,17 +27,16 @@ export default class CraneManager {
         this.topStrut.setDisplaySize(width, 3);
 
         this.rope = this.scene.add.rectangle((window.chasmRange[0] * 10) + (width / 2), 161, 1, 24, this.ropeColor);
-        this.rope.setDepth(-2);
+        this.rope.setDepth(2);
 
         this.ropeTwo = this.scene.add.rectangle((window.chasmRange[0] * 10) + 32, 190, 1, 50, this.ropeColor);
         this.ropeTwo.setRotation(degrees_to_radians(45))
-        this.ropeTwo.setDepth(-2);
+        this.ropeTwo.setDepth(2);
 
         this.ropeThree = this.scene.add.rectangle((window.chasmRange[1] * 10) - 32, 190, 1, 50, this.ropeColor);
         this.ropeThree.setRotation(degrees_to_radians(-45))
-        this.ropeThree.setDepth(-2);
+        this.ropeThree.setDepth(2);
 
-        console.log(this.craneFlat, ' : crane flat');
     }
 
 }
