@@ -47,38 +47,42 @@ export default class MapService {
             let chunkX = Math.floor(x / this.game.chunkSize) * this.game.chunkSize;
             let chunkY = Math.floor(y / this.game.chunkSize) * this.game.chunkSize;
             let chunkKey = `${chunkX}_${chunkY}`;
-            const entryEvery = 10;
-            const blockEvery = 9;
-
+            const entryEvery = 30;
+            const blockEvery = 35;
+            // Make is so the wood goes al the way across
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
                 const EveryNinteenthDownAndOneSideOfColumn = ((x < window.chasmRange[0] || x > window.chasmRange[1]) && y % blockEvery === 0);
-                if (y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5) && x !== 0 && x !== this.game.mapWidth - 1) {
+                if ((y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5) && x !== 0 && x !== this.game.mapWidth - 1) && !(EveryNinteenthDownAndOneSideOfColumn)) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
                         ...window._tileTypes.soil
                     } : {
                         ...window._tileTypes.soil,
                         strength: 100
                     };
-                } else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % entryEvery !== 0) || (y === window.aboveGround + 1 && x > window.chasmRange[0] && x < window.chasmRange[1])) || (x === 0) || (x === this.game.mapWidth - 1)) {
+                }
+                else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % entryEvery !== 0)) || (x === 0) || (x === this.game.mapWidth - 1)) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
                         strength: 999999,
                         type: 2
                     }
-                } else if (EveryNinteenthDownAndOneSideOfColumn && y > window.aboveGround) {
+                }
+                else if (EveryNinteenthDownAndOneSideOfColumn && y > window.aboveGround) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
                         strength: 999999,
                         type: 2
                     }
-                } else if (((x < window.chasmRange[0] || x > window.chasmRange[1]) && y > window.aboveGround) && !EveryNinteenthDownAndOneSideOfColumn) {
+                }
+                else if (((x < window.chasmRange[0] || x > window.chasmRange[1]) && y > window.aboveGround) && !EveryNinteenthDownAndOneSideOfColumn) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.soil,
                         strength: 100
                     }
-                } else if (((x === window.chasmRange[1] && y % entryEvery === 0) || (x === window.chasmRange[0] && y % entryEvery === 0)) && y > window.aboveGround + 1) {
+                }
+                else if (((x === window.chasmRange[1] && y % entryEvery === 0) || (x === window.chasmRange[0] && y % entryEvery === 0)) && y > window.aboveGround + 1) {
                     this.game.grid[chunkKey][localY][localX] = {
                         ...window._tileTypes.light,
                         radius: 50,
@@ -245,11 +249,11 @@ export default class MapService {
             let clusterHeight = Math.floor(Math.random() * (heightRange[1] - heightRange[0] + 1)) + heightRange[0];
             let clusterSize = clusterWidth * clusterHeight;
             let aspectRatio = clusterWidth / clusterHeight;
-            let queue = [{ x: startX, y: startY }];
+            let queue = [{x: startX, y: startY}];
             let added = 0;
 
             while (queue.length > 0 && placed < count && added < clusterSize) {
-                let { x, y } = queue.shift();
+                let {x, y} = queue.shift();
                 // Skip positions below threshold or inside the chasm.
                 if (y < 20 || (x > window.chasmRange[0] - 5 && x < window.chasmRange[1] + 5))
                     continue;
@@ -261,16 +265,16 @@ export default class MapService {
                     let expandDirections = [];
                     // Expand preferentially in X or Y based on the aspect ratio.
                     if (Math.random() < aspectRatio) {
-                        expandDirections.push({ x: x + 1, y });
-                        expandDirections.push({ x: x - 1, y });
+                        expandDirections.push({x: x + 1, y});
+                        expandDirections.push({x: x - 1, y});
                     } else {
-                        expandDirections.push({ x, y: y + 1 });
-                        expandDirections.push({ x, y: y - 1 });
+                        expandDirections.push({x, y: y + 1});
+                        expandDirections.push({x, y: y - 1});
                     }
                     // Optionally add diagonal expansion.
                     if (Math.random() < edgeNoiseChance) {
-                        expandDirections.push({ x: x + 1, y: y + 1 });
-                        expandDirections.push({ x: x - 1, y: y - 1 });
+                        expandDirections.push({x: x + 1, y: y + 1});
+                        expandDirections.push({x: x - 1, y: y - 1});
                     }
                     Phaser.Utils.Array.Shuffle(expandDirections);
                     for (let neighbor of expandDirections) {
@@ -289,7 +293,6 @@ export default class MapService {
             console.log("Finished placing blocks. Total placed:", placed);
         }
     }
-
 
     areSquaresIntersecting(square1X, square1Y, square1Size, square2X, square2Y, square2Size) {
         return (
@@ -494,7 +497,7 @@ export default class MapService {
                     worldX: worldX,
                     worldY: worldY,
                     prefs: prefs
-                })
+                });
             }
         });
         return newTile;

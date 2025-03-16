@@ -1,7 +1,7 @@
 export default class PlayerManager {
     constructor(scene) {
         this.scene = scene;
-        this.scene.startPoint = {x: 1540, y: 197};
+        this.scene.startPoint = {x: 1500, y: 197};
         // this.scene.startPoint = {x: 3100, y: 197};
         let x = this.scene.playerX || this.scene.startPoint.x;
         let y = this.scene.playerY || this.scene.startPoint.y;

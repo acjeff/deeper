@@ -9,6 +9,7 @@ import UiManager from "../services/uiManager";
 import ToolbarManager from "../services/toolBarManager";
 import InventoryManager from "../services/InventoryManager";
 import InventoryItem from "../classes/InventoryItem";
+import CraneManager from "../services/craneManager";
 
 const batchSize = 100;
 let currentIndex = 0;
@@ -24,6 +25,7 @@ export default class GameScene extends Phaser.Scene {
         this.playerSize = window._playerSize;
         this.soilGroup = this.physics.add.staticGroup();
         this.buttressGroup = this.physics.add.staticGroup();
+        this.craneGroup = this.physics.add.staticGroup();
         this.railGroup = this.add.group();
         this.glowStickGroup = this.physics.add.group();
         this.glowSticks = [];
@@ -104,6 +106,8 @@ export default class GameScene extends Phaser.Scene {
             this.physics.add.collider(this.glowStickGroup, this.soilGroup);
             this.physics.add.collider(this.buttressGroup, this.player);
             this.physics.add.collider(this.buttressGroup, this.glowStickGroup);
+            this.physics.add.collider(this.craneGroup, this.player);
+            this.craneManager = new CraneManager(this);
             // this.physics.add.collider(this.player, this.glowStickGroup);
             this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;
