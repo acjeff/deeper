@@ -7,7 +7,8 @@ function degrees_to_radians(degrees)
 export default class CraneManager {
     constructor(scene) {
         this.scene = scene;
-        this.ropeColor = '0xffb2fd';
+        this.ropeColor = '0x6B3E22';
+        let color = '#6b3e22'
         const width = (window.chasmRange[1] - window.chasmRange[0]) * 10;
         // this.craneFlat = this.scene.add.image(1500, 210, 'wood');
         this.craneFlat = this.scene.add.image(((window.chasmRange[0] * 10) + width / 2), (window.aboveGround * 10) + 10, 'wood');
