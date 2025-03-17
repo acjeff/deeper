@@ -101,7 +101,9 @@ export class Tile {
         if (!prefs?.preserveAttached) {
             const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
             if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
+                console.log('This block: ', this.tileDetails);
                 Object.entries(adjacentBlocks).forEach(([direction, block]) => {
+                    console.log(direction, ' : ', block);
                     if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
                         let baseCell = {...window._tileTypes.empty};
                         this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
@@ -180,7 +182,7 @@ export class Tile {
         if (this.disabled) return;
         const metadata = this.game.selectedTool?.metadata;
         const adj = this.checkAdjacentBlocks(metadata);
-        let _adj = adj;
+        let _adj = {...adj};
         if (metadata?.interactsWith?.find(tile => tile.id === this.tileDetails.id && ((
             !tile.additionalChecks ||
             Object.entries(tile.additionalChecks).filter(
@@ -189,8 +191,9 @@ export class Tile {
         ))) && (!metadata.limited || metadata.number) && adj) {
             // SET ADJ to have a UUID and then use that UUID in the attached to logic
             if (adj.block) {
-                const _uuid = uuid();
                 const originalTileDetails = {...adj.block.tileRef.tileDetails};
+                const _uuid = originalTileDetails.uuid || uuid();
+
                 let newTileDetails = {
                     ...originalTileDetails
                 };

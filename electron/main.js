@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 let mainWindow;
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=4096"); // ✅ Increase memory
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192"); // ✅ Increase memory
 app.commandLine.appendSwitch("disable-site-isolation-trials"); // ✅ Reduce unnecessary isolation
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion"); // ✅ Improves speed on Windows
 app.commandLine.appendSwitch("enable-gpu-rasterization"); // ✅ Uses GPU for rendering

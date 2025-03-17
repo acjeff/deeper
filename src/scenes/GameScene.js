@@ -50,8 +50,7 @@ export default class GameScene extends Phaser.Scene {
             ...window._tileTypes.light,
             radius: 100,
             color: window.lightColors[1],
-            neon: false,
-            attachedTo: 'true'
+            neon: false
         }, 'Lamp', 'tool', 'images/lamp.png', {
             interactsWith: [{
                 ...window._tileTypes.empty
