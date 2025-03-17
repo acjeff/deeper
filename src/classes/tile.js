@@ -64,11 +64,12 @@ export class Tile {
     }
 
     checkState() {
+        this.checkStateWrapper();
+    }
+
+    checkStateWrapper(cb) {
         const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
         const blockAbove = adjacentBlocks?.above;
-        const blockBelow = adjacentBlocks?.below;
-        const blockLeft = adjacentBlocks?.left;
-        const blockRight = adjacentBlocks?.right;
         let tileDetails;
         if (this.tileDetails.id !== 2 && this.tileDetails.id !== 5) {
             if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
@@ -79,48 +80,14 @@ export class Tile {
                 };
             }
         }
-        if (this.tileDetails.id === 2) {
-            if (blockBelow && (blockBelow.tileRef?.tileDetails?.id === 0 || blockBelow.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...window._tileTypes.empty};
-
-                this.game.mapService.setTile(blockBelow.tileRef?.worldX, blockBelow.tileRef?.worldY, {
-                    ...window._tileTypes.liquid
-                }, blockBelow);
-                //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
-            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'left') {
-                tileDetails = {...window._tileTypes.empty};
-
-                this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
-                    lm: 'left'
-                }, blockLeft);
-            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'right') {
-                tileDetails = {...window._tileTypes.empty};
-
-                this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
-                    lm: 'right'
-                }, blockRight);
-            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...window._tileTypes.empty};
-                this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
-                    lm: 'left'
-                }, blockLeft);
-            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...window._tileTypes.empty};
-                this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
-                    lm: 'right'
-                }, blockRight);
-            }
-        }
 
         if (tileDetails) {
             if (this.tileDetails.id !== 0) {
                 tileDetails.trapped = this.tileDetails;
             }
             this.game.mapService.setTile(this.worldX, this.worldY, tileDetails, this.sprite);
+        } else {
+            if (cb) cb();
         }
     }
 

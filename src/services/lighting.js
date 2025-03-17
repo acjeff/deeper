@@ -6,6 +6,7 @@ export default class LightingManager {
         this.lights = [];
         this.trackedGroups = [];
         this.initLighting();
+        this.initSky();
     }
 
     updateLightPosition(light, x, y) {
@@ -13,6 +14,12 @@ export default class LightingManager {
             light.x = x;
             light.y = y;
         }
+    }
+
+    initSky() {
+        let skyCol = '#a6f5ff';
+        this.scene.skyBox = this.scene.add.rectangle(0, 0, 9999, 410, '0xa6f5ff');
+        this.scene.skyBox.setDepth(-999);
     }
 
     initLighting() {
@@ -70,7 +77,7 @@ export default class LightingManager {
         }
     }
 
-    updateLighting() {
+    updateLighting(deltaTime) {
         const ctx = this.scene.lightCtx;
         ctx.clearRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
 
@@ -78,6 +85,8 @@ export default class LightingManager {
         ctx.fillRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
 
         this.lights.forEach(light => !light.off && this.castLight(light));
+
+        this.updateSky();
 
         this.updateViewMask();
 
@@ -120,9 +129,13 @@ export default class LightingManager {
         ctx.arc(centerX, centerY, viewRadius, 0, Math.PI * 2);
         ctx.fill();
 
+        // NEW: Subtract a rectangle at the top of the canvas to reveal the sky beneath it.
+        // Adjust skyMaskHeight as needed.
+
         // Reset composite mode
         ctx.globalCompositeOperation = "source-over";
     }
+
 
     initViewMask() {
         // Create a new canvas for the view mask
@@ -181,6 +194,29 @@ export default class LightingManager {
         return this.cachedCanvases[color];
     }
 
+    updateSky() {
+        const camera = this.scene.cameras.main;
+        const scale = camera.zoom;
+        const skyX = (0 - camera.worldView.x) * scale;
+        const skyY = (0 - camera.worldView.y) * scale;
+        const skyHeight = 950;
+
+        const ctx = this.scene.lightCtx;
+
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.globalAlpha = 1;
+
+        const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + skyHeight);
+        _gradient.addColorStop(0, "rgba(0, 0, 0, 1)");   // Start: black (opaque)
+        _gradient.addColorStop(0.9, "rgba(0, 0, 0, 1)");   // Start: black (opaque)
+        _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");   // End: transparent
+
+        ctx.fillStyle = _gradient;
+        ctx.fillRect(skyX, skyY, 99999, skyHeight);
+        ctx.globalCompositeOperation = "normal";
+
+    }
+
     castLight(light) {
         const camera = this.scene.cameras.main;
         const scale = camera.zoom;
@@ -188,6 +224,10 @@ export default class LightingManager {
 
         const screenX = (light.x - camera.worldView.x) * scale;
         const screenY = (light.y - camera.worldView.y) * scale;
+
+        const skyX = (0 - camera.worldView.x) * scale;
+        const skyY = (0 - camera.worldView.y) * scale;
+        const skyHeight = 950;
 
         const ctx = this.scene.lightCtx;
 
@@ -202,6 +242,8 @@ export default class LightingManager {
             screenX - radius, screenY - radius, radius * 2, radius * 2
         );
 
+
+
         ctx.globalCompositeOperation = "normal";
         ctx.globalAlpha = light.neon ? 0.6 : 0.1;
 
@@ -213,7 +255,6 @@ export default class LightingManager {
 
         ctx.globalAlpha = 1;
     }
-
 
     getRays(worldX, worldY, radius) {
         const rays = [];

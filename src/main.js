@@ -96,7 +96,8 @@ window._randomElements = [
         widthRange: [2, 5],
         heightRange: [5, 10],
         count: 1000,
-        layerWeights: [0, 1, 1, 0, 0, 0, 0]
+        layerWeights: [1, 0, 0, 0, 0, 0, 0],
+        columnWeights: [0, 0, 0, 1, 0, 0, 0]
     }
 ];
 

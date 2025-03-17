@@ -17,6 +17,8 @@ export default class PlayerManager {
         this.scene.player.hitPower = this.scene.player.maxHitPower;
         this.scene.player.setDisplaySize(this.scene.playerSize, this.scene.playerSize);
         this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 8, 1, window.lightColors[1], false);
+        this.scene.playerLight.off = true;
+        this.scene.playerLightFaux = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, 0, 1, window.lightColors[1], false);
         this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup, () => {
             const fallSpeed = this.scene.lastFallSpeed || 0;
             const safeSpeed = 180;
@@ -147,6 +149,7 @@ export default class PlayerManager {
         this.scene.player.x = relativePos.x;
         this.scene.player.y = relativePos.y;
         this.scene.playerLight.setPosition(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2);
+        this.scene.playerLightFaux.setPosition(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2);
         this.scene.freezePlayer = true;
         this.scene.cameras.main.stopFollow();
         this.scene.cameras.main.setScroll(relativePos.x, relativePos.y);

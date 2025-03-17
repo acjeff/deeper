@@ -1,4 +1,5 @@
 import MouseManager from "./MouseManager";
+
 export default class ControlsManager {
     constructor(scene) {
         this.scene = scene;
@@ -43,6 +44,23 @@ export default class ControlsManager {
         //     this.scene.zoomAmount = Phaser.Math.Clamp(this.scene.cameras.main.zoom + (e.deltaY * -zoomSpeed * 0.01), 0.5, 5);
         //     this.scene.cameras.main.setZoom(this.scene.zoomAmount);
         // });
+
+        window.addEventListener('wheel',  (event) => {
+            // Prevent the default scroll behavior (optional)
+            event.preventDefault();
+            let currentNumber = this.scene.selectedIndex;
+
+            // Scroll up (deltaY negative) increases the number; scroll down decreases it
+            if (event.deltaY < 0) {
+                currentNumber--;
+            } else {
+                currentNumber++;
+            }
+
+            this.scene.toolBarManager.setSelected(currentNumber);
+
+        }, {passive: false});
+
 
         window.addEventListener("keypress", (e) => {
             if (e.key === "c") {
@@ -125,16 +143,17 @@ export default class ControlsManager {
         // if ('requestIdleCallback' in window) {
         //     requestIdleCallback(() => {
         //         Render low-priority blocks here
-                // this.scene.mapService.loadChunks(playerX, playerY);
-            // });
+        // this.scene.mapService.loadChunks(playerX, playerY);
+        // });
         // } else {
-            // Fallback to requestAnimationFrame
-            requestAnimationFrame(() => {
-                this.scene.mapService.loadChunks(playerX, playerY);
-            });
+        // Fallback to requestAnimationFrame
+        requestAnimationFrame(() => {
+            this.scene.mapService.loadChunks(playerX, playerY);
+        });
         // }
 
         this.scene.playerLight.setPosition(playerX, playerY);
+        this.scene.playerLightFaux.setPosition(playerX, playerY);
     }
 
     getInteractableBlock(interactionRange) {

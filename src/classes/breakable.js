@@ -21,6 +21,7 @@ export class Breakable extends Tile {
     }
 
     checkState() {
+        this.checkStateWrapper();
     }
 
     addToGroup() {
