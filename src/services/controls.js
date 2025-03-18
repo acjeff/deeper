@@ -163,16 +163,17 @@ export default class ControlsManager {
         // });
         // } else {
         // Fallback to requestAnimationFrame
-        // requestAnimationFrame(() => {
-        this.game.mapService.loadChunks(playerX, playerY);
+
+            this.game.mapService.loadChunks(playerX, playerY);
         // });
         if (moveSpeed) {
             this.game.controlsManager.getInteractableBlock(15);
         }
         // }
-
-        this.game.playerLight.setPosition(playerX, playerY);
-        this.game.playerLightFaux.setPosition(playerX, playerY);
+        requestAnimationFrame(() => {
+            this.game.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
+            this.game.playerLightFaux.setPosition(Math.round(playerX), Math.round(playerY));
+        });
     }
 
     getInteractableBlock(interactionRange) {
@@ -181,7 +182,7 @@ export default class ControlsManager {
         const player = this.game.player;
         if (this.game.player) {
             this.gettingBlock = true
-            window.requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
                 const pointer = this.game.input.activePointer; // Get current mouse pointer
 
                 // Convert mouse screen coordinates to world coordinates

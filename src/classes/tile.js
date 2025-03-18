@@ -52,7 +52,8 @@ export class Tile {
                 targets: this.fadeElements,
                 alpha: 1,
                 duration: this.game.fadeSpeed, // Duration in ms; adjust as needed
-                ease: 'ease-out'
+                ease: 'ease-out',
+                onComplete: () => this.game.controlsManager.getInteractableBlock(15)
             };
             if (this.tileDetails.caved) {
                 anims.y = '+=' + this.game.tileSize;
