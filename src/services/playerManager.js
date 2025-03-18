@@ -53,6 +53,9 @@ export default class PlayerManager {
         this.viewMaskCtx.font = "30px Arial";
         this.viewMaskCtx.fillStyle = "white";
         this.viewMaskCtx.textAlign = "center";
+        window.setTimeout(() => {
+        this.teleportTo(x, y)
+        }, 100);
     }
 
     die(reason) {
@@ -100,7 +103,7 @@ export default class PlayerManager {
             this.game.player.breath = 100;
             this.alreadyDead = false;
             this.fadeOutAndRemoveDialogue();
-            this.returnToBaseCamp();
+            this.teleportTo();
         })
     }
 
@@ -153,9 +156,9 @@ export default class PlayerManager {
         }, {once: true}); // Use { once: true } so the listener is removed automatically.
     }
 
-    returnToBaseCamp() {
+    teleportTo(x, y) {
         this.game.player.setAlpha(0);
-        const relativePos = {x: this.game.startPoint.x, y: this.game.startPoint.y};
+        const relativePos = {x: x || this.game.startPoint.x, y: y || this.game.startPoint.y};
         this.game.player.x = relativePos.x;
         this.game.player.y = relativePos.y;
         this.game.playerLight.setPosition(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2);

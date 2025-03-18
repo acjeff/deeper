@@ -87,7 +87,7 @@ export default class ControlsManager {
                 this.game.playerLight.off = !this.game.playerLight.off;
             }
             if (e.key === "p") {
-                this.game.playerManager.returnToBaseCamp()
+                this.game.playerManager.teleportTo()
             }
         });
         window.addEventListener("keyup", (e) => {
@@ -174,10 +174,6 @@ export default class ControlsManager {
             this.game.controlsManager.getInteractableBlock(15);
         }
 
-        requestAnimationFrame(() => {
-            this.game.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
-            this.game.playerLightFaux.setPosition(Math.round(playerX), Math.round(playerY));
-        });
     }
 
 

@@ -13,7 +13,7 @@ export default class CameraManager {
 
         this.game.cameras.main.setZoom(zoom);
 
-        this.game.cameras.main.startFollow(this.game.player, true, 0.1, 0.1, 0, 0);
+        this.game.cameras.main.startFollow(this.game.player, true, 0.05, 0.05, 0, 0);
 
         this.game.cameras.main.removeBounds();
     }

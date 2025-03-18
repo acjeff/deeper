@@ -323,8 +323,8 @@ export default class GameScene extends Phaser.Scene {
 
             this.newGame = data.newGame;
             if (data.playerData?.length > 0 && !data.newGame) {
-                this.playerX = data.playerData[0].x;
-                this.playerY = data.playerData[0].y;
+                this.playerX = Math.round(data.playerData[0].x);
+                this.playerY = Math.round(data.playerData[0].y);
                 console.log(this.playerX, ' : playerX');
             }
 
@@ -341,6 +341,10 @@ export default class GameScene extends Phaser.Scene {
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting(delta);
             this.uiManager.updateUI();
+            const playerOffset = this.playerSize / 2;
+            const playerX = this.player.x + playerOffset;
+            const playerY = this.player.y + playerOffset;
+            this.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
             // this.craneManager.update();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
