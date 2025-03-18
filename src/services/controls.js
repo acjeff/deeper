@@ -125,18 +125,30 @@ export default class ControlsManager {
                 this.game.player.breath += 0.8;
             }
         }
-        const speed = 50;
+
         let moveSpeed;
+        // Horizontal movement and animation handling:
         if (this.game.keys.left.isDown) {
             moveSpeed = this.game.isFloating ? -26 : -50;
             this.game.player.setVelocityX(moveSpeed);
+            // Play walk animation and flip sprite for left movement
+            this.game.player.anims.play('walk', true);
+            this.game.player.flipX = true;
         } else if (this.game.keys.right.isDown) {
             moveSpeed = this.game.isFloating ? 26 : 50;
             this.game.player.setVelocityX(moveSpeed);
+            // Play walk animation normally for right movement
+            this.game.player.anims.play('walk', true);
+            this.game.player.flipX = false;
         } else {
             this.game.player.setVelocityX(0);
+            // Stop animation when not moving horizontally
+            this.game.player.anims.stop();
+            // Optionally, set an idle frame:
+            // this.game.player.setFrame(0);
         }
 
+        // Vertical movement
         if (this.game.keys.up.isDown) {
             if (this.game.isFloating) {
                 this.game.player.setVelocityY(-30);
@@ -152,35 +164,28 @@ export default class ControlsManager {
         if (this.game.isFloating && !this.game.keys.down.isDown && !this.game.keys.up.isDown) {
             this.game.player.setVelocityY(20);
         }
+
         const playerOffset = this.game.playerSize / 2;
         const playerX = this.game.player.x + playerOffset;
         const playerY = this.game.player.y + playerOffset;
 
-        // if ('requestIdleCallback' in window) {
-        //     requestIdleCallback(() => {
-        //         Render low-priority blocks here
-        // this.game.mapService.loadChunks(playerX, playerY);
-        // });
-        // } else {
-        // Fallback to requestAnimationFrame
-
-            this.game.mapService.loadChunks(playerX, playerY);
-        // });
+        this.game.mapService.loadChunks(playerX, playerY);
         if (moveSpeed) {
             this.game.controlsManager.getInteractableBlock(15);
         }
-        // }
+
         requestAnimationFrame(() => {
             this.game.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
             this.game.playerLightFaux.setPosition(Math.round(playerX), Math.round(playerY));
         });
     }
 
+
     getInteractableBlock(interactionRange) {
         if (this.gettingBlock) return;
 
         const player = this.game.player;
-        if (this.game.player) {
+        if (this.game.player && this.game.cameras.main) {
             this.gettingBlock = true
             requestAnimationFrame(() => {
                 const pointer = this.game.input.activePointer; // Get current mouse pointer

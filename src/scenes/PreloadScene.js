@@ -4,7 +4,10 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image("player", "images/player.png");
+        this.load.spritesheet('player', 'images/player.png', {
+            frameWidth: 55,
+            frameHeight: 70
+        });
         this.load.image("energy", "images/energy.png");
         this.load.image("door", "images/door.png");
         this.load.image("wall", "images/door.png");

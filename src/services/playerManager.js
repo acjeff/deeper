@@ -3,8 +3,18 @@ export default class PlayerManager {
         this.game = scene;
         this.game.startPoint = {x: 1500, y: 180};
         let x = this.game.playerX || this.game.startPoint.x;
+
         let y = this.game.playerY || this.game.startPoint.y;
+        this.game.anims.create({
+            key: 'walk',
+            frames: this.game.anims.generateFrameNumbers('player', { start: 0, end: 1 }),
+            frameRate: 10,
+            repeat: -1  // Loop indefinitely
+        });
+
+        // Create the player sprite
         this.game.player = this.game.physics.add.sprite(x, y, 'player');
+
         this.game.player.setBounce(0.2);
         this.game.player.setOrigin(0, 0);
         this.game.player.maxHealth = 100;
