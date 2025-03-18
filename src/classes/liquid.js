@@ -38,36 +38,36 @@ export class Liquid extends Tile {
             let tileDetails;
 
             if (blockBelow && (blockBelow.tileRef?.tileDetails?.id === 0 || blockBelow.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...window._tileTypes.empty};
+                tileDetails = {...this.game.tileTypes.empty};
 
                 this.game.mapService.setTile(blockBelow.tileRef?.worldX, blockBelow.tileRef?.worldY, {
-                    ...window._tileTypes.liquid
+                    ...this.game.tileTypes.liquid
                 }, blockBelow);
                 //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
             } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'left') {
-                tileDetails = {...window._tileTypes.empty};
+                tileDetails = {...this.game.tileTypes.empty};
 
                 this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
+                    ...this.game.tileTypes.liquid,
                     lm: 'left'
                 }, blockLeft);
             } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'right') {
-                tileDetails = {...window._tileTypes.empty};
+                tileDetails = {...this.game.tileTypes.empty};
 
                 this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
+                    ...this.game.tileTypes.liquid,
                     lm: 'right'
                 }, blockRight);
             } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...window._tileTypes.empty};
+                tileDetails = {...this.game.tileTypes.empty};
                 this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
+                    ...this.game.tileTypes.liquid,
                     lm: 'left'
                 }, blockLeft);
             } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...window._tileTypes.empty};
+                tileDetails = {...this.game.tileTypes.empty};
                 this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
-                    ...window._tileTypes.liquid,
+                    ...this.game.tileTypes.liquid,
                     lm: 'right'
                 }, blockRight);
             }

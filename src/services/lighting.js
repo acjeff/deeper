@@ -2,7 +2,7 @@ import LightSource from "./lightsource";
 
 export default class LightingManager {
     constructor(scene) {
-        this.scene = scene;
+        this.game = scene;
         this.lights = [];
         this.trackedGroups = [];
         this.initLighting();
@@ -18,32 +18,32 @@ export default class LightingManager {
 
     initSky() {
         let skyCol = '#a6f5ff';
-        this.scene.skyBox = this.scene.add.rectangle(0, 0, 9999, 410, '0xa6f5ff');
-        this.scene.skyBox.setDepth(-999);
+        this.game.skyBox = this.game.add.rectangle(0, 0, 9999, 410, '0xa6f5ff');
+        this.game.skyBox.setDepth(-999);
     }
 
     initLighting() {
         this.cachedCanvases = {};
         this.colorCaches = {};
-        this.scene.lightCanvas = document.createElement("canvas");
-        this.scene.lightCanvas.id = 'light_canvas';
+        this.game.lightCanvas = document.createElement("canvas");
+        this.game.lightCanvas.id = 'light_canvas';
         this.initViewMask();
-        this.scene.lightCanvas.width = this.scene.cameras.main.width;
-        this.scene.lightCanvas.height = this.scene.cameras.main.height;
-        this.scene.lightCanvas.style.position = "absolute";
-        // this.scene.lightCanvas.style.opacity = 0;
-        this.scene.lightCanvas.style.top = "0";
-        this.scene.lightCanvas.style.left = "0";
-        this.scene.lightCanvas.style.pointerEvents = "none";
-        document.body.appendChild(this.scene.lightCanvas);
+        this.game.lightCanvas.width = this.game.cameras.main.width;
+        this.game.lightCanvas.height = this.game.cameras.main.height;
+        this.game.lightCanvas.style.position = "absolute";
+        // this.game.lightCanvas.style.opacity = 0;
+        this.game.lightCanvas.style.top = "0";
+        this.game.lightCanvas.style.left = "0";
+        this.game.lightCanvas.style.pointerEvents = "none";
+        document.body.appendChild(this.game.lightCanvas);
 
-        this.scene.lightCtx = this.scene.lightCanvas.getContext("2d");
+        this.game.lightCtx = this.game.lightCanvas.getContext("2d");
         window.addEventListener("resize", () => {
-            this.scene.lightCanvas.width = this.scene.cameras.main.width;
-            this.scene.lightCanvas.height = this.scene.cameras.main.height;
+            this.game.lightCanvas.width = this.game.cameras.main.width;
+            this.game.lightCanvas.height = this.game.cameras.main.height;
         });
 
-        this.initColorCaches(window.lightColors, 256, 10);
+        this.initColorCaches(this.game.lightColors, 256, 10);
     }
 
     initColorCaches(colorsArray, maxRadius = 256, blurAmount = 10) {
@@ -78,17 +78,17 @@ export default class LightingManager {
     }
 
     updateLighting(deltaTime) {
-        const ctx = this.scene.lightCtx;
-        ctx.clearRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
+        const ctx = this.game.lightCtx;
+        ctx.clearRect(0, 0, this.game.lightCanvas.width, this.game.lightCanvas.height);
 
         ctx.fillStyle = "rgba(0,0,0,1)";
-        ctx.fillRect(0, 0, this.scene.lightCanvas.width, this.scene.lightCanvas.height);
+        ctx.fillRect(0, 0, this.game.lightCanvas.width, this.game.lightCanvas.height);
 
         this.lights.forEach(light => !light.off && this.castLight(light));
 
         this.updateSky();
 
-        this.updateViewMask();
+        // this.updateViewMask();
 
         ctx.globalCompositeOperation = "source-over";
     }
@@ -108,9 +108,9 @@ export default class LightingManager {
         ctx.globalCompositeOperation = "destination-out";
 
         // Get camera properties and compute the scaled view radius
-        const camera = this.scene.cameras.main;
+        const camera = this.game.cameras.main;
         const zoom = camera.zoom;
-        const baseViewRadius = window.renderviewDistance; // Base view distance in world units
+        const baseViewRadius = this.game.renderviewDistance; // Base view distance in world units
         const viewRadius = baseViewRadius * zoom; // Scale radius by the current zoom
 
         // Define the center of the view mask (e.g., centered on the screen, or player's screen position)
@@ -141,8 +141,8 @@ export default class LightingManager {
         // Create a new canvas for the view mask
         this.viewMaskCanvas = document.createElement("canvas");
         this.viewMaskCanvas.id = "view_mask_canvas";
-        this.viewMaskCanvas.width = this.scene.cameras.main.width;
-        this.viewMaskCanvas.height = this.scene.cameras.main.height;
+        this.viewMaskCanvas.width = this.game.cameras.main.width;
+        this.viewMaskCanvas.height = this.game.cameras.main.height;
         this.viewMaskCanvas.style.position = "absolute";
         this.viewMaskCanvas.style.top = "0";
         this.viewMaskCanvas.style.left = "0";
@@ -155,8 +155,8 @@ export default class LightingManager {
 
         // Update size on resize
         window.addEventListener("resize", () => {
-            this.viewMaskCanvas.width = this.scene.cameras.main.width;
-            this.viewMaskCanvas.height = this.scene.cameras.main.height;
+            this.viewMaskCanvas.width = this.game.cameras.main.width;
+            this.viewMaskCanvas.height = this.game.cameras.main.height;
         });
     }
 
@@ -195,13 +195,13 @@ export default class LightingManager {
     }
 
     updateSky() {
-        const camera = this.scene.cameras.main;
+        const camera = this.game.cameras.main;
         const scale = camera.zoom;
         const skyX = (0 - camera.worldView.x) * scale;
         const skyY = (0 - camera.worldView.y) * scale;
         const skyHeight = 950;
 
-        const ctx = this.scene.lightCtx;
+        const ctx = this.game.lightCtx;
 
         ctx.globalCompositeOperation = "destination-out";
         ctx.globalAlpha = 1;
@@ -218,7 +218,7 @@ export default class LightingManager {
     }
 
     castLight(light) {
-        const camera = this.scene.cameras.main;
+        const camera = this.game.cameras.main;
         const scale = camera.zoom;
         const radius = light.radius * scale;
 
@@ -229,7 +229,7 @@ export default class LightingManager {
         const skyY = (0 - camera.worldView.y) * scale;
         const skyHeight = 950;
 
-        const ctx = this.scene.lightCtx;
+        const ctx = this.game.lightCtx;
 
         const cachedCanvas = this.cachedCanvases[light.color] || this.cachedCanvases['255,255,255'];
 
@@ -279,7 +279,7 @@ export default class LightingManager {
         this.trackedGroups.forEach((group) => {
             group.children.iterate((element) => {
                 if (element.active) {
-                    const rect = new Phaser.Geom.Rectangle(element.x, element.y, this.scene.tileSize, this.scene.tileSize);
+                    const rect = new Phaser.Geom.Rectangle(element.x, element.y, this.game.tileSize, this.game.tileSize);
                     const intersection = Phaser.Geom.Intersects.GetLineToRectangle(line, rect);
                     if (intersection.length > 0) {
                         const dist = Phaser.Math.Distance.Between(startX, startY, intersection[0].x, intersection[0].y);

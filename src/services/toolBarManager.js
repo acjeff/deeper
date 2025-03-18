@@ -5,10 +5,10 @@ export default class ToolbarManager {
      * @param {number} numSlots - Number of toolbar slots (default 9).
      */
     constructor(scene, containerId = 'toolbarContainer', numSlots = 7) {
-        this.scene = scene;
+        this.game = scene;
         this.numSlots = numSlots;
 
-        this.scene.selectedIndex = 0; // Default selected slot index.
+        this.game.selectedIndex = 0; // Default selected slot index.
         // Create an array for toolbar slots; each slot holds an item or null.
         this.slots = new Array(numSlots).fill(null);
         this.container = document.getElementById(containerId);
@@ -60,7 +60,7 @@ export default class ToolbarManager {
             });
 
             // Apply a highlight if this is the selected slot.
-            if (i === this.scene.selectedIndex) {
+            if (i === this.game.selectedIndex) {
                 slotEl.style.borderColor = '#FFD700';
                 slotEl.style.borderWidth = '3px';
             }
@@ -78,7 +78,7 @@ export default class ToolbarManager {
                     this.swapItems(sourceIndex, targetIndex);
                 } else if (source === 'inventory') {
                     // Dragging from inventory to toolbar.
-                    const inventoryManager = this.scene.inventoryManager;
+                    const inventoryManager = this.game.inventoryManager;
                     const draggedItem = inventoryManager.slots[sourceIndex];
                     if (!draggedItem) return;
                     const targetItem = this.slots[targetIndex];
@@ -94,7 +94,7 @@ export default class ToolbarManager {
                     inventoryManager.render();
                 }
                 // Refresh selection visuals.
-                this.setSelected(this.scene.selectedIndex);
+                this.setSelected(this.game.selectedIndex);
             });
 
             // Render an item if present.
@@ -140,14 +140,14 @@ export default class ToolbarManager {
         this.slots[sourceIndex] = this.slots[targetIndex];
         this.slots[targetIndex] = temp;
         this.render();
-        this.setSelected(this.scene.selectedIndex);
+        this.setSelected(this.game.selectedIndex);
     }
 
     removeItemBySlot(index) {
         if (index >= 0 && index < this.numSlots) {
             this.slots[index] = null;
             this.render();
-            this.setSelected(this.scene.selectedIndex);
+            this.setSelected(this.game.selectedIndex);
         }
     }
 
@@ -156,7 +156,7 @@ export default class ToolbarManager {
             this.slots[index] = item;
             this.render();
             // Optionally, if you want to auto-select the first added item:
-            if (this.scene.selectedIndex === null || this.scene.selectedIndex === undefined) {
+            if (this.game.selectedIndex === null || this.game.selectedIndex === undefined) {
                 this.setSelected(index);
             }
         }
@@ -164,7 +164,7 @@ export default class ToolbarManager {
 
     setSelected(index) {
         if (index < 0 || index >= this.numSlots) return;
-        this.scene.selectedIndex = index;
+        this.game.selectedIndex = index;
         // Update visuals for each slot.
         const slotEls = this.container.children;
         for (let i = 0; i < slotEls.length; i++) {
@@ -177,8 +177,8 @@ export default class ToolbarManager {
             }
         }
         // Set the selected tool on the scene.
-        if (this.scene) {
-            this.scene.selectedTool = this.slots[index];
+        if (this.game) {
+            this.game.selectedTool = this.slots[index];
         }
     }
 

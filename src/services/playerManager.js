@@ -1,38 +1,38 @@
 export default class PlayerManager {
     constructor(scene) {
-        this.scene = scene;
-        this.scene.startPoint = {x: 1500, y: 180};
-        let x = this.scene.playerX || this.scene.startPoint.x;
-        let y = this.scene.playerY || this.scene.startPoint.y;
-        this.scene.player = this.scene.physics.add.sprite(x, y, 'player');
-        this.scene.player.setBounce(0.2);
-        this.scene.player.setOrigin(0, 0);
-        this.scene.player.maxHealth = 100;
-        this.scene.player.maxEnergy = 100;
-        this.scene.player.maxBreath = 100;
-        this.scene.player.maxHitPower = 100;
-        this.scene.player.health = this.scene.player.maxHealth;
-        this.scene.player.energy = this.scene.player.maxEnergy;
-        this.scene.player.breath = this.scene.player.maxBreath;
-        this.scene.player.hitPower = this.scene.player.maxHitPower;
-        this.scene.player.setDisplaySize(this.scene.playerSize, this.scene.playerSize);
-        this.scene.playerLight = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, this.scene.playerSize * 8, 1, window.lightColors[1], false);
-        this.scene.playerLight.off = true;
-        this.scene.playerLightFaux = this.scene.lightingManager.addLight(this.scene.player.x, this.scene.player.y, 0, 1, window.lightColors[1], false);
-        this.scene.physics.add.collider(this.scene.player, this.scene.soilGroup, () => {
-            const fallSpeed = this.scene.lastFallSpeed || 0;
+        this.game = scene;
+        this.game.startPoint = {x: 1500, y: 180};
+        let x = this.game.playerX || this.game.startPoint.x;
+        let y = this.game.playerY || this.game.startPoint.y;
+        this.game.player = this.game.physics.add.sprite(x, y, 'player');
+        this.game.player.setBounce(0.2);
+        this.game.player.setOrigin(0, 0);
+        this.game.player.maxHealth = 100;
+        this.game.player.maxEnergy = 100;
+        this.game.player.maxBreath = 100;
+        this.game.player.maxHitPower = 100;
+        this.game.player.health = this.game.player.maxHealth;
+        this.game.player.energy = this.game.player.maxEnergy;
+        this.game.player.breath = this.game.player.maxBreath;
+        this.game.player.hitPower = this.game.player.maxHitPower;
+        this.game.player.setDisplaySize(this.game.playerSize, this.game.playerSize);
+        this.game.playerLight = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, this.game.playerSize * 8, 1, this.game.lightColors[1], false);
+        this.game.playerLight.off = true;
+        this.game.playerLightFaux = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, 0, 1, this.game.lightColors[1], false);
+        this.game.physics.add.collider(this.game.player, this.game.soilGroup, () => {
+            const fallSpeed = this.game.lastFallSpeed || 0;
             const safeSpeed = 180;
 
             if (fallSpeed > safeSpeed) {
                 const damageFactor = 0.8;
                 const damage = (fallSpeed - safeSpeed) * damageFactor;
-                this.scene.player.health -= damage;
+                this.game.player.health -= damage;
             }
         });
         this.dialogueLayer = document.createElement("canvas");
         this.dialogueLayer.id = "dialogue_canvas";
-        this.dialogueLayer.width = this.scene.cameras.main.width;
-        this.dialogueLayer.height = this.scene.cameras.main.height;
+        this.dialogueLayer.width = this.game.cameras.main.width;
+        this.dialogueLayer.height = this.game.cameras.main.height;
         this.dialogueLayer.style.position = "absolute";
         this.dialogueLayer.style.top = "0";
         this.dialogueLayer.style.left = "0";
@@ -50,9 +50,9 @@ export default class PlayerManager {
         this.alreadyDead = true;
 
         this.createDialogueLayer();
-        this.scene.player.health = this.scene.player.maxHealth;
-        this.scene.player.energy = this.scene.player.maxEnergy;
-        this.scene.player.breath = this.scene.player.maxBreath;
+        this.game.player.health = this.game.player.maxHealth;
+        this.game.player.energy = this.game.player.maxEnergy;
+        this.game.player.breath = this.game.player.maxBreath;
 
         // Determine the message based on the reason.
         let message;
@@ -81,13 +81,13 @@ export default class PlayerManager {
 
         // Example additional game logic
 
-        this.scene.freezePlayer = true;
+        this.game.freezePlayer = true;
 
         // After 2 seconds, fade out and remove the dialogue layer then return to base camp
-        this.scene.time.delayedCall(2000, () => {
-            this.scene.player.energy = 100;
-            this.scene.player.health = 100;
-            this.scene.player.breath = 100;
+        this.game.time.delayedCall(2000, () => {
+            this.game.player.energy = 100;
+            this.game.player.health = 100;
+            this.game.player.breath = 100;
             this.alreadyDead = false;
             this.fadeOutAndRemoveDialogue();
             this.returnToBaseCamp();
@@ -97,8 +97,8 @@ export default class PlayerManager {
     createDialogueLayer() {
         this.dialogueLayer = document.createElement("canvas");
         this.dialogueLayer.id = "dialogue_canvas";
-        this.dialogueLayer.width = this.scene.cameras.main.width;
-        this.dialogueLayer.height = this.scene.cameras.main.height;
+        this.dialogueLayer.width = this.game.cameras.main.width;
+        this.dialogueLayer.height = this.game.cameras.main.height;
         this.dialogueLayer.style.position = "absolute";
         this.dialogueLayer.style.top = "0";
         this.dialogueLayer.style.left = "0";
@@ -144,20 +144,20 @@ export default class PlayerManager {
     }
 
     returnToBaseCamp() {
-        this.scene.player.setAlpha(0);
-        const relativePos = {x: this.scene.startPoint.x, y: this.scene.startPoint.y};
-        this.scene.player.x = relativePos.x;
-        this.scene.player.y = relativePos.y;
-        this.scene.playerLight.setPosition(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2);
-        this.scene.playerLightFaux.setPosition(this.scene.player.x + this.scene.playerSize / 2, this.scene.player.y + this.scene.playerSize / 2);
-        this.scene.freezePlayer = true;
-        this.scene.cameras.main.stopFollow();
-        this.scene.cameras.main.setScroll(relativePos.x, relativePos.y);
-        this.scene.cameras.main.startFollow(this.scene.player);
-        this.scene.freezePlayer = false;
+        this.game.player.setAlpha(0);
+        const relativePos = {x: this.game.startPoint.x, y: this.game.startPoint.y};
+        this.game.player.x = relativePos.x;
+        this.game.player.y = relativePos.y;
+        this.game.playerLight.setPosition(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2);
+        this.game.playerLightFaux.setPosition(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2);
+        this.game.freezePlayer = true;
+        this.game.cameras.main.stopFollow();
+        this.game.cameras.main.setScroll(relativePos.x, relativePos.y);
+        this.game.cameras.main.startFollow(this.game.player);
+        this.game.freezePlayer = false;
         window.setTimeout(() => {
-            this.scene.tweens.add({
-                targets: [this.scene.player],
+            this.game.tweens.add({
+                targets: [this.game.player],
                 alpha: 1,
                 duration: 1000,
                 ease: 'ease-out'

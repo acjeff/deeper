@@ -1,8 +1,8 @@
 export default class UiManager {
     constructor(scene) {
-        this.scene = scene;
-        this.scene.saveButton = this.addSaveButton();
-        this.scene.backToMenuButton = this.addBackToMenuButton();
+        this.game = scene;
+        this.game.saveButton = this.addSaveButton();
+        this.game.backToMenuButton = this.addBackToMenuButton();
         this.addHealthBar();
         this.addEnergyBar();
         this.addBreathBar();
@@ -25,18 +25,18 @@ export default class UiManager {
             this['backToMenuButton'].innerHTML = "Saving...";
             this['saveButton'].style.visibility = 'hidden';
             window.setTimeout(async () => {
-                await this.scene.saveGame(this.scene.user, this.scene.grid);
+                await this.game.saveGame(this.game.user, this.game.grid);
                 this['backToMenuButton'].remove();
                 this['saveButton'].remove();
-                this.scene.lightCanvas.remove();
+                this.game.lightCanvas.remove();
                 this.healthBarFill.remove();
                 this.energyBarFill.remove();
                 this.breathBarFill.remove();
                 this.healthBarContainer.remove();
                 this.energyBarContainer.remove();
                 this.breathBarContainer.remove();
-                this.scene.scene.stop("GameScene"); // ✅ Stop the game scene
-                this.scene.scene.start("MenuScene");
+                this.game.scene.stop("GameScene"); // ✅ Stop the game scene
+                this.game.scene.start("MenuScene");
             }, 100)
 
         });
@@ -54,10 +54,10 @@ export default class UiManager {
             border: 'none'
         }, 'Save Game', async () => {
             // 🚀 UI Update Before Processing
-            this.scene['saveButton'].disabled = true;
-            this.scene['saveButton'].innerHTML = "Saving...";
+            this.game['saveButton'].disabled = true;
+            this.game['saveButton'].innerHTML = "Saving...";
             window.setTimeout(async () => {
-                await this.scene.saveGame(this.scene.user, this.scene.grid);
+                await this.game.saveGame(this.game.user, this.game.grid);
             }, 100)
         });
 
@@ -169,20 +169,20 @@ export default class UiManager {
     }
 
     updateUI() {
-        const healthPercentage = Math.max(0, Math.min((this.scene.player.health / 100) * 100, 100));
-        const energyPercentage = Math.max(0, Math.min((this.scene.player.energy / 100) * 100, 100));
-        const breathPercentage = Math.max(0, Math.min((this.scene.player.breath / 100) * 100, 100));
+        const healthPercentage = Math.max(0, Math.min((this.game.player.health / 100) * 100, 100));
+        const energyPercentage = Math.max(0, Math.min((this.game.player.energy / 100) * 100, 100));
+        const breathPercentage = Math.max(0, Math.min((this.game.player.breath / 100) * 100, 100));
         this.healthBarFill.style.width = healthPercentage + "%";
         this.energyBarFill.style.width = energyPercentage + "%";
         this.breathBarFill.style.width = breathPercentage + "%";
         if (energyPercentage <= 0) {
-            this.scene.playerManager.die('sleep');
+            this.game.playerManager.die('sleep');
         }
         if (healthPercentage <= 0) {
-            this.scene.playerManager.die();
+            this.game.playerManager.die();
         }
         if (breathPercentage <= 0) {
-            this.scene.playerManager.die('suffocate');
+            this.game.playerManager.die('suffocate');
         }
     }
 

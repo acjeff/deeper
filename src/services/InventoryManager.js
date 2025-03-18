@@ -5,7 +5,7 @@ export default class InventoryManager {
      * @param {number} numSlots - Number of fixed inventory slots (default 27 for a 9×3 grid).
      */
     constructor(scene, containerId = 'inventoryContainer', numSlots = 12) {
-        this.scene = scene;
+        this.game = scene;
         this.numSlots = numSlots;
         // Create a fixed array of slots; each slot holds either an item object or null.
         this.slots = new Array(numSlots).fill(null);
@@ -136,7 +136,7 @@ export default class InventoryManager {
                 } else if (source === 'toolbar') {
                     // Dragged from the toolbar.
                     // Get a reference to the toolbar manager (assumed to be on the scene).
-                    const toolbarManager = this.scene.toolBarManager;
+                    const toolbarManager = this.game.toolBarManager;
                     // Get the dragged item from the toolbar.
                     const draggedItem = toolbarManager.getItemById(draggedItemId);
                     if (!draggedItem) return;

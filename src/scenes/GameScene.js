@@ -21,8 +21,102 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async create() {
-        this.tileSize = window._tileSize;
-        this.playerSize = window._playerSize;
+
+        this.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
+        this.renderDistance = 3;
+        this.railRotate = 45;
+        this.fadeSpeed = 200;
+        this.renderviewDistance = 250;
+        this.aboveGround = 20;
+        this.chasmRange = [150, 160];
+        this.tileSize = 10;
+        this.playerSize = 8;
+        this.gridSize = 200;
+        this.width = this.tileSize * this.gridSize;
+        this.height = this.tileSize * this.gridSize;
+        this.soilTypes = {
+            1: {
+                image: 'coal'
+            },
+            2: {
+                image: 'wood'
+            }
+        }
+        this.railTypes = {
+            1: {
+                id: 1,
+                image: 'rail',
+                rotate: this.railRotate
+            },
+            2: {
+                id: 2,
+                image: 'rail',
+                rotate: -this.railRotate
+            }
+        }
+
+        this.tileTypes = {
+            empty: {
+                id: 0
+            },
+            soil: {
+                id: 1,
+                strength: 200
+            },
+            coal: {
+                id: 1,
+                strength: 5000,
+                type: 1
+            },
+            liquid: {
+                id: 2
+            },
+            stone: {
+                id: 3
+            },
+            light: {
+                id: 4
+            },
+            buttress: {
+                id: 5
+            },
+            rail: {
+                id: 6
+            }
+        }
+
+        this.randomElements = [
+            {
+                tile: {
+                    ...this.tileTypes.coal
+                },
+                widthRange: [2, 3],
+                heightRange: [2, 3],
+                count: 1000,
+                layerWeights: [1, 0, 0, 0, 0, 0, 0],
+                columnWeights: [0, 1, 0, 0, 0, 1, 0]
+            },
+            {
+                tile: {
+                    ...this.tileTypes.empty
+                },
+                widthRange: [5, 5],
+                heightRange: [5, 5],
+                count: 10000,
+                layerWeights: [1, 1, 1, 1, 1, 1, 1]
+            }, {
+                tile: {
+                    ...this.tileTypes.liquid
+                },
+                widthRange: [2, 5],
+                heightRange: [5, 10],
+                count: 1000,
+                layerWeights: [1, 0, 0, 0, 0, 0, 0],
+                columnWeights: [0, 0, 0, 1, 0, 0, 0]
+            }
+        ];
+        
+        
         this.soilGroup = this.physics.add.staticGroup();
         this.buttressGroup = this.physics.add.staticGroup();
         this.craneGroup = this.physics.add.staticGroup();
@@ -40,59 +134,59 @@ export default class GameScene extends Phaser.Scene {
         this.toolBarManager = new ToolbarManager(this);
         this.inventoryManager = new InventoryManager(this);
 
-        const pickaxe = new InventoryItem('1', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [window._tileTypes.soil]});
+        const pickaxe = new InventoryItem('1', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil]});
         const glowStick = new InventoryItem('2', null, 'Glow-stick', 'tool', 'images/glow-stick.png', {
             throwable: true,
             number: 100,
             limited: true
         });
         const lamp = new InventoryItem('3', {
-            ...window._tileTypes.light,
+            ...this.tileTypes.light,
             radius: 100,
-            color: window.lightColors[1],
+            color: this.lightColors[1],
             neon: false
         }, 'Lamp', 'tool', 'images/lamp.png', {
             interactsWith: [{
-                ...window._tileTypes.empty
+                ...this.tileTypes.empty
             }],
             mustBeGroundedTo: {
-                tiles: [window._tileTypes.soil, window._tileTypes.buttress],
+                tiles: [this.tileTypes.soil, this.tileTypes.buttress],
                 sides: ['left', 'above', 'below', 'right']
             },
             number: 50,
             limited: true,
-            reclaimFrom: window._tileTypes.light
+            reclaimFrom: this.tileTypes.light
         });
-        const buttress = new InventoryItem('6', {...window._tileTypes.buttress}, 'Buttress', 'tool', 'images/buttress.png', {
-            interactsWith: [window._tileTypes.empty, {
-                ...window._tileTypes.soil,
+        const buttress = new InventoryItem('6', {...this.tileTypes.buttress}, 'Buttress', 'tool', 'images/buttress.png', {
+            interactsWith: [this.tileTypes.empty, {
+                ...this.tileTypes.soil,
                 additionalChecks: {strength: 100}
             }], mustBeGroundedTo: {
-                tiles: [window._tileTypes.soil, window._tileTypes.buttress],
+                tiles: [this.tileTypes.soil, this.tileTypes.buttress],
                 sides: ['left', 'above', 'below', 'right']
-            }, number: 50, limited: true, reclaimFrom: window._tileTypes.buttress
+            }, number: 50, limited: true, reclaimFrom: this.tileTypes.buttress
         });
 
-        const rail = new InventoryItem('7', {...window._tileTypes.rail}, 'Rail', 'tool', 'images/rail.png', {
-            interactsWith: [window._tileTypes.empty], mustBeGroundedTo: {
-                tiles: [window._tileTypes.buttress, window._tileTypes.soil],
+        const rail = new InventoryItem('7', {...this.tileTypes.rail}, 'Rail', 'tool', 'images/rail.png', {
+            interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
+                tiles: [this.tileTypes.buttress, this.tileTypes.soil],
                 sides: ['below']
-            }, number: 50, limited: true, reclaimFrom: window._tileTypes.rail
+            }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         });
 
-        const railDiagonalLeft = new InventoryItem('8', {...window._tileTypes.rail, type: window._railTypes[1]}, 'Rail Left', 'tool', 'images/rail.png', {
-            interactsWith: [window._tileTypes.empty], mustBeGroundedTo: {
-                tiles: [window._tileTypes.buttress, window._tileTypes.soil],
+        const railDiagonalLeft = new InventoryItem('8', {...this.tileTypes.rail, type: this.railTypes[1]}, 'Rail Left', 'tool', 'images/rail.png', {
+            interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
+                tiles: [this.tileTypes.buttress, this.tileTypes.soil],
                 sides: ['below']
-            }, number: 50, limited: true, reclaimFrom: window._tileTypes.rail
-        }, {rotate: window.railRotate});
+            }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
+        }, {rotate: this.railRotate});
 
-        const railDiagonalRight = new InventoryItem('9', {...window._tileTypes.rail, type: window._railTypes[2]}, 'Rail Right', 'tool', 'images/rail.png', {
-            interactsWith: [window._tileTypes.empty], mustBeGroundedTo: {
-                tiles: [window._tileTypes.buttress, window._tileTypes.soil],
+        const railDiagonalRight = new InventoryItem('9', {...this.tileTypes.rail, type: this.railTypes[2]}, 'Rail Right', 'tool', 'images/rail.png', {
+            interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
+                tiles: [this.tileTypes.buttress, this.tileTypes.soil],
                 sides: ['below']
-            }, number: 50, limited: true, reclaimFrom: window._tileTypes.rail
-        }, {rotate: -window.railRotate});
+            }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
+        }, {rotate: -this.railRotate});
 
         this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup];
         this.mapService = new MapService(32, 16, this);
@@ -130,19 +224,25 @@ export default class GameScene extends Phaser.Scene {
             this.checkBlocksInterval = this.time.addEvent({
                 delay: 50,
                 callback: () => {
-                    requestAnimationFrame(() => {
-                        let processed = 0;
-                        let softSoil = this.emptyGroup.getChildren().concat(this.lightGroup.getChildren()).concat(this.liquidGroup.getChildren()).concat(this.railGroup.getChildren());
-                        while (processed < batchSize && currentIndex < softSoil.length) {
-                            const block = softSoil[currentIndex];
-                            if (block.tileRef?.checkState) block.tileRef?.checkState();
-                            currentIndex++;
-                            processed++;
+                    // Option 1: If groups change rarely, you could cache this combined array externally.
+                    // For now, we're computing it on every call.
+                    const emptyChildren = this.emptyGroup.getChildren();
+                    const lightChildren = this.lightGroup.getChildren();
+                    const liquidChildren = this.liquidGroup.getChildren();
+                    const railChildren = this.railGroup.getChildren();
+                    // Combine arrays using spread syntax (more readable and possibly more optimized)
+                    const softSoil = [...emptyChildren, ...lightChildren, ...liquidChildren, ...railChildren];
+                    const total = softSoil.length;
+
+                    // Process a batch of blocks using a for loop.
+                    const max = Math.min(currentIndex + batchSize, total);
+                    for (let i = currentIndex; i < max; i++) {
+                        const block = softSoil[i];
+                        if (block.tileRef?.checkState) {
+                            block.tileRef.checkState();
                         }
-                        if (currentIndex >= softSoil.length) {
-                            currentIndex = 0;
-                        }
-                    })
+                    }
+                    currentIndex = (currentIndex + batchSize) >= total ? 0 : currentIndex + batchSize;
                 },
                 callbackScope: this,
                 loop: true
@@ -161,8 +261,8 @@ export default class GameScene extends Phaser.Scene {
         try {
             const compressedData = LZString.compressToUTF16(JSON.stringify(gridData));
 
-            if (window.electronAPI?.isElectron) {
-                await window.electronAPI.saveGame({grid: gridData, playerData: {x: this.player.x, y: this.player.y}});
+            if (this.electronAPI?.isElectron) {
+                await this.electronAPI.saveGame({grid: gridData, playerData: {x: this.player.x, y: this.player.y}});
                 this.saveButton.disabled = true;
                 this.saveButton.innerHTML = "Saved";
                 window.setTimeout(async () => {
@@ -240,7 +340,6 @@ export default class GameScene extends Phaser.Scene {
         if (this.player) {
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting(delta);
-            this.controlsManager.getInteractableBlock(15);
             this.uiManager.updateUI();
             // this.craneManager.update();
             if (this.glowSticks.length) {

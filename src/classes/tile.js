@@ -51,7 +51,7 @@ export class Tile {
             let anims = {
                 targets: this.fadeElements,
                 alpha: 1,
-                duration: window.fadeSpeed, // Duration in ms; adjust as needed
+                duration: this.game.fadeSpeed, // Duration in ms; adjust as needed
                 ease: 'ease-out'
             };
             if (this.tileDetails.caved) {
@@ -74,7 +74,7 @@ export class Tile {
         if (this.tileDetails.id !== 2 && this.tileDetails.id !== 5) {
             if (blockAbove && blockAbove.tileRef?.tileDetails?.id === 1 && blockAbove.tileRef?.tileDetails?.strength === 100) {
                 tileDetails = {
-                    ...window._tileTypes.soil,
+                    ...this.game.tileTypes.soil,
                     strength: 100,
                     caved: true
                 };
@@ -92,7 +92,7 @@ export class Tile {
     }
 
     setAsEmpty() {
-        let baseCell = {...window._tileTypes.empty};
+        let baseCell = {...this.game.tileTypes.empty};
         this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
     }
 
@@ -105,7 +105,7 @@ export class Tile {
                 Object.entries(adjacentBlocks).forEach(([direction, block]) => {
                     console.log(direction, ' : ', block);
                     if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
-                        let baseCell = {...window._tileTypes.empty};
+                        let baseCell = {...this.game.tileTypes.empty};
                         this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);
                     }
                 });
@@ -117,11 +117,15 @@ export class Tile {
             this.game.tweens.add({
                 targets: this.fadeElements,
                 alpha: 0,
-                duration: window.fadeSpeed, // Duration in ms; adjust as needed
+                duration: this.game.fadeSpeed, // Duration in ms; adjust as needed
                 ease: 'ease-out',
-                onComplete: cb
+                onComplete: () => {
+                    this.game.controlsManager.getInteractableBlock(15);
+                    cb();
+                }
             });
         } else {
+            this.game.controlsManager.getInteractableBlock(15);
             cb();
         }
     }

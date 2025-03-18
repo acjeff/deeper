@@ -1,5 +1,6 @@
 import * as ROT from "rot-js";
 import {Breakable, Light, Empty, Liquid, Buttress, Rail} from "../classes/tiles";
+import TilePool from "../classes/TilePool";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -22,6 +23,12 @@ export default class MapService {
         this.game.dustEmitter.setDepth(9999);
         this.layerCount = 7;
         this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);
+        this.emptyPool = new TilePool((params) => new Empty(params));
+        this.breakablePool = new TilePool((params) => new Breakable(params));
+        this.liquidPool = new TilePool((params) => new Liquid(params));
+        this.lightPool = new TilePool((params) => new Light(params));
+        this.buttressPool = new TilePool((params) => new Buttress(params));
+        this.railPool = new TilePool((params) => new Rail(params));
     }
 
     getLayer(y) {
@@ -29,6 +36,7 @@ export default class MapService {
     }
 
     generateMap() {
+        console.log('Generate map');
         let map = new ROT.Map.Cellular(this.game.mapWidth, this.game.mapHeight);
 
         map.randomize(0.5);
@@ -38,7 +46,7 @@ export default class MapService {
                 let chunkKey = `${x}_${y}`;
                 this.game.grid[chunkKey] = Array.from({length: this.game.chunkSize}, () =>
                     Array(this.game.chunkSize).fill({
-                        ...window._tileTypes.soil
+                        ...this.game.tileTypes.soil
                     })
                 );
             }
@@ -53,45 +61,41 @@ export default class MapService {
             if (this.game.grid[chunkKey]) {
                 let localX = x % this.game.chunkSize;
                 let localY = y % this.game.chunkSize;
-                const EveryNinteenthDownAndOneSideOfColumn = ((x < window.chasmRange[0] || x > window.chasmRange[1]) && y % blockEvery === 0);
-                if ((y > window.aboveGround && (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5) && x !== 0 && x !== this.game.mapWidth - 1) && !(EveryNinteenthDownAndOneSideOfColumn)) {
+                const EveryNinteenthDownAndOneSideOfColumn = ((x < this.game.chasmRange[0] || x > this.game.chasmRange[1]) && y % blockEvery === 0);
+                if ((y > this.game.aboveGround && (x < this.game.chasmRange[0] - 5 || x > this.game.chasmRange[1] + 5) && x !== 0 && x !== this.game.mapWidth - 1) && !(EveryNinteenthDownAndOneSideOfColumn)) {
                     this.game.grid[chunkKey][localY][localX] = wall ? {
-                        ...window._tileTypes.soil
+                        ...this.game.tileTypes.soil
                     } : {
-                        ...window._tileTypes.soil,
+                        ...this.game.tileTypes.soil,
                         strength: 100
                     };
-                }
-                else if ((((x === window.chasmRange[0] || x === window.chasmRange[1]) && y > window.aboveGround && y % entryEvery !== 0)) || (x === 0) || (x === this.game.mapWidth - 1)) {
+                } else if ((((x === this.game.chasmRange[0] || x === this.game.chasmRange[1]) && y > this.game.aboveGround && y % entryEvery !== 0)) || (x === 0) || (x === this.game.mapWidth - 1)) {
                     this.game.grid[chunkKey][localY][localX] = {
-                        ...window._tileTypes.soil,
+                        ...this.game.tileTypes.soil,
                         strength: 999999,
                         type: 2
                     }
-                }
-                else if (EveryNinteenthDownAndOneSideOfColumn && y > window.aboveGround) {
+                } else if (EveryNinteenthDownAndOneSideOfColumn && y > this.game.aboveGround) {
                     this.game.grid[chunkKey][localY][localX] = {
-                        ...window._tileTypes.soil,
+                        ...this.game.tileTypes.soil,
                         strength: 999999,
                         type: 2
                     }
-                }
-                else if (((x < window.chasmRange[0] || x > window.chasmRange[1]) && y > window.aboveGround) && !EveryNinteenthDownAndOneSideOfColumn) {
+                } else if (((x < this.game.chasmRange[0] || x > this.game.chasmRange[1]) && y > this.game.aboveGround) && !EveryNinteenthDownAndOneSideOfColumn) {
                     this.game.grid[chunkKey][localY][localX] = {
-                        ...window._tileTypes.soil,
+                        ...this.game.tileTypes.soil,
                         strength: 100
                     }
-                }
-                else if (((x === window.chasmRange[1] && y % entryEvery === 0) || (x === window.chasmRange[0] && y % entryEvery === 0)) && y > window.aboveGround + 1) {
+                } else if (((x === this.game.chasmRange[1] && y % entryEvery === 0) || (x === this.game.chasmRange[0] && y % entryEvery === 0)) && y > this.game.aboveGround + 1) {
                     this.game.grid[chunkKey][localY][localX] = {
-                        ...window._tileTypes.light,
+                        ...this.game.tileTypes.light,
                         radius: 50,
-                        color: window.lightColors[2],
+                        color: this.game.lightColors[2],
                         neon: true
                     }
                 } else {
                     this.game.grid[chunkKey][localY][localX] = {
-                        ...window._tileTypes.empty
+                        ...this.game.tileTypes.empty
                     }
                 }
             }
@@ -101,15 +105,15 @@ export default class MapService {
         map = null; // Clear reference completely if map won't be reused
 
         // Randomly place water
-        window._randomElements.forEach(element => {
+        this.game.randomElements.forEach(element => {
             this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights, element.columnWeights);
         })
 
         // worldX, worldY, tileType, cellItem
         // Update region: every cell in columns 40 through 48 gets updated to a new tile type.
-        // this.updateRegion(156, 164, window._tileTypes.empty);
+        // this.updateRegion(156, 164, this.game.tileTypes.empty);
 
-        // this.setRandomElement(window._tileTypes.stone, 100000);
+        // this.setRandomElement(this.game.tileTypes.stone, 100000);
     }
 
     updateRegion(xStart, xEnd, tileType) {
@@ -189,8 +193,8 @@ export default class MapService {
             }
             // Only place if y is above the ground threshold and x is outside the chasm.
             if (
-                y > window.aboveGround &&
-                (x < window.chasmRange[0] - 5 || x > window.chasmRange[1] + 5)
+                y > this.game.aboveGround &&
+                (x < this.game.chasmRange[0] - 5 || x > this.game.chasmRange[1] + 5)
             ) {
                 let chunkKey = self.getChunkKey.call(this, x, y);
                 if (!this.game.grid[chunkKey]) {
@@ -255,7 +259,7 @@ export default class MapService {
             while (queue.length > 0 && placed < count && added < clusterSize) {
                 let {x, y} = queue.shift();
                 // Skip positions below threshold or inside the chasm.
-                if (y < 20 || (x > window.chasmRange[0] - 5 && x < window.chasmRange[1] + 5))
+                if (y < 20 || (x > this.game.chasmRange[0] - 5 && x < this.game.chasmRange[1] + 5))
                     continue;
                 let posKey = `${x}_${y}`;
                 if (!filledPositions.has(posKey) && placeBlock.call(this, x, y)) {
@@ -380,39 +384,38 @@ export default class MapService {
         return Math.sqrt(dx * dx + dy * dy) <= radius;
     }
 
-    loadChunks(playerX, playerY, renderDistance = window._renderDistance) {
-        let chunkX = Math.floor(playerX / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
-        let chunkY = Math.floor(playerY / (this.game.chunkSize * this.game.tileSize)) * this.game.chunkSize;
-        let newChunks = new Map(); // Keep existing chunks
+    loadChunks(playerX, playerY, renderDistance = this.game.renderDistance) {
+        requestAnimationFrame(() => {
+            const chunkSizeInPixels = this.game.chunkSize * this.game.tileSize;
+            const baseChunkX = Math.floor(playerX / chunkSizeInPixels) * this.game.chunkSize;
+            const baseChunkY = Math.floor(playerY / chunkSizeInPixels) * this.game.chunkSize;
+            let newChunks = new Map();
 
-        for (let dx = -renderDistance; dx <= renderDistance; dx++) {
-            for (let dy = -renderDistance; dy <= renderDistance; dy++) {
-                let cx = chunkX + dx * this.game.chunkSize;
-                let cy = chunkY + dy * this.game.chunkSize;
-                let chunkKey = `${cx}_${cy}`;
-
-                if (this.game.grid[chunkKey]) {
-                    // Only render if it's not already loaded
-                    if (!this.game.loadedChunks.has(chunkKey)) {
-                        this.renderChunk(cx, cy);
+            for (let dx = -renderDistance; dx <= renderDistance; dx++) {
+                for (let dy = -renderDistance; dy <= renderDistance; dy++) {
+                    const cx = baseChunkX + dx * this.game.chunkSize;
+                    const cy = baseChunkY + dy * this.game.chunkSize;
+                    const chunkKey = `${cx}_${cy}`;
+                    if (this.game.grid[chunkKey]) {
+                        if (!this.game.loadedChunks.has(chunkKey)) {
+                            this.renderChunk(cx, cy);
+                        }
+                        newChunks.set(chunkKey, this.game.grid[chunkKey]);
                     }
-                    newChunks.set(chunkKey, this.game.grid[chunkKey]);
                 }
             }
-        }
 
-        // Unload only chunks outside of the render distance
-        for (let key of [...this.game.loadedChunks.keys()]) {
-            if (!newChunks.has(key)) {
-                this.unloadChunk(key);
-                this.game.loadedChunks.delete(key); // Remove from loadedChunks
-            }
-        }
+            // Unload chunks that are no longer within the render distance
+            this.game.loadedChunks.forEach((grid, key) => {
+                if (!newChunks.has(key)) {
+                    this.unloadChunk(key);
+                    this.game.loadedChunks.delete(key);
+                }
+            });
 
-        this.game.loadedChunks = newChunks;
-        // this.updateWorldBounds();
-        // this.game.physics.world.setBounds(0, 0, 10000, 10000);
-        this.game.children.bringToTop(this.game.shadowGraphics);
+            this.game.loadedChunks = newChunks;
+            this.game.children.bringToTop(this.game.shadowGraphics);
+        });
     }
 
     setTile(worldX, worldY, tileType, cellItem, prefs) {
@@ -438,68 +441,35 @@ export default class MapService {
 
     placeObject(tileType, worldX, worldY, cellDetails, prefs) {
         let newTile;
-        window.requestAnimationFrame(() => {
-            if (tileType.id === window._tileTypes.empty.id) {
-                newTile = new Empty({
-                    game: this.game,
-                    cellDetails: cellDetails,
-                    tileDetails: tileType,
-                    worldX: worldX,
-                    worldY: worldY,
-                    prefs: prefs
-                });
-            }
-            if (tileType.id === window._tileTypes.soil.id) {
-                newTile = new Breakable({
-                    game: this.game,
-                    cellDetails: cellDetails,
-                    tileDetails: tileType,
-                    worldX: worldX,
-                    worldY: worldY,
-                    prefs: prefs
-                });
-            }
-            if (tileType.id === window._tileTypes.liquid.id) {
-                newTile = new Liquid({
-                    game: this.game,
-                    cellDetails: cellDetails,
-                    tileDetails: tileType,
-                    worldX: worldX,
-                    worldY: worldY,
-                    prefs: prefs
-                });
-            }
-            if (tileType.id === window._tileTypes.light.id) {
-                newTile = new Light({
-                    game: this.game,
-                    cellDetails: cellDetails,
-                    tileDetails: tileType,
-                    worldX: worldX,
-                    worldY: worldY,
-                    prefs: prefs
-                })
-            }
-            if (tileType.id === window._tileTypes.buttress.id) {
-                newTile = new Buttress({
-                    game: this.game,
-                    cellDetails: cellDetails,
-                    tileDetails: tileType,
-                    worldX: worldX,
-                    worldY: worldY,
-                    prefs: prefs
-                })
-            }
-            if (tileType.id === window._tileTypes.rail.id) {
-                newTile = new Rail({
-                    game: this.game,
-                    cellDetails: cellDetails,
-                    tileDetails: tileType,
-                    worldX: worldX,
-                    worldY: worldY,
-                    prefs: prefs
-                });
-            }
-        });
+        // window.requestAnimationFrame(() => {
+        const params = {
+            game: this.game,
+            cellDetails: cellDetails,
+            tileDetails: tileType,
+            worldX: worldX,
+            worldY: worldY,
+            prefs: prefs
+        };
+
+        if (tileType.id === this.game.tileTypes.empty.id) {
+            newTile = this.emptyPool.acquire(params);
+        }
+        if (tileType.id === this.game.tileTypes.soil.id) {
+            newTile = this.breakablePool.acquire(params);
+        }
+        if (tileType.id === this.game.tileTypes.liquid.id) {
+            newTile = this.liquidPool.acquire(params);
+        }
+        if (tileType.id === this.game.tileTypes.light.id) {
+            newTile = this.lightPool.acquire(params);
+        }
+        if (tileType.id === this.game.tileTypes.buttress.id) {
+            newTile = this.buttressPool.acquire(params);
+        }
+        if (tileType.id === this.game.tileTypes.rail.id) {
+            newTile = this.railPool.acquire(params);
+        }
+        // });
         return newTile;
     }
 

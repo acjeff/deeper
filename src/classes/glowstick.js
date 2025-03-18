@@ -1,12 +1,12 @@
 export class GlowStick {
     constructor(scene, x, y, textureKey = 'glowstick', options = {}) {
-        this.scene = scene;
+        this.game = scene;
         this.fadeTime = options.fadeTime || 100000;
         this.throwSpeed = options.throwSpeed || 200;
-        this.sprite = this.scene.physics.add.sprite(x, y, 'glowstick');
+        this.sprite = this.game.physics.add.sprite(x, y, 'glowstick');
         const newSizeW = this.sprite.width / 5;
         const newSizeH = this.sprite.height / 5;
-        this.scene.glowStickGroup.add(this.sprite);
+        this.game.glowStickGroup.add(this.sprite);
         this.sprite.body.setAllowRotation(true);
         this.sprite.setDepth(999);
         this.sprite.setAlpha(1);
@@ -16,7 +16,7 @@ export class GlowStick {
         this.sprite.setDrag(200);
         this.sprite.body.setGravityY(options.gravityY || 300);
         this.intensity = options.intensity || 0.8;
-        this.color = window.lightColors[0];
+        this.color = this.game.lightColors[0];
         this.radius = options.radius || 50;
         this.neon = options.neon !== undefined ? options.neon : true;
 
@@ -92,7 +92,7 @@ export class GlowStick {
                 this.glowLight.x = this.sprite.x;
                 this.glowLight.y = this.sprite.y;
             }
-            this.scene.physics.overlap(this.sprite, this.scene.liquidGroup, () => {
+            this.game.physics.overlap(this.sprite, this.game.liquidGroup, () => {
                 this.isFloating = true;
                 this.sprite.body.setVelocity(0, 10);
             });
@@ -107,7 +107,7 @@ export class GlowStick {
      * Clean up by removing the dynamic light and destroying the sprite.
      */
     destroy() {
-        if (this.glowLight && this.scene.lightingManager) {
+        if (this.glowLight && this.game.lightingManager) {
             this.glowLight.destroy();
         }
         this.sprite.destroy();

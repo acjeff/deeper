@@ -35,7 +35,7 @@ export class Breakable extends Tile {
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
         if (this.tileDetails.type) {
-            const image = window._soilTypes[this.tileDetails.type].image;
+            const image = this.game.soilTypes[this.tileDetails.type].image;
             this.overlaySprite = this.game.add.image(this.worldX, this.worldY, image);
             this.overlaySprite.setDisplaySize(this.game.tileSize, this.game.tileSize);
             this.overlaySprite.setDepth(3);
@@ -70,7 +70,7 @@ export class Breakable extends Tile {
     onClick() {
         this.onClickHandler((adj) => {
             if (this.game.selectedTool.id === '6' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
-                let baseCell = {...window._tileTypes.buttress};
+                let baseCell = {...this.game.tileTypes.buttress};
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
             } else if (this.game.selectedTool.id === '1') {
                 if (this.clicking) return;
@@ -86,7 +86,7 @@ export class Breakable extends Tile {
                     this.crackSprite.setAlpha(0);
                     this.sprite.setStrokeStyle(0, 0);
                     this.game.dustEmitter.explode(50);
-                    baseCell = this.tileDetails.trapped || {...window._tileTypes.empty};
+                    baseCell = this.tileDetails.trapped || {...this.game.tileTypes.empty};
                     this.clicking = false;
                     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
                 } else {

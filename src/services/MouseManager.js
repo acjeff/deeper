@@ -1,12 +1,12 @@
 // MouseManager.js
-import { GlowStick } from "../classes/glowstick"; // adjust the path as needed
+import {GlowStick} from "../classes/glowstick"; // adjust the path as needed
 
 export default class MouseManager {
     /**
      * @param {Phaser.Scene} scene - The current game scene.
      */
     constructor(scene) {
-        this.scene = scene;
+        this.game = scene;
         this.init();
     }
 
@@ -17,24 +17,10 @@ export default class MouseManager {
 
     handleMouseMove(event) {
         // Update the scene's mouse position.
-        this.scene.mousePos = { x: event.clientX, y: event.clientY };
     }
 
     handleMouseDown(event) {
         // Check if the selected tool is a throwable glowstick.
-        const selectedTool = this.scene.selectedTool;
-        if (
-            selectedTool &&
-            selectedTool.metadata &&
-            selectedTool.metadata.throwable &&
-            selectedTool.id === '2' &&
-            selectedTool.metadata.number
-        ) {
-            // Create and throw a new glow stick from the player's position.
-            const glowStick = GlowStick.throwFromPlayer(this.scene, this.scene.player);
-            selectedTool.metadata.number = selectedTool.metadata.number - 1;
-            this.scene.glowSticks.push(glowStick);
-            this.scene.toolBarManager.render();
-        }
+
     }
 }
