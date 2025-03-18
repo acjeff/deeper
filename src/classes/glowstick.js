@@ -12,7 +12,7 @@ export class GlowStick {
         this.sprite.setAlpha(1);
         this.sprite.body.setSize(newSizeW, newSizeH);
         this.sprite.setDisplaySize(newSizeW, newSizeH);
-        this.sprite.setBounce(1, 1);
+        this.sprite.setBounce(0.5);
         this.sprite.setDrag(200);
         this.sprite.body.setGravityY(options.gravityY || 300);
         this.intensity = options.intensity || 0.8;
