@@ -99,6 +99,8 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
+        // this.game.player.body.x = Math.round(this.game.player.body.x);
+        // this.game.player.body.y = Math.round(this.game.player.body.y);
         const pointer = this.game.input.activePointer;
         const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const worldMouseX = worldPoint.x;
@@ -204,6 +206,8 @@ export default class ControlsManager {
             this.game.player.anims.play('jump', true);
         }
 
+
+
     }
 
 
@@ -223,8 +227,8 @@ export default class ControlsManager {
 
                 // Get all entities around the player
                 const nearbyBlocks = this.game.mapService.getEntitiesAround(
-                    player.x + this.game.playerSize / 2,
-                    player.y + this.game.playerSize / 2,
+                    player.x,
+                    player.y,
                     interactionRange
                 );
 
