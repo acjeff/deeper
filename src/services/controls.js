@@ -48,6 +48,8 @@ export default class ControlsManager {
                 this.game.toolBarManager.render();
             }
 
+            this.game.player.flipX = this.game.playerHead.flipX;
+
             this.game.controlsManager.getInteractableBlock(15);
         });
 
@@ -162,26 +164,22 @@ export default class ControlsManager {
 
         let moveSpeed;
         this.stationary = false;
-        // Horizontal movement and animation handling:
         if (this.game.keys.left.isDown) {
             moveSpeed = this.game.isFloating ? -26 : -50;
             this.game.player.setVelocityX(moveSpeed);
-            // Play walk animation and flip sprite for left movement
             this.game.player.anims.play('walk', true);
             this.game.player.flipX = true;
+            this.game.playerHead.flipX = true;
         } else if (this.game.keys.right.isDown) {
             moveSpeed = this.game.isFloating ? 26 : 50;
             this.game.player.flipX = false;
+            this.game.playerHead.flipX = false;
             this.game.player.setVelocityX(moveSpeed);
-            // Play walk animation normally for right movement
             this.game.player.anims.play('walk', true);
         } else {
             this.game.player.setVelocityX(0);
-            // Stop animation when not moving horizontally
             this.game.player.anims.play('stationary', true);
-            this.stationary = true;
-            // Optionally, set an idle frame:
-
+            // this.stationary = true;
         }
 
         // const worldMouseY = worldPoint.y;
@@ -224,7 +222,6 @@ export default class ControlsManager {
 
 
     }
-
 
     getInteractableBlock(interactionRange) {
         if (this.gettingBlock) return;
