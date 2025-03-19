@@ -33,7 +33,8 @@ export default class PlayerManager {
         this.game.playerHead = this.game.add.sprite(x, y, 'player_head');
         this.game.player.setDisplaySize(7, 9);
         this.game.playerHead.setDisplaySize(7, 6.24);
-        this.game.playerHead.setDepth(-1)
+        this.game.playerHead.setDepth(1);
+        this.game.player.setDepth(2);
         console.log(this.game.player.width, this.game.player.height);
         this.game.player.setBounce(0.2);
         // this.game.player.setOrigin(0, 0);
