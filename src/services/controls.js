@@ -55,6 +55,7 @@ export default class ControlsManager {
             // Update the scene's mouse position.
             this.game.mousePos = {x: event.clientX, y: event.clientY};
             this.game.controlsManager.getInteractableBlock(15);
+            this.playerLooking();
         });
 
         // window.addEventListener("wheel", (e) => {
@@ -98,13 +99,10 @@ export default class ControlsManager {
 
     }
 
-    handlePlayerMovement() {
+    playerLooking() {
         const pointer = this.game.input.activePointer;
         const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const worldMouseX = worldPoint.x;
-        this.game.playerHead.x = this.game.player.body.x + 3.5;
-        this.game.playerHead.y = this.game.player.body.y + 3.3;
-        this.game.playerHead.flipX = this.game.player.flipX;
 
         let angle = Phaser.Math.Angle.Between(
             this.game.playerHead.x,
@@ -123,9 +121,18 @@ export default class ControlsManager {
             // STRAIGHT AHEAD
             this.game.playerHead.setFrame(0);
         }
+        this.game.playerHead.flipX = worldMouseX < this.game.player.x;
+    }
 
-
+    handlePlayerMovement() {
+        const pointer = this.game.input.activePointer;
+        const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const worldMouseX = worldPoint.x;
         this.game.isFloating = false;
+        this.game.playerHead.x = this.game.player.body.x + 3.5;
+        this.game.playerHead.y = this.game.player.body.y + 3.3;
+        // this.game.playerHead.flipX = this.game.player.flipX;
+
         if (!this.game.player.body) return;
         if (this.game.player?.body?.velocity?.y > 5) {
             this.game.lastFallSpeed = this.game.player.body.velocity.y;
@@ -153,17 +160,18 @@ export default class ControlsManager {
             }
         }
 
-        let moveSpeed, walkingLeft, walkingRight;
+        let moveSpeed;
+        this.stationary = false;
         // Horizontal movement and animation handling:
         if (this.game.keys.left.isDown) {
             moveSpeed = this.game.isFloating ? -26 : -50;
             this.game.player.setVelocityX(moveSpeed);
-            walkingLeft = true;
             // Play walk animation and flip sprite for left movement
             this.game.player.anims.play('walk', true);
+            this.game.player.flipX = true;
         } else if (this.game.keys.right.isDown) {
-            walkingRight = true;
             moveSpeed = this.game.isFloating ? 26 : 50;
+            this.game.player.flipX = false;
             this.game.player.setVelocityX(moveSpeed);
             // Play walk animation normally for right movement
             this.game.player.anims.play('walk', true);
@@ -171,14 +179,13 @@ export default class ControlsManager {
             this.game.player.setVelocityX(0);
             // Stop animation when not moving horizontally
             this.game.player.anims.play('stationary', true);
+            this.stationary = true;
             // Optionally, set an idle frame:
 
         }
 
         // const worldMouseY = worldPoint.y;
         // If mouse position is to the left of player
-        this.game.player.flipX = (walkingLeft || worldMouseX < this.game.player.x) && !walkingRight;
-
         // this.game.playerHead.rotation = angle - (this.game.player.flipX ? Phaser.Math.DegToRad(180) : 0);
 
         // Vertical movement
