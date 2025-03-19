@@ -1,3 +1,5 @@
+import {degrees_to_radians} from "./math";
+
 export default class PlayerManager {
     constructor(scene) {
         this.game = scene;
@@ -7,16 +9,35 @@ export default class PlayerManager {
         let y = this.game.playerY || this.game.startPoint.y;
         this.game.anims.create({
             key: 'walk',
-            frames: this.game.anims.generateFrameNumbers('player', { start: 0, end: 1 }),
+            frames: this.game.anims.generateFrameNumbers('player_walk', { start: 0, end: 1 }),
+            frameRate: 10,
+            repeat: -1  // Loop indefinitely
+        });
+
+        this.game.anims.create({
+            key: 'jump',
+            frames: this.game.anims.generateFrameNumbers('player_jump', { start: 0, end: 1 }),
+            frameRate: 5,
+            repeat: -1  // Loop indefinitely
+        });
+
+        this.game.anims.create({
+            key: 'stationary',
+            frames: this.game.anims.generateFrameNumbers('player_stationary', { start: 0, end: 0 }),
             frameRate: 10,
             repeat: -1  // Loop indefinitely
         });
 
         // Create the player sprite
-        this.game.player = this.game.physics.add.sprite(x, y, 'player');
-
+        this.game.player = this.game.physics.add.sprite(x, y, 'player_stationary');
+        this.game.playerHead = this.game.add.sprite(x, y, 'player_head');
+        this.game.player.setDisplaySize(7, 9);
+        this.game.playerHead.setDisplaySize(7, 6.24);
+        this.game.playerHead.setDepth(-1)
+        console.log(this.game.player.width, this.game.player.height);
         this.game.player.setBounce(0.2);
-        this.game.player.setOrigin(0, 0);
+        // this.game.player.setOrigin(0, 0);
+
         this.game.player.maxHealth = 100;
         this.game.player.maxEnergy = 100;
         this.game.player.maxBreath = 100;
@@ -25,7 +46,6 @@ export default class PlayerManager {
         this.game.player.energy = this.game.player.maxEnergy;
         this.game.player.breath = this.game.player.maxBreath;
         this.game.player.hitPower = this.game.player.maxHitPower;
-        this.game.player.setDisplaySize(this.game.playerSize * 0.9, this.game.playerSize * 1.1);
         this.game.playerLight = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, this.game.playerSize * 8, 1, this.game.lightColors[1], false);
         this.game.playerLight.off = true;
         this.game.playerLightFaux = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, 0, 1, this.game.lightColors[1], false);

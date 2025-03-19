@@ -1,4 +1,5 @@
 import {GlowStick} from "../classes/glowstick";
+import {degrees_to_radians} from "./math";
 
 export default class ControlsManager {
     constructor(scene) {
@@ -98,6 +99,21 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
+        const pointer = this.game.input.activePointer;
+        const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const worldMouseX = worldPoint.x;
+        this.game.playerHead.x = this.game.player.body.x + 3.5;
+        this.game.playerHead.y = this.game.player.body.y + 3.12;
+        this.game.playerHead.flipX = this.game.player.flipX;
+
+        let angle = Phaser.Math.Angle.Between(
+            this.game.playerHead.x,
+            this.game.playerHead.y,
+            pointer.worldX,
+            pointer.worldY
+        );
+
+
         this.game.isFloating = false;
         if (!this.game.player.body) return;
         if (this.game.player?.body?.velocity?.y > 5) {
@@ -126,31 +142,38 @@ export default class ControlsManager {
             }
         }
 
-        let moveSpeed;
+        let moveSpeed, walkingLeft, walkingRight;
         // Horizontal movement and animation handling:
         if (this.game.keys.left.isDown) {
             moveSpeed = this.game.isFloating ? -26 : -50;
             this.game.player.setVelocityX(moveSpeed);
+            walkingLeft = true;
             // Play walk animation and flip sprite for left movement
             this.game.player.anims.play('walk', true);
-            this.game.player.flipX = true;
         } else if (this.game.keys.right.isDown) {
+            walkingRight = true;
             moveSpeed = this.game.isFloating ? 26 : 50;
             this.game.player.setVelocityX(moveSpeed);
             // Play walk animation normally for right movement
             this.game.player.anims.play('walk', true);
-            this.game.player.flipX = false;
         } else {
             this.game.player.setVelocityX(0);
             // Stop animation when not moving horizontally
-            this.game.player.anims.stop();
+            this.game.player.anims.play('stationary', true);
             // Optionally, set an idle frame:
             // this.game.player.setFrame(0);
         }
 
+        // const worldMouseY = worldPoint.y;
+        // If mouse position is to the left of player
+        this.game.player.flipX = (walkingLeft || worldMouseX < this.game.player.x) && !walkingRight;
+
+        // this.game.playerHead.rotation = angle - (this.game.player.flipX ? Phaser.Math.DegToRad(180) : 0);
+
         // Vertical movement
         if (this.game.keys.up.isDown) {
             if (this.game.isFloating) {
+                this.game.player.anims.play('jump', true);
                 this.game.player.setVelocityY(-30);
             } else if (this.game.player.body.blocked.down) {
                 this.game.player.setVelocityY(-100);
@@ -158,10 +181,12 @@ export default class ControlsManager {
         }
         if (this.game.keys.down.isDown) {
             if (this.game.isFloating) {
+                this.game.player.anims.play('jump', true);
                 this.game.player.setVelocityY(30);
             }
         }
         if (this.game.isFloating && !this.game.keys.down.isDown && !this.game.keys.up.isDown) {
+            this.game.player.anims.play('jump', true);
             this.game.player.setVelocityY(20);
         }
 
@@ -172,6 +197,11 @@ export default class ControlsManager {
         this.game.mapService.loadChunks(playerX, playerY);
         if (moveSpeed) {
             this.game.controlsManager.getInteractableBlock(15);
+        }
+
+        const isFalling = !this.game.player.body.blocked.down;
+        if (isFalling) {
+            this.game.player.anims.play('jump', true);
         }
 
     }

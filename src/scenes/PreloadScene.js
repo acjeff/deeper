@@ -4,7 +4,15 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.spritesheet('player', 'images/player.png', {
+        this.load.spritesheet('player_walk', 'images/player_walking.png', {
+            frameWidth: 55,
+            frameHeight: 70
+        });
+        this.load.spritesheet('player_stationary', 'images/player_stationary.png', {
+            frameWidth: 55,
+            frameHeight: 70
+        });
+        this.load.spritesheet('player_jump', 'images/player_jumping.png', {
             frameWidth: 55,
             frameHeight: 70
         });
@@ -19,6 +27,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('buttress', 'images/buttress.png');
         this.load.image('glowstick', 'images/glow-stick.png');
         this.load.image('rail', 'images/rail.png');
+        this.load.image('player_head', 'images/player_head.png');
     }
     // flat
     // diagonal_left
