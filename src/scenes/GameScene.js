@@ -30,7 +30,7 @@ export default class GameScene extends Phaser.Scene {
         this.aboveGround = 20;
         this.chasmRange = [150, 160];
         this.tileSize = 10;
-        this.playerSize = 8;
+        this.playerSize = 7;
         this.gridSize = 200;
         this.width = this.tileSize * this.gridSize;
         this.height = this.tileSize * this.gridSize;
