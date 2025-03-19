@@ -17,7 +17,7 @@ export default class PlayerManager {
         this.game.anims.create({
             key: 'jump',
             frames: this.game.anims.generateFrameNumbers('player_jump', { start: 0, end: 1 }),
-            frameRate: 5,
+            frameRate: 10,
             repeat: -1  // Loop indefinitely
         });
 
@@ -178,6 +178,7 @@ export default class PlayerManager {
 
     teleportTo(x, y) {
         this.game.player.setAlpha(0);
+        this.game.playerHead.setAlpha(0);
         const relativePos = {x: x || this.game.startPoint.x, y: y || this.game.startPoint.y};
         this.game.player.x = relativePos.x;
         this.game.player.y = relativePos.y;
@@ -190,7 +191,7 @@ export default class PlayerManager {
         this.game.freezePlayer = false;
         window.setTimeout(() => {
             this.game.tweens.add({
-                targets: [this.game.player],
+                targets: [this.game.player, this.game.playerHead],
                 alpha: 1,
                 duration: 1000,
                 ease: 'ease-out'

@@ -99,13 +99,11 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
-        // this.game.player.body.x = Math.round(this.game.player.body.x);
-        // this.game.player.body.y = Math.round(this.game.player.body.y);
         const pointer = this.game.input.activePointer;
         const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const worldMouseX = worldPoint.x;
         this.game.playerHead.x = this.game.player.body.x + 3.5;
-        this.game.playerHead.y = this.game.player.body.y + 3.12;
+        this.game.playerHead.y = this.game.player.body.y + 3.3;
         this.game.playerHead.flipX = this.game.player.flipX;
 
         let angle = Phaser.Math.Angle.Between(
@@ -114,6 +112,17 @@ export default class ControlsManager {
             pointer.worldX,
             pointer.worldY
         );
+        let angleDeg = Phaser.Math.RadToDeg(angle);
+        if (angleDeg > -145 && angleDeg < -35) {
+            // UP
+            this.game.playerHead.setFrame(1);
+        } else if (angleDeg < 145 && angleDeg > 35) {
+            // DOWN
+            this.game.playerHead.setFrame(2);
+        } else {
+            // STRAIGHT AHEAD
+            this.game.playerHead.setFrame(0);
+        }
 
 
         this.game.isFloating = false;
@@ -163,7 +172,7 @@ export default class ControlsManager {
             // Stop animation when not moving horizontally
             this.game.player.anims.play('stationary', true);
             // Optionally, set an idle frame:
-            // this.game.player.setFrame(0);
+
         }
 
         // const worldMouseY = worldPoint.y;
@@ -205,7 +214,6 @@ export default class ControlsManager {
         if (isFalling) {
             this.game.player.anims.play('jump', true);
         }
-
 
 
     }

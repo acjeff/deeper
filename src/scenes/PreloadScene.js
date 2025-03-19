@@ -16,6 +16,10 @@ export default class PreloadScene extends Phaser.Scene {
             frameWidth: 55,
             frameHeight: 70
         });
+        this.load.spritesheet('player_head', 'images/player_head.png', {
+            frameWidth: 55,
+            frameHeight: 49
+        });
         this.load.image("energy", "images/energy.png");
         this.load.image("door", "images/door.png");
         this.load.image("wall", "images/door.png");
@@ -27,7 +31,6 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('buttress', 'images/buttress.png');
         this.load.image('glowstick', 'images/glow-stick.png');
         this.load.image('rail', 'images/rail.png');
-        this.load.image('player_head', 'images/player_head.png');
     }
     // flat
     // diagonal_left
