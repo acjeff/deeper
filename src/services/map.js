@@ -1,5 +1,5 @@
 import * as ROT from "rot-js";
-import {Breakable, Light, Empty, Liquid, Buttress, Rail} from "../classes/tiles";
+import {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl} from "../classes/tiles";
 import TilePool from "../classes/TilePool";
 
 export default class MapService {
@@ -25,6 +25,7 @@ export default class MapService {
         this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);
         this.emptyPool = new TilePool((params) => new Empty(params));
         this.breakablePool = new TilePool((params) => new Breakable(params));
+        this.liftControlPool = new TilePool((params) => new LiftControl(params));
         this.liquidPool = new TilePool((params) => new Liquid(params));
         this.lightPool = new TilePool((params) => new Light(params));
         this.buttressPool = new TilePool((params) => new Buttress(params));
@@ -469,7 +470,9 @@ export default class MapService {
         if (tileType.id === this.game.tileTypes.rail.id) {
             newTile = this.railPool.acquire(params);
         }
-        // });
+        if (tileType.id === this.game.tileTypes.liftControl.id) {
+            newTile = this.liftControlPool.acquire(params);
+        }
         return newTile;
     }
 

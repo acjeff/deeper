@@ -1,5 +1,3 @@
-import {degrees_to_radians} from "./math";
-
 export default class PlayerManager {
     constructor(scene) {
         this.game = scene;

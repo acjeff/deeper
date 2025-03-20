@@ -57,7 +57,9 @@ export default class ControlsManager {
             // Update the scene's mouse position.
             this.game.mousePos = {x: event.clientX, y: event.clientY};
             this.game.controlsManager.getInteractableBlock(15);
-            this.playerLooking();
+            if (this.game.playerHead) {
+                this.playerLooking();
+            }
         });
 
         // window.addEventListener("wheel", (e) => {

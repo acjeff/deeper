@@ -82,6 +82,9 @@ export default class GameScene extends Phaser.Scene {
             },
             rail: {
                 id: 6
+            },
+            liftControl: {
+                id: 7
             }
         }
 
@@ -125,6 +128,7 @@ export default class GameScene extends Phaser.Scene {
         this.glowSticks = [];
         this.emptyGroup = this.add.group();
         this.lightGroup = this.add.group();
+        this.liftControlGroup = this.add.group();
         this.liquidGroup = this.physics.add.staticGroup();
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
@@ -157,6 +161,20 @@ export default class GameScene extends Phaser.Scene {
             limited: true,
             reclaimFrom: this.tileTypes.light
         });
+        const liftControl = new InventoryItem('14', {
+            ...this.tileTypes.liftControl
+        }, 'Switch', 'tool', 'images/switch-single.png', {
+            interactsWith: [{
+                ...this.tileTypes.empty
+            }],
+            mustBeGroundedTo: {
+                tiles: [this.tileTypes.soil, this.tileTypes.buttress],
+                sides: ['left', 'above', 'below', 'right']
+            },
+            number: 50,
+            limited: true,
+            reclaimFrom: this.tileTypes.liftControl
+        });
         const buttress = new InventoryItem('6', {...this.tileTypes.buttress}, 'Buttress', 'tool', 'images/buttress.png', {
             interactsWith: [this.tileTypes.empty, {
                 ...this.tileTypes.soil,
@@ -188,7 +206,7 @@ export default class GameScene extends Phaser.Scene {
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         }, {rotate: -this.railRotate});
 
-        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup, this.liftControlGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();
@@ -212,7 +230,9 @@ export default class GameScene extends Phaser.Scene {
             this.toolBarManager.addItemToSlot(3, buttress);
             this.toolBarManager.addItemToSlot(4, rail);
             this.toolBarManager.addItemToSlot(5, railDiagonalLeft);
-            this.toolBarManager.addItemToSlot(6, railDiagonalRight);
+            // this.toolBarManager.addItemToSlot(6, railDiagonalRight);
+            this.toolBarManager.addItemToSlot(6, liftControl);
+
             this.toolBarManager.setSelected(0);
 
             this.glowStickCols = ["163,255,93", "255,163,93", "163,93,255", "253,196,124"];

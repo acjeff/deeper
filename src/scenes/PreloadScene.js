@@ -20,6 +20,11 @@ export default class PreloadScene extends Phaser.Scene {
             frameWidth: 55,
             frameHeight: 49
         });
+
+        this.load.spritesheet('switch', 'images/switch.png', {
+            frameWidth: 100,
+            frameHeight: 100
+        });
         this.load.image("energy", "images/energy.png");
         this.load.image("door", "images/door.png");
         this.load.image("wall", "images/door.png");
