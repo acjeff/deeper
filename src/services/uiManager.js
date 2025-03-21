@@ -188,9 +188,9 @@ export default class UiManager {
         if (healthPercentage <= 0) {
             this.game.playerManager.die();
         }
-        if (breathPercentage <= 0) {
-            this.game.playerManager.die('suffocate');
-        }
+        // if (breathPercentage <= 0) {
+        //     this.game.playerManager.die('suffocate');
+        // }
     }
 
 }

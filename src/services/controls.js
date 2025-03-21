@@ -164,6 +164,9 @@ export default class ControlsManager {
                 this.game.player.breath += 0.8;
             }
         }
+        if (this.game.player.breath <= 0) {
+            this.game.player.health -= 0.1;
+        }
 
         let moveSpeed;
         this.stationary = false;
