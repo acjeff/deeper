@@ -262,7 +262,7 @@ export default class ControlsManager {
         if (this.gettingBlock) return;
 
         const player = this.game.player;
-        if (this.game.player && this.game.cameras.main) {
+        if (this.game.player && this.game.cameras.main && this.game.input && this.game.input.activePointer) {
             this.gettingBlock = true
             requestAnimationFrame(() => {
                 const pointer = this.game.input.activePointer; // Get current mouse pointer
