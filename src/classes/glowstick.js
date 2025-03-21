@@ -31,28 +31,32 @@ export class GlowStick {
                 false,
                 this.neon
             );
+            this.glowLight.radius = 0;
+            this.glowLight.fadeIn();
         }
 
         this.sprite.dummyTween = 1;
 
-        scene.tweens.add({
-            targets: this.sprite,
-            dummyTween: 0, // Tween this value from 1 to 0
-            duration: this.fadeTime, // Duration of the effect
-            onUpdate: (tween, target) => {
-                const progress = target.dummyTween; // Progress from 1 to 0
+        window.setTimeout(() => {
+            scene.tweens.add({
+                targets: this.sprite,
+                dummyTween: 0, // Tween this value from 1 to 0
+                duration: this.fadeTime, // Duration of the effect
+                onUpdate: (tween, target) => {
+                    const progress = target.dummyTween; // Progress from 1 to 0
 
-                // Lower the light radius
-                if (this.glowLight) {
-                    if (this.glowLight.radius > 0) {
-                        this.glowLight.radius = this.radius * progress; // Reduce radius over time
+                    // Lower the light radius
+                    if (this.glowLight) {
+                        if (this.glowLight.radius > 0) {
+                            this.glowLight.radius = this.radius * progress; // Reduce radius over time
+                        }
                     }
+                },
+                onComplete: () => {
+                    // this.destroy();
                 }
-            },
-            onComplete: () => {
-                // this.destroy();
-            }
-        });
+            });
+        }, 200)
     }
 
     static throwFromPlayer(scene, player, textureKey = 'glowStick', options = {}) {

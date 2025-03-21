@@ -40,6 +40,9 @@ export class Tile {
         this.borderGraphics.setAlpha(0);
         this.setupInteractions();
         this.addToGroup();
+        if (this.light) {
+            this.light.fadeIn();
+        }
         if (this.sprite && this.fadeElements && this.fadeElements.length > 0 && !this.prefs?.noAnimation) {
             this.fadeElements.forEach(fe => {
                 if (this.tileDetails.caved) {

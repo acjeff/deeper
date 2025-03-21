@@ -50,8 +50,7 @@ export class Light extends Tile {
     }
 
     destroy(prefs) {
-        this.light.off = true;
-
+        this.light.fadeOut();
         this.destroyHandler(() => {
             if (!this.active) return;  // Guard against double-destroy
             this.active = false;
