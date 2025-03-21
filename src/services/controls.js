@@ -17,7 +17,8 @@ export default class ControlsManager {
 
         window.addEventListener("keydown", (e) => {
             if (e.key === "e") {
-                this.game.events.emit('interacting');
+                console.log(this.game.showInteractionPrompt, ' : this.game.showInteractionPrompt');
+                if (this.game.showInteractionPrompt) this.game.showInteractionPrompt.tileRef.callCrane();
             }
         });
 
@@ -140,8 +141,9 @@ export default class ControlsManager {
             this.game.isFloating = true;
         });
         this.game.showInteractionPrompt = false;
-        this.game.physics.overlap(this.game.player, this.game.interactableGroup, () => {
-            this.game.showInteractionPrompt = true;
+        this.game.physics.overlap(this.game.player, this.game.interactableGroup, (obj1, obj2) => {
+            // console.log(obj2, ' : obj2');
+            this.game.showInteractionPrompt = obj2;
         });
 
         if (this.game.freezePlayer) {
@@ -231,11 +233,11 @@ export default class ControlsManager {
             const textY = playerY - 5;
 
             const style = {
-                    font: '3px',
-                    fill: '#ffffff',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    padding: {left: 3, right: 3, top: 2, bottom: 1}
-                };
+                font: '3px',
+                fill: '#ffffff',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                padding: {left: 3, right: 3, top: 2, bottom: 1}
+            };
 
             if (!this.interactionText) {
                 this.interactionText = this.game.add.text(textX, textY, 'E to Interact', style);

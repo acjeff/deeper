@@ -4,9 +4,20 @@ export class LiftControl extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
         this.init();
-        game.events.on('interacting', (data) => {
-            console.log("The 'E' key was pressed!", data);
-        });
+    }
+
+    callCrane() {
+        this.game.craneManager.moveTo(this.worldY, this);
+    }
+
+    moving(direction) {
+        if (direction === "up") {
+            this.switchSprite.setFrame(1);
+        } else if (direction === "down") {
+            this.switchSprite.setFrame(2);
+        } else {
+            this.switchSprite.setFrame(0);
+        }
     }
 
     addToGroup() {
