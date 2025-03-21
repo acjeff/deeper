@@ -5,6 +5,7 @@ export default class ControlsManager {
         this.game = scene;
         this.game.mousePos = {x: 0, y: 0};
         this.hoveredBlock = null;
+        this.swingRadius = 45;
 
         this.game.keys = this.game.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -30,7 +31,7 @@ export default class ControlsManager {
                 selectedTool &&
                 selectedTool.metadata &&
                 selectedTool.metadata.throwable &&
-                selectedTool.id === '2' &&
+                selectedTool.id === 'glowstick' &&
                 selectedTool.metadata.number
             ) {
                 // Create and throw a new glow stick from the player's position.
@@ -41,6 +42,28 @@ export default class ControlsManager {
             }
 
             this.game.player.flipX = this.game.playerHead.flipX;
+
+            if (this.game.toolSprite) {
+                this.interacting = true;
+                this.game.tweens.add({
+                    targets: this.game.toolSprite,
+                    rotation: Phaser.Math.DegToRad(this.game.toolSprite.flipX ? -this.swingRadius : this.swingRadius),
+                    duration: 100, // Duration in ms; adjust as needed
+                    ease: 'ease-in',
+                    onComplete: () => {
+                        this.game.tweens.add({
+                            targets: this.game.toolSprite,
+                            rotation: Phaser.Math.DegToRad(this.game.toolSprite.flipX ? this.swingRadius : -this.swingRadius),
+                            duration: 100, // Duration in ms; adjust as needed
+                            ease: 'ease-out',
+                            onComplete: () => {
+                                this.interacting = false;
+                            }
+                        });
+                    }
+                });
+            }
+
 
             this.game.controlsManager.getInteractableBlock(15);
         });
@@ -108,10 +131,10 @@ export default class ControlsManager {
             pointer.worldY
         );
         let angleDeg = Phaser.Math.RadToDeg(angle);
-        if (angleDeg > -145 && angleDeg < -35) {
+        if (angleDeg > -145 && angleDeg < -this.swingRadius) {
             // UP
             this.game.playerHead.setFrame(1);
-        } else if (angleDeg < 145 && angleDeg > 35) {
+        } else if (angleDeg < 145 && angleDeg > this.swingRadius) {
             // DOWN
             this.game.playerHead.setFrame(2);
         } else {
@@ -122,13 +145,14 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
-        const pointer = this.game.input.activePointer;
-        const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
-        const worldMouseX = worldPoint.x;
         this.game.isFloating = false;
         this.game.playerHead.x = this.game.player.body.x + 3;
         this.game.playerHead.y = this.game.player.body.y + 2.5;
-        // this.game.playerHead.flipX = this.game.player.flipX;
+
+        if (this.game.toolSprite) {
+            this.game.toolSprite.x = this.game.player.body.x + (this.game.toolSprite.flipX ? 4 : 2);
+            this.game.toolSprite.y = this.game.player.body.y + 7;
+        }
 
         if (!this.game.player.body) return;
         if (this.game.player?.body?.velocity?.y > 5) {
@@ -167,6 +191,8 @@ export default class ControlsManager {
 
         let moveSpeed;
         this.stationary = false;
+        this.game.toolSprite.setOrigin(0.5, 1);
+        this.game.toolSprite.setDepth(3);
         if (this.game.keys.left.isDown) {
             moveSpeed = this.game.isFloating ? -26 : -50;
             this.game.player.setVelocityX(moveSpeed);
@@ -177,6 +203,7 @@ export default class ControlsManager {
             moveSpeed = this.game.isFloating ? 26 : 50;
             this.game.player.flipX = false;
             this.game.playerHead.flipX = false;
+            this.game.toolSprite.setDepth(3);
             this.game.player.setVelocityX(moveSpeed);
             this.game.player.anims.play('walk', true);
         } else {
@@ -185,9 +212,10 @@ export default class ControlsManager {
             // this.stationary = true;
         }
 
-        // const worldMouseY = worldPoint.y;
-        // If mouse position is to the left of player
-        // this.game.playerHead.rotation = angle - (this.game.player.flipX ? Phaser.Math.DegToRad(180) : 0);
+        this.game.toolSprite.flipX = this.game.player.flipX;
+        if (!this.interacting) {
+            this.game.toolSprite.rotation = Phaser.Math.DegToRad(this.game.toolSprite.flipX ? this.swingRadius : -this.swingRadius);
+        }
 
         // Vertical movement
         if (this.game.keys.up.isDown) {
@@ -262,7 +290,6 @@ export default class ControlsManager {
                     .interactionText = null;
             }
         }
-
 
     }
 

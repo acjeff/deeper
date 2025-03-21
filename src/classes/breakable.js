@@ -69,10 +69,10 @@ export class Breakable extends Tile {
 
     onClick() {
         this.onClickHandler((adj) => {
-            if (this.game.selectedTool.id === '6' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
+            if (this.game.selectedTool.id === 'buttress' && this.tileDetails.id === 1 && this.tileDetails.strength === 100) {
                 let baseCell = {...this.game.tileTypes.buttress};
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
-            } else if (this.game.selectedTool.id === '1') {
+            } else if (this.game.selectedTool.id === 'pickaxe') {
                 if (this.clicking) return;
                 this.clicking = true;
                 this.game.player.energy -= 1;

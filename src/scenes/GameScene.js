@@ -139,13 +139,13 @@ export default class GameScene extends Phaser.Scene {
         this.toolBarManager = new ToolbarManager(this);
         this.inventoryManager = new InventoryManager(this);
 
-        const pickaxe = new InventoryItem('1', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil]});
-        const glowStick = new InventoryItem('2', null, 'Glow-stick', 'tool', 'images/glow-stick.png', {
+        const pickaxe = new InventoryItem('pickaxe', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil]});
+        const glowStick = new InventoryItem('glowstick', null, 'Glow-stick', 'tool', 'images/glow-stick.png', {
             throwable: true,
             number: 100,
             limited: true
         });
-        const lamp = new InventoryItem('3', {
+        const lamp = new InventoryItem('lamp', {
             ...this.tileTypes.light,
             radius: 100,
             color: this.lightColors[1],
@@ -162,7 +162,7 @@ export default class GameScene extends Phaser.Scene {
             limited: true,
             reclaimFrom: this.tileTypes.light
         });
-        const liftControl = new InventoryItem('14', {
+        const liftControl = new InventoryItem('switch', {
             ...this.tileTypes.liftControl
         }, 'Switch', 'tool', 'images/switch-single.png', {
             interactsWith: [{
@@ -176,7 +176,7 @@ export default class GameScene extends Phaser.Scene {
             limited: true,
             reclaimFrom: this.tileTypes.liftControl
         });
-        const buttress = new InventoryItem('6', {...this.tileTypes.buttress}, 'Buttress', 'tool', 'images/buttress.png', {
+        const buttress = new InventoryItem('buttress', {...this.tileTypes.buttress}, 'Buttress', 'tool', 'images/buttress.png', {
             interactsWith: [this.tileTypes.empty, {
                 ...this.tileTypes.soil,
                 additionalChecks: {strength: 100}
@@ -186,21 +186,21 @@ export default class GameScene extends Phaser.Scene {
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.buttress
         });
 
-        const rail = new InventoryItem('7', {...this.tileTypes.rail}, 'Rail', 'tool', 'images/rail.png', {
+        const rail = new InventoryItem('rail', {...this.tileTypes.rail}, 'Rail', 'tool', 'images/rail.png', {
             interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
                 tiles: [this.tileTypes.buttress, this.tileTypes.soil],
                 sides: ['below']
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         });
 
-        const railDiagonalLeft = new InventoryItem('8', {...this.tileTypes.rail, type: this.railTypes[1]}, 'Rail Left', 'tool', 'images/rail.png', {
+        const railDiagonalLeft = new InventoryItem('rail-left', {...this.tileTypes.rail, type: this.railTypes[1]}, 'Rail Left', 'tool', 'images/rail.png', {
             interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
                 tiles: [this.tileTypes.buttress, this.tileTypes.soil],
                 sides: ['below']
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         }, {rotate: this.railRotate});
 
-        const railDiagonalRight = new InventoryItem('9', {...this.tileTypes.rail, type: this.railTypes[2]}, 'Rail Right', 'tool', 'images/rail.png', {
+        const railDiagonalRight = new InventoryItem('rail-right', {...this.tileTypes.rail, type: this.railTypes[2]}, 'Rail Right', 'tool', 'images/rail.png', {
             interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
                 tiles: [this.tileTypes.buttress, this.tileTypes.soil],
                 sides: ['below']
