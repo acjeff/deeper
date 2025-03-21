@@ -199,23 +199,24 @@ export default class LightingManager {
         const scale = camera.zoom;
         const skyX = (0 - camera.worldView.x) * scale;
         const skyY = (0 - camera.worldView.y) * scale;
-        const skyHeight = 950;
+        const skyHeight = this.game.aboveGround * 10 + 50;
+        const scaledSkyHeight = skyHeight * scale; // Adjust height by zoom
 
         const ctx = this.game.lightCtx;
 
         ctx.globalCompositeOperation = "destination-out";
         ctx.globalAlpha = 1;
 
-        const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + skyHeight);
-        _gradient.addColorStop(0, "rgba(0, 0, 0, 1)");   // Start: black (opaque)
-        _gradient.addColorStop(0.9, "rgba(0, 0, 0, 1)");   // Start: black (opaque)
-        _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");   // End: transparent
+        const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + scaledSkyHeight);
+        _gradient.addColorStop(0, "rgba(0, 0, 0, 1)");
+        _gradient.addColorStop(0.8, "rgba(0, 0, 0, 1)");
+        _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
         ctx.fillStyle = _gradient;
-        ctx.fillRect(skyX, skyY, 99999, skyHeight);
+        ctx.fillRect(skyX, skyY, 99999, scaledSkyHeight);
         ctx.globalCompositeOperation = "normal";
-
     }
+
 
     castLight(light) {
         const camera = this.game.cameras.main;
