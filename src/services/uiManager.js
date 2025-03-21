@@ -172,9 +172,16 @@ export default class UiManager {
         const healthPercentage = Math.max(0, Math.min((this.game.player.health / 100) * 100, 100));
         const energyPercentage = Math.max(0, Math.min((this.game.player.energy / 100) * 100, 100));
         const breathPercentage = Math.max(0, Math.min((this.game.player.breath / 100) * 100, 100));
+        this.breathBarFill.style.display = 'none';
+        this.breathBarContainer.style.display = 'none';
         this.healthBarFill.style.width = healthPercentage + "%";
         this.energyBarFill.style.width = energyPercentage + "%";
         this.breathBarFill.style.width = breathPercentage + "%";
+        if (breathPercentage < 95) {
+            this.breathBarFill.style.display = 'block';
+            this.breathBarContainer.style.display = 'block';
+        }
+
         if (energyPercentage <= 0) {
             this.game.playerManager.die('sleep');
         }

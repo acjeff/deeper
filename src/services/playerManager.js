@@ -9,24 +9,23 @@ export default class PlayerManager {
             key: 'walk',
             frames: this.game.anims.generateFrameNumbers('player_walk', { start: 0, end: 1 }),
             frameRate: 10,
-            repeat: -1  // Loop indefinitely
+            repeat: -1
         });
 
         this.game.anims.create({
             key: 'jump',
             frames: this.game.anims.generateFrameNumbers('player_jump', { start: 0, end: 1 }),
             frameRate: 10,
-            repeat: -1  // Loop indefinitely
+            repeat: -1
         });
 
         this.game.anims.create({
             key: 'stationary',
             frames: this.game.anims.generateFrameNumbers('player_stationary', { start: 0, end: 0 }),
             frameRate: 10,
-            repeat: -1  // Loop indefinitely
+            repeat: -1
         });
 
-        // Create the player sprite
         this.game.player = this.game.physics.add.sprite(x, y, 'player_stationary');
         this.game.playerHead = this.game.add.sprite(x, y, 'player_head');
         this.game.player.setDisplaySize(7, 9);
@@ -35,7 +34,6 @@ export default class PlayerManager {
         this.game.player.setDepth(2);
         console.log(this.game.player.width, this.game.player.height);
         this.game.player.setBounce(0.2);
-        // this.game.player.setOrigin(0, 0);
 
         this.game.player.maxHealth = 100;
         this.game.player.maxEnergy = 100;
