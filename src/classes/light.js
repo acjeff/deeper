@@ -22,7 +22,7 @@ export class Light extends Tile {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
         baseSprite.setAlpha(0);
         this.lampSprite = this.game.add.image(this.worldX, this.worldY, 'lamp');
-        this.lampSprite.setDisplaySize(this.game.tileSize - 3, this.game.tileSize - 3);
+        this.lampSprite.setDisplaySize(this.game.tileSize - 5, this.game.tileSize - 5);
         this.lampSprite.setDepth(-1);
         this.fadeElements = [this.lampSprite];
 
@@ -31,18 +31,18 @@ export class Light extends Tile {
 
             if (this.tileDetails.attachedTo.direction === 'above') {
                 this.lampSprite.rotation = degreesToRadians(180);
-                this.lampSprite.y = this.lampSprite.y - 2;
+                this.lampSprite.y = this.lampSprite.y - 2.5;
             } else if (this.tileDetails.attachedTo.direction === 'right') {
                 this.lampSprite.rotation = degreesToRadians(-90);
-                this.lampSprite.x = this.lampSprite.x + 2;
+                this.lampSprite.x = this.lampSprite.x + 2.5;
             } else if (this.tileDetails.attachedTo.direction === 'left') {
                 this.lampSprite.rotation = degreesToRadians(90);
-                this.lampSprite.x = this.lampSprite.x - 2;
+                this.lampSprite.x = this.lampSprite.x - 2.5;
             } else {
-                this.lampSprite.y = this.lampSprite.y + 2;
+                this.lampSprite.y = this.lampSprite.y + 2.5;
             }
         } else {
-            this.lampSprite.y = this.lampSprite.y + 2;
+            this.lampSprite.y = this.lampSprite.y + 2.5;
         }
 
         this.light = this.game.lightingManager.addLight(this.worldX, this.worldY, this.radius, this.intensity, this.color, !this.neon, this.neon);

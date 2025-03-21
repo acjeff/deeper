@@ -28,8 +28,8 @@ export default class PlayerManager {
 
         this.game.player = this.game.physics.add.sprite(x, y, 'player_stationary');
         this.game.playerHead = this.game.add.sprite(x, y, 'player_head');
-        this.game.player.setDisplaySize(7, 9);
-        this.game.playerHead.setDisplaySize(7, 6.24);
+        this.game.player.setDisplaySize(6, 8);
+        this.game.playerHead.setDisplaySize(6, 6);
         this.game.playerHead.setDepth(1);
         this.game.player.setDepth(2);
         console.log(this.game.player.width, this.game.player.height);

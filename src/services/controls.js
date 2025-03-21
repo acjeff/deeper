@@ -126,8 +126,8 @@ export default class ControlsManager {
         const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const worldMouseX = worldPoint.x;
         this.game.isFloating = false;
-        this.game.playerHead.x = this.game.player.body.x + 3.5;
-        this.game.playerHead.y = this.game.player.body.y + 3.3;
+        this.game.playerHead.x = this.game.player.body.x + 3;
+        this.game.playerHead.y = this.game.player.body.y + 2.5;
         // this.game.playerHead.flipX = this.game.player.flipX;
 
         if (!this.game.player.body) return;
