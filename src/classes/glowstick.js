@@ -31,13 +31,13 @@ export class GlowStick {
                 false,
                 this.neon
             );
-            this.glowLight.radius = 0;
-            this.glowLight.fadeIn();
+            // this.glowLight.radius = 0;
+            // this.glowLight.fadeIn();
         }
 
         this.sprite.dummyTween = 1;
 
-        window.setTimeout(() => {
+        // window.setTimeout(() => {
             scene.tweens.add({
                 targets: this.sprite,
                 dummyTween: 0, // Tween this value from 1 to 0
@@ -56,7 +56,7 @@ export class GlowStick {
                     // this.destroy();
                 }
             });
-        }, 200)
+        // }, 200)
     }
 
     static throwFromPlayer(scene, player, textureKey = 'glowStick', options = {}) {
