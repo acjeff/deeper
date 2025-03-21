@@ -224,36 +224,43 @@ export default class ControlsManager {
 
         if (this.game.showInteractionPrompt) {
             console.log('Show interaction prompt');
-            // Get the player's current position
-            const playerX = this.game.player.x;
-            const playerY = this.game.player.y;
+            const playerX = this.game.player.body.x - 10;
+            const playerY = this.game.player.body.y - 5;
 
-            // Determine the position for the text box (e.g., 50 pixels above the player)
             const textX = playerX;
             const textY = playerY - 5;
 
-            // Define text style with white text and an 80% opacity black background
             const style = {
-                font: '10px Arial',
-                fill: '#ffffff', // white text
-                backgroundColor: 'rgba(0, 0, 0, 0.8)' // black background with 80% opacity
-            };
+                    font: '3px',
+                    fill: '#ffffff',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    padding: {left: 3, right: 3, top: 2, bottom: 1}
+                };
 
-            // Create or update the interaction text
             if (!this.interactionText) {
                 this.interactionText = this.game.add.text(textX, textY, 'E to Interact', style);
-                this.interactionText.setOrigin(0.5); // center the text horizontally and vertically
+                // this.interactionText.setOrigin(0.5);
             } else {
                 this.interactionText.setText('E to Interact');
                 this.interactionText.setPosition(textX, textY);
                 this.interactionText.setDepth(999999);
             }
+            // this.interactionText.setOrigin(0.5);
+            this.interactionText.setResolution(10);
         } else {
-            if (this.interactionText) {
-                this.interactionText.destroy();
+            if (
+
+                this
+                    .interactionText
+            ) {
+                this
+                    .interactionText
+                    .destroy();
+
+                this
+                    .interactionText = null;
             }
         }
-
 
 
     }
@@ -267,19 +274,16 @@ export default class ControlsManager {
             requestAnimationFrame(() => {
                 const pointer = this.game.input.activePointer; // Get current mouse pointer
 
-                // Convert mouse screen coordinates to world coordinates
                 const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
                 const worldMouseX = worldPoint.x;
                 const worldMouseY = worldPoint.y;
 
-                // Get all entities around the player
                 const nearbyBlocks = this.game.mapService.getEntitiesAround(
                     player.x,
                     player.y,
                     interactionRange
                 );
 
-                // Find the first block that the mouse is over
                 let hoveredBlock = nearbyBlocks.find(block => this.isMouseOverEntity(block, worldMouseX, worldMouseY));
 
                 if (!hoveredBlock) {
