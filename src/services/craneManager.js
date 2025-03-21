@@ -1,7 +1,6 @@
-function degrees_to_radians(degrees)
-{
+function degrees_to_radians(degrees) {
     let pi = Math.PI;
-    return degrees * (pi/180);
+    return degrees * (pi / 180);
 }
 
 export default class CraneManager {
@@ -42,20 +41,26 @@ export default class CraneManager {
     }
 
     moveTo(y, liftControl) {
+        if (this.moving) return;
         if (y + 5 > this.craneFlat.body.y) {
             liftControl.moving('down');
         } else if (y + 5 < this.craneFlat.body.y) {
             liftControl.moving('up');
         } else {
             liftControl.moving();
+            return;
         }
+        this.moving = true;
 
         this.game.tweens.add({
             targets: [this.craneFlat],
             y: y + 7.4,
             duration: this.liftSpeed, // Duration in ms; adjust as needed
             ease: 'ease-out',
-            onComplete: () => liftControl.moving()
+            onComplete: () => {
+                liftControl.moving();
+                this.moving = false;
+            }
         });
 
         this.game.tweens.add({
@@ -74,7 +79,7 @@ export default class CraneManager {
 
         this.game.tweens.add({
             targets: [this.rope],
-            height: y - this.rope.y -15,
+            height: y - this.rope.y - 15,
             duration: this.liftSpeed, // Duration in ms; adjust as needed
             ease: 'ease-out'
         });
