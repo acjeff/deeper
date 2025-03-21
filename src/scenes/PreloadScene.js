@@ -21,7 +21,7 @@ export default class PreloadScene extends Phaser.Scene {
             frameHeight: 49
         });
 
-        this.load.spritesheet('switch', 'images/switch.png', {
+        this.load.spritesheet('lift-control', 'images/lift-control.png', {
             frameWidth: 100,
             frameHeight: 100
         });

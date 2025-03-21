@@ -105,6 +105,7 @@ export default class ControlsManager {
 
     playerLooking() {
         const pointer = this.game.input.activePointer;
+        if (!this.game.cameras.main) return;
         const worldPoint = this.game.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const worldMouseX = worldPoint.x;
 

@@ -18,13 +18,12 @@ export class LiftControl extends Tile {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, '0xffffff');
         baseSprite.setAlpha(0);
         this.game.anims.create({
-            key: 'switch',
-            frames: this.game.anims.generateFrameNumbers('switch', { start: 0, end: 3 }),
+            key: 'lift-control',
+            frames: this.game.anims.generateFrameNumbers('lift-control', { start: 0, end: 2 }),
             frameRate: 3,
             repeat: -1  // Loop indefinitely
         });
-        this.switchSprite = this.game.add.sprite(this.worldX, this.worldY, 'switch');
-        this.switchSprite.anims.play('switch', true);
+        this.switchSprite = this.game.add.sprite(this.worldX, this.worldY, 'lift-control');
         this.switchSprite.setDisplaySize(this.game.tileSize, this.game.tileSize);
         this.switchSprite.setDepth(-1);
         this.fadeElements = [this.switchSprite];
@@ -34,19 +33,14 @@ export class LiftControl extends Tile {
 
             if (this.tileDetails.attachedTo.direction === 'above') {
                 this.switchSprite.rotation = degreesToRadians(180);
-                this.switchSprite.y = this.switchSprite.y - 2;
             } else if (this.tileDetails.attachedTo.direction === 'right') {
                 this.switchSprite.rotation = degreesToRadians(-90);
-                this.switchSprite.x = this.switchSprite.x + 2;
             } else if (this.tileDetails.attachedTo.direction === 'left') {
                 this.switchSprite.rotation = degreesToRadians(90);
-                this.switchSprite.x = this.switchSprite.x - 2;
             } else {
-                this.switchSprite.y = this.switchSprite.y + 2;
             }
-        } else {
-            this.switchSprite.y = this.switchSprite.y + 2;
         }
+        this.light = this.game.lightingManager.addLight(this.worldX, this.worldY, this.radius, this.intensity, this.color, !this.neon, this.neon);
 
         return baseSprite;
     }
@@ -57,6 +51,7 @@ export class LiftControl extends Tile {
             this.active = false;
             this.removeFromGroup();
             this.sprite.destroy();
+            this.light.destroy();
             this.switchSprite.destroy();
         }, prefs)
     }

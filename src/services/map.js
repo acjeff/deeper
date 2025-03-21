@@ -89,10 +89,7 @@ export default class MapService {
                     }
                 } else if (((x === this.game.chasmRange[1] && y % entryEvery === 0) || (x === this.game.chasmRange[0] && y % entryEvery === 0)) && y > this.game.aboveGround + 1) {
                     this.game.grid[chunkKey][localY][localX] = {
-                        ...this.game.tileTypes.light,
-                        radius: 50,
-                        color: this.game.lightColors[2],
-                        neon: true
+                        ...this.game.tileTypes.liftControl
                     }
                 } else {
                     this.game.grid[chunkKey][localY][localX] = {
