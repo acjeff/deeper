@@ -203,20 +203,52 @@ export default class LightingManager {
         const scaledSkyHeight = skyHeight * scale; // Adjust height by zoom
 
         const ctx = this.game.lightCtx;
-
         ctx.globalCompositeOperation = "destination-out";
         ctx.globalAlpha = 1;
 
+        // Calculate the time fraction for the cycle.
+        const now = Date.now();
+        const dayCycleDuration = this.game.dayCycleDuration || 60000; // default 60 seconds per cycle
+        const timeFraction = (now % dayCycleDuration) / dayCycleDuration;
+
+        // Compute a dayFactor that is 1 at full day and 0 at full night.
+        // Using cosine: at timeFraction=0.5 (noon) dayFactor=1, and at timeFraction=0 or 1 (midnight) dayFactor=0.
+        const dayFactor = (1 + Math.cos(2 * Math.PI * timeFraction)) / 2;
+
+        // Multiply the full-day gradient stops by dayFactor.
+        const alphaVal = dayFactor;
+
         const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + scaledSkyHeight);
-        _gradient.addColorStop(0, "rgba(0, 0, 0, 1)");
-        _gradient.addColorStop(0.8, "rgba(0, 0, 0, 1)");
+        _gradient.addColorStop(0, `rgba(0, 0, 0, ${alphaVal})`);
+        _gradient.addColorStop(0.8, `rgba(0, 0, 0, ${alphaVal})`);
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+        // Update the skyBox's fill style with a smooth tint transition.
+        if (this.game.skyBox) {
+            // Helper linear interpolation function.
+            function lerp(a, b, t) { return a + (b - a) * t; }
+            // Define the day tint based on your rectangle's initial color (0xa6f5ff).
+            // 0xa6f5ff in RGB is: r=166, g=245, b=255.
+            const dayTint = { r: 166, g: 245, b: 255 };
+            // Define a cosy warm night tint.
+            const nightTint = { r: 255, g: 209, b: 164 };
+
+            // Interpolate between the night and day tints based on dayFactor.
+            const tintR = Math.round(lerp(nightTint.r, dayTint.r, dayFactor));
+            const tintG = Math.round(lerp(nightTint.g, dayTint.g, dayFactor));
+            const tintB = Math.round(lerp(nightTint.b, dayTint.b, dayFactor));
+            const tintColor = (tintR << 16) | (tintG << 8) | tintB;
+
+            // For Phaser rectangles, use setFillStyle instead of setTint.
+            this.game.skyBox.setFillStyle(tintColor, 1);
+            // Alternatively, you could update the fillColor property directly:
+            // this.game.skyBox.fillColor = tintColor;
+        }
 
         ctx.fillStyle = _gradient;
         ctx.fillRect(skyX, skyY, 99999, scaledSkyHeight);
         ctx.globalCompositeOperation = "normal";
     }
-
 
     castLight(light) {
         const camera = this.game.cameras.main;

@@ -30,10 +30,11 @@ export default class GameScene extends Phaser.Scene {
         this.aboveGround = 20;
         this.chasmRange = [150, 160];
         this.tileSize = 10;
-        this.playerSize = 7;
+        this.playerSize = 0;
         this.gridSize = 200;
         this.width = this.tileSize * this.gridSize;
         this.height = this.tileSize * this.gridSize;
+        this.dayCycleDuration = 60000 * 5;
         this.soilTypes = {
             1: {
                 image: 'coal'
@@ -362,7 +363,7 @@ export default class GameScene extends Phaser.Scene {
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
-            const playerOffset = this.playerSize / 2;
+            const playerOffset = 0;
             const playerX = this.player.x + playerOffset;
             const playerY = this.player.y + playerOffset;
             this.playerLight.setPosition(Math.round(playerX), Math.round(playerY));

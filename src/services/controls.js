@@ -210,7 +210,7 @@ export default class ControlsManager {
             this.game.player.setVelocityY(20);
         }
 
-        const playerOffset = this.game.playerSize / 2;
+        const playerOffset = 3;
         const playerX = this.game.player.x + playerOffset;
         const playerY = this.game.player.y + playerOffset;
 

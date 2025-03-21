@@ -43,7 +43,7 @@ export default class PlayerManager {
         this.game.player.energy = this.game.player.maxEnergy;
         this.game.player.breath = this.game.player.maxBreath;
         this.game.player.hitPower = this.game.player.maxHitPower;
-        this.game.playerLight = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, this.game.playerSize * 8, 1, this.game.lightColors[1], false);
+        this.game.playerLight = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, 30, 1, this.game.lightColors[1], false);
         this.game.playerLight.off = true;
         this.game.playerLightFaux = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, 0, 1, this.game.lightColors[1], false);
         this.game.physics.add.collider(this.game.player, this.game.soilGroup, () => {
