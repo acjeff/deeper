@@ -9,7 +9,7 @@ export class Breakable extends Tile {
             this.game.time.delayedCall(randomDelay, () => {
                 this.init();
                 delete this.tileDetails.caved;
-                let insideSquare = this.game.mapService.areSquaresIntersecting(this.game.player.x, this.game.player.y, 4, this.worldX, this.worldY, this.game.tileSize);
+                let insideSquare = this.game.mapService.areSquaresIntersecting(this.game.player.x + 3, this.game.player.y + 3, 4, this.worldX, this.worldY, this.game.tileSize);
                 if (insideSquare) {
                     // this.game.playerManager.die('crushed');
                     this.game.player.health = 0;

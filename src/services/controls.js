@@ -1,5 +1,4 @@
 import {GlowStick} from "../classes/glowstick";
-import {degrees_to_radians} from "./math";
 
 export default class ControlsManager {
     constructor(scene) {
