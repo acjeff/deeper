@@ -4,6 +4,9 @@ export class LiftControl extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
         this.init();
+        game.events.on('interacting', (data) => {
+            console.log("The 'E' key was pressed!", data);
+        });
     }
 
     addToGroup() {

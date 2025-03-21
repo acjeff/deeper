@@ -16,16 +16,8 @@ export default class ControlsManager {
 
 
         window.addEventListener("keydown", (e) => {
-            if (e.key === "r") {
-                this.game.drilling = true;
-            }
-            if (e.key === "g") {
-                const blocks = this.game.mapService.getEntitiesAround(this.game.player.x + this.game.playerSize, this.game.player.y + this.game.playerSize, 5);
-                blocks.forEach(block => {
-                    this.game.mapService.setTile(block.x, block.y, {
-                        ...this.game.tileTypes.empty
-                    }, block);
-                })
+            if (e.key === "e") {
+                this.game.events.emit('interacting');
             }
         });
 
@@ -147,6 +139,10 @@ export default class ControlsManager {
         this.game.physics.overlap(this.game.player, this.game.liquidGroup, () => {
             this.game.isFloating = true;
         });
+        this.game.showInteractionPrompt = false;
+        this.game.physics.overlap(this.game.player, this.game.interactableGroup, () => {
+            this.game.showInteractionPrompt = true;
+        });
 
         if (this.game.freezePlayer) {
             this.game.player.body.setVelocity(0, 0);
@@ -225,6 +221,39 @@ export default class ControlsManager {
         if (isFalling) {
             this.game.player.anims.play('jump', true);
         }
+
+        if (this.game.showInteractionPrompt) {
+            console.log('Show interaction prompt');
+            // Get the player's current position
+            const playerX = this.game.player.x;
+            const playerY = this.game.player.y;
+
+            // Determine the position for the text box (e.g., 50 pixels above the player)
+            const textX = playerX;
+            const textY = playerY - 5;
+
+            // Define text style with white text and an 80% opacity black background
+            const style = {
+                font: '10px Arial',
+                fill: '#ffffff', // white text
+                backgroundColor: 'rgba(0, 0, 0, 0.8)' // black background with 80% opacity
+            };
+
+            // Create or update the interaction text
+            if (!this.interactionText) {
+                this.interactionText = this.game.add.text(textX, textY, 'E to Interact', style);
+                this.interactionText.setOrigin(0.5); // center the text horizontally and vertically
+            } else {
+                this.interactionText.setText('E to Interact');
+                this.interactionText.setPosition(textX, textY);
+                this.interactionText.setDepth(999999);
+            }
+        } else {
+            if (this.interactionText) {
+                this.interactionText.destroy();
+            }
+        }
+
 
 
     }

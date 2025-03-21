@@ -128,7 +128,7 @@ export default class GameScene extends Phaser.Scene {
         this.glowSticks = [];
         this.emptyGroup = this.add.group();
         this.lightGroup = this.add.group();
-        this.liftControlGroup = this.add.group();
+        this.liftControlGroup = this.physics.add.staticGroup();
         this.liquidGroup = this.physics.add.staticGroup();
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
@@ -360,6 +360,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.player) {
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting(delta);
+            this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
             const playerOffset = this.playerSize / 2;
             const playerX = this.player.x + playerOffset;

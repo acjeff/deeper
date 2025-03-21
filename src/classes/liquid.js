@@ -17,7 +17,7 @@ export class Liquid extends Tile {
 
     createSprite() {
         const liquid = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, 0x2EA5C3);
-        ;
+        liquid.setDepth(999999)
         // this.game.physics.add.existing(liquid, true);
         return liquid;
     }

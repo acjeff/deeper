@@ -39,4 +39,8 @@ export default class CraneManager {
 
     }
 
+    moveTo(y) {
+
+    }
+
 }

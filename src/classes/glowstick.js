@@ -100,6 +100,7 @@ export class GlowStick {
                 this.isFloating = true;
                 this.sprite.body.setVelocity(0, 10);
             });
+
             if (this.isFloating) {
                 this.sprite.body.setGravityY(50);
                 this.sprite.body.setDrag(300);

@@ -14,6 +14,8 @@ const config = {
     width: window.innerWidth,
     height: window.innerHeight,
     backgroundColor: "#000000",
+    pixelArt: true, // Ensures pixel art rendering
+    antialias: false, // Disables default smoothing
     fps: {
         target: 30,  // ✅ Force 60 FPS
         forceSetTimeOut: false, // ✅ Ensure requestAnimationFrame is used
