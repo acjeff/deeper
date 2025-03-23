@@ -17,7 +17,6 @@ export default class ControlsManager {
 
         window.addEventListener("keydown", (e) => {
             if (e.key === "e") {
-                console.log(this.game.showInteractionPrompt, ' : this.game.showInteractionPrompt');
                 if (this.game.showInteractionPrompt) this.game.showInteractionPrompt.tileRef.callCrane();
             }
         });
@@ -252,7 +251,6 @@ export default class ControlsManager {
         }
 
         if (this.game.showInteractionPrompt) {
-            console.log('Show interaction prompt');
             const playerX = this.game.player.body.x - 10;
             const playerY = this.game.player.body.y - 5;
 

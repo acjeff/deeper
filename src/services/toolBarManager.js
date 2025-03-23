@@ -179,12 +179,15 @@ export default class ToolbarManager {
         // Set the selected tool on the scene.
         if (this.game) {
             this.game.selectedTool = this.slots[index];
-            console.log(this.game.selectedTool, ' : this.game.selectedTool');
             if (this.game.selectedTool) {
                 if (this.game.toolSprite) this.game.toolSprite.destroy();
                 this.game.toolSprite = this.game.add.image(this.game.player.body.x, this.game.player.body.y + 4.2, this.game.selectedTool.id);
                 if (this.game.selectedTool.id === 'lamp') {
                     this.game.toolSprite.setDisplaySize(this.game.toolSprite.width * 0.1, this.game.toolSprite.height * 0.1);
+                } else if (this.game.selectedTool.id.includes('rail')) {
+                    this.game.toolSprite.setDisplaySize(this.game.toolSprite.width * 0.05, this.game.toolSprite.height * 0.05);
+                } else if (this.game.selectedTool.id.includes('minecart')) {
+                    this.game.toolSprite.setDisplaySize(this.game.toolSprite.width * 0.08, this.game.toolSprite.height * 0.08);
                 } else {
                     this.game.toolSprite.setDisplaySize(this.game.toolSprite.width * 0.2, this.game.toolSprite.height * 0.2);
                 }

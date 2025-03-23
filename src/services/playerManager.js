@@ -32,7 +32,6 @@ export default class PlayerManager {
         this.game.playerHead.setDisplaySize(6, 6);
         this.game.playerHead.setDepth(1);
         this.game.player.setDepth(2);
-        console.log(this.game.player.width, this.game.player.height);
         this.game.player.setBounce(0.2);
 
         this.game.player.maxHealth = 100;

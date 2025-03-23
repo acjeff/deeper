@@ -26,7 +26,6 @@ export class Empty extends Tile {
             if (this.game.selectedTool) {
                 let item = {...this.game.selectedTool.item};
                 if (adj) {
-                    console.log('Attach to: ', adj)
                     item.attachedTo = {...adj};
                 }
                 this.game.mapService.setTile(this.worldX, this.worldY, item, this.sprite);

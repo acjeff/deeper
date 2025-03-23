@@ -105,9 +105,7 @@ export class Tile {
         if (!prefs?.preserveAttached) {
             const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
             if (Object.values(adjacentBlocks).find(b => b && b.tileRef.tileDetails.attachedTo)) {
-                console.log('This block: ', this.tileDetails);
                 Object.entries(adjacentBlocks).forEach(([direction, block]) => {
-                    console.log(direction, ' : ', block);
                     if (block && block.tileRef && block.tileRef.tileDetails.attachedTo && block.tileRef.tileDetails.attachedTo.block && block.tileRef.tileDetails.attachedTo.block === this.tileDetails.uuid) {
                         let baseCell = {...this.game.tileTypes.empty};
                         this.game.mapService.setTile(block.tileRef.worldX, block.tileRef.worldY, baseCell, block.tileRef.sprite);

@@ -37,7 +37,6 @@ export default class MapService {
     }
 
     generateMap() {
-        console.log('Generate map');
         let map = new ROT.Map.Cellular(this.game.mapWidth, this.game.mapHeight);
 
         map.randomize(0.5);

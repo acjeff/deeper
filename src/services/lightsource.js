@@ -20,7 +20,6 @@ export default class LightSource {
     }
 
     fadeIn() {
-        console.log('fadeIn: ', this.originalRadius);
         this.radius = 0; // Clamp the radius to 0
         const fadeDuration = 200; // Total fade duration in ms
         const stepTime = 10;        // Time between steps in ms

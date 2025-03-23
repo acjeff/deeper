@@ -21,7 +21,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async create() {
-
         this.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
         this.renderDistance = 3;
         this.railRotate = 45;
@@ -108,7 +107,8 @@ export default class GameScene extends Phaser.Scene {
                 heightRange: [5, 5],
                 count: 10000,
                 layerWeights: [1, 1, 1, 1, 1, 1, 1]
-            }, {
+            },
+            {
                 tile: {
                     ...this.tileTypes.liquid
                 },
@@ -119,7 +119,6 @@ export default class GameScene extends Phaser.Scene {
                 columnWeights: [0, 0, 0, 1, 0, 0, 0]
             }
         ];
-        
         
         this.soilGroup = this.physics.add.staticGroup();
         this.buttressGroup = this.physics.add.staticGroup();
@@ -175,6 +174,16 @@ export default class GameScene extends Phaser.Scene {
             number: 50,
             limited: true,
             reclaimFrom: this.tileTypes.liftControl
+        });
+        const mineCart = new InventoryItem('minecart', {
+            ...this.tileTypes.liftControl
+        }, 'Mine Cart', 'tool', 'images/mine-cart.png', {
+            interactsWith: [{
+                ...this.tileTypes.rail
+            }],
+            number: 1,
+            limited: true,
+            reclaimFrom: this.tileTypes.rail
         });
         const buttress = new InventoryItem('buttress', {...this.tileTypes.buttress}, 'Buttress', 'tool', 'images/buttress.png', {
             interactsWith: [this.tileTypes.empty, {
@@ -232,7 +241,8 @@ export default class GameScene extends Phaser.Scene {
             this.toolBarManager.addItemToSlot(4, rail);
             this.toolBarManager.addItemToSlot(5, railDiagonalLeft);
             // this.toolBarManager.addItemToSlot(6, railDiagonalRight);
-            this.toolBarManager.addItemToSlot(6, liftControl);
+            // this.toolBarManager.addItemToSlot(6, liftControl);
+            this.toolBarManager.addItemToSlot(6, mineCart);
 
             this.toolBarManager.setSelected(0);
 
@@ -346,7 +356,6 @@ export default class GameScene extends Phaser.Scene {
             if (data.playerData?.length > 0 && !data.newGame) {
                 this.playerX = Math.round(data.playerData[0].x);
                 this.playerY = Math.round(data.playerData[0].y);
-                console.log(this.playerX, ' : playerX');
             }
 
             this.user = data.user;

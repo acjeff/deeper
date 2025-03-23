@@ -31,50 +31,38 @@ export class Liquid extends Tile {
     checkState() {
         this.checkStateWrapper(() => {
             const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
-            const blockAbove = adjacentBlocks?.above;
             const blockBelow = adjacentBlocks?.below;
             const blockLeft = adjacentBlocks?.left;
             const blockRight = adjacentBlocks?.right;
-            let tileDetails;
+            let tileDetails = this.tileDetails.trapped ? {...this.tileDetails.trapped} : {...this.game.tileTypes.empty};
+            // let tileDetails = {...this.game.tileTypes.empty};
+            let block;
+            let lm;
 
-            if (blockBelow && (blockBelow.tileRef?.tileDetails?.id === 0 || blockBelow.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...this.game.tileTypes.empty};
-
-                this.game.mapService.setTile(blockBelow.tileRef?.worldX, blockBelow.tileRef?.worldY, {
-                    ...this.game.tileTypes.liquid
-                }, blockBelow);
-                //     FOR MOVING LEFT AND RIGHT SAVE THE LAST DIRECTION AND PRIORITISE
-            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'left') {
-                tileDetails = {...this.game.tileTypes.empty};
-
-                this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
-                    ...this.game.tileTypes.liquid,
-                    lm: 'left'
-                }, blockLeft);
-            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4) && this.tileDetails?.lm === 'right') {
-                tileDetails = {...this.game.tileTypes.empty};
-
-                this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
-                    ...this.game.tileTypes.liquid,
-                    lm: 'right'
-                }, blockRight);
-            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id === 0 || blockLeft.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...this.game.tileTypes.empty};
-                this.game.mapService.setTile(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY, {
-                    ...this.game.tileTypes.liquid,
-                    lm: 'left'
-                }, blockLeft);
-            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id === 0 || blockRight.tileRef?.tileDetails?.id === 4)) {
-                tileDetails = {...this.game.tileTypes.empty};
-                this.game.mapService.setTile(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY, {
-                    ...this.game.tileTypes.liquid,
-                    lm: 'right'
-                }, blockRight);
+            if (blockBelow && (blockBelow.tileRef?.tileDetails?.id !== 1 && blockBelow.tileRef?.tileDetails?.id !== 5 && blockBelow.tileRef?.tileDetails?.id !== 2)) {
+                block = blockBelow;
+            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id !== 1 && blockLeft.tileRef?.tileDetails?.id !== 5 && blockLeft.tileRef?.tileDetails?.id !== 2) && this.tileDetails?.lm === 'left') {
+                block = blockLeft;
+                lm = 'left';
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id !== 1 && blockRight.tileRef?.tileDetails?.id !== 5 && blockRight.tileRef?.tileDetails?.id !== 2) && this.tileDetails?.lm === 'right') {
+                block = blockRight;
+                lm = 'right';
+            } else if (blockLeft && (blockLeft.tileRef?.tileDetails?.id !== 1 && blockLeft.tileRef?.tileDetails?.id !== 5 && blockLeft.tileRef?.tileDetails?.id !== 2)) {
+                block = blockLeft;
+                lm = 'left';
+            } else if (blockRight && (blockRight.tileRef?.tileDetails?.id !== 1 && blockRight.tileRef?.tileDetails?.id !== 5 && blockRight.tileRef?.tileDetails?.id !== 2)) {
+                block = blockRight;
+                lm = 'right';
             }
-            if (tileDetails) {
-                if (this.tileDetails.id !== 0) {
-                    tileDetails.trapped = this.tileDetails;
+            if (block) {
+                let liquidDetails = {
+                    ...this.game.tileTypes.liquid
+                };
+                if (lm) {
+                    liquidDetails.lm = lm;
                 }
+                liquidDetails.trapped = {...block.tileRef?.tileDetails};
+                this.game.mapService.setTile(block.tileRef?.worldX, block.tileRef?.worldY, liquidDetails, block);
                 this.game.mapService.setTile(this.worldX, this.worldY, tileDetails, this.sprite);
             }
         });
