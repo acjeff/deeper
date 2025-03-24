@@ -1,7 +1,8 @@
-function degrees_to_radians(degrees)
-{
+import {MineCart} from "./minecart";
+
+function degrees_to_radians(degrees) {
     let pi = Math.PI;
-    return degrees * (pi/180);
+    return degrees * (pi / 180);
 }
 
 import {Tile} from "./tile";
@@ -53,7 +54,44 @@ export class Rail extends Tile {
     }
 
     onClick() {
-        this.onClickHandler(this.setAsEmpty.bind(this));
+        if (this.game.selectedTool.id === 'minecart') {
+            let mineCart = new MineCart(this.game, this.worldX, this.worldY);
+            console.log('Add mine cart: ', mineCart);
+            this.tileDetails.mineCart = mineCart.id;
+        } else {
+            this.onClickHandler(this.setAsEmpty.bind(this));
+        }
+    }
+
+    checkState() {
+        this.checkStateWrapper(() => {
+                if (this.tileDetails.mineCart) {
+                    const mineCart = this.game.mineCartGroup.find(mc => mc.id === this.tileDetails.mineCart);
+                    if (mineCart.moving && mineCart.sprite.x === this.worldX && mineCart.sprite.y === this.worldY) {
+                        let block;
+                        const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
+                        const blockLeft = adjacentBlocks?.left;
+                        const blockRight = adjacentBlocks?.right;
+                        if (blockLeft && mineCart.directions.includes('left') && blockLeft.tileRef.tileDetails.id === 6 && !blockLeft.tileRef.tileDetails.mineCart) {
+                            block = blockLeft;
+                        } else if (blockRight && mineCart.directions.includes('right') && blockRight.tileRef.tileDetails.id === 6 && !blockRight.tileRef.tileDetails.mineCart) {
+                            block = blockRight;
+                        }
+                        if (block) {
+                            this.tileDetails.mineCart = null;
+                            block.tileRef.tileDetails.mineCart = mineCart.id;
+                            mineCart.setGoal({x: block.tileRef.worldX, y: block.tileRef.worldY});
+                            if (block.tileRef.tileDetails?.type?.rotate) {
+                                mineCart.setRotation(degrees_to_radians(block.tileRef.tileDetails?.type?.rotate));
+                            } else {
+                                mineCart.setRotation(degrees_to_radians(0));
+                            }
+                        }
+                    }
+
+                }
+            }
+        );
     }
 
 }

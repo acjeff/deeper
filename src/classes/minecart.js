@@ -1,83 +1,61 @@
+const uuid = function () {
+    return Math.random().toString(36).substr(2);
+}
+
 export class MineCart {
     constructor(scene, x, y) {
         this.game = scene;
-        this.sprite = this.game.physics.add.sprite(x, y, 'minecart');
-        this.sprite.body.setSize(newSizeW, newSizeH);
-        this.sprite.setDisplaySize(newSizeW, newSizeH);
-        this.sprite.setBounce(0.5);
-        this.sprite.setDrag(200);
-        this.sprite.body.setGravityY(options.gravityY || 300);
-        this.intensity = options.intensity || 0.8;
-        this.color = this.game.lightColors[0];
-        this.radius = options.radius || 50;
-        this.neon = options.neon !== undefined ? options.neon : true;
-
-        this.glowLight = null;
-        if (scene.lightingManager) {
-            this.glowLight = scene.lightingManager.addLight(
-                x,
-                y,
-                this.radius,
-                this.intensity,
-                this.color,
-                false,
-                this.neon
-            );
-            // this.glowLight.radius = 0;
-            // this.glowLight.fadeIn();
+        this.sprite = this.game.add.sprite(x, y, 'minecart');
+        this.sprite.setDisplaySize(this.sprite.width * 0.1, this.sprite.height * 0.1);
+        this.sprite.setOrigin(0.5, 0.7);
+        this.id = uuid();
+        this.game.mineCartGroup.push(this);
+        this.directions = ['right', 'bottom_right', 'top_right'];
+        this.moving = true;
+        this.rotation = 0;
+        this.goal = {
+            x: x,
+            y: y
         }
+    }
 
-        this.sprite.dummyTween = 1;
+    changeDirections(directions) {
+        this.directions = directions;
+    }
 
-        // window.setTimeout(() => {
-            scene.tweens.add({
-                targets: this.sprite,
-                dummyTween: 0, // Tween this value from 1 to 0
-                duration: this.fadeTime, // Duration of the effect
-                onUpdate: (tween, target) => {
-                    const progress = target.dummyTween; // Progress from 1 to 0
+    setRotation(rotation) {
+       this.rotation = rotation;
+    }
 
-                    // Lower the light radius
-                    if (this.glowLight) {
-                        if (this.glowLight.radius > 0) {
-                            this.glowLight.radius = this.radius * progress; // Reduce radius over time
-                        }
-                    }
-                },
-                onComplete: () => {
-                    // this.destroy();
-                }
-            });
-        // }, 200)
+    setGoal(goal) {
+        this.goal = goal;
     }
 
     update() {
-        this.isFloating = false;
-        if (this.sprite.body) {
-            this.sprite.rotation = this.sprite.body.angle;
+        if (this.goal && typeof this.goal.x === 'number' && typeof this.goal.y === 'number') {
+            const step = 0.2;
 
-            this.sprite.body.setGravityY(300);
-            this.sprite.body.setDrag(200);
-            if (this.glowLight) {
-                this.glowLight.x = this.sprite.x;
-                this.glowLight.y = this.sprite.y;
+            // Update x coordinate
+            const dx = this.goal.x - this.sprite.x;
+            if (Math.abs(dx) < step) {
+                this.sprite.x = this.goal.x;
+            } else {
+                this.sprite.x += step * Math.sign(dx);
             }
-            this.game.physics.overlap(this.sprite, this.game.liquidGroup, () => {
-                this.isFloating = true;
-                this.sprite.body.setVelocity(0, 10);
-            });
 
-            if (this.isFloating) {
-                this.sprite.body.setGravityY(50);
-                this.sprite.body.setDrag(300);
+            // Update y coordinate
+            const dy = this.goal.y - this.sprite.y;
+            if (Math.abs(dy) < step) {
+                this.sprite.y = this.goal.y;
+            } else {
+                this.sprite.y += step * Math.sign(dy);
             }
+
+            this.sprite.setRotation(this.rotation);
         }
     }
 
     destroy() {
-        if (this.glowLight && this.game.lightingManager) {
-            this.glowLight.destroy();
-        }
         this.sprite.destroy();
     }
 }

@@ -123,6 +123,7 @@ export default class GameScene extends Phaser.Scene {
         this.soilGroup = this.physics.add.staticGroup();
         this.buttressGroup = this.physics.add.staticGroup();
         this.craneGroup = this.physics.add.staticGroup();
+        this.mineCartGroup = [];
         this.railGroup = this.add.group();
         this.glowStickGroup = this.physics.add.group();
         this.glowSticks = [];
@@ -197,22 +198,22 @@ export default class GameScene extends Phaser.Scene {
 
         const rail = new InventoryItem('rail', {...this.tileTypes.rail}, 'Rail', 'tool', 'images/rail.png', {
             interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
-                tiles: [this.tileTypes.buttress, this.tileTypes.soil],
-                sides: ['below']
+                tiles: [this.tileTypes.buttress, this.tileTypes.soil, this.tileTypes.rail],
+                sides: ['below', 'left', 'right']
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         });
 
         const railDiagonalLeft = new InventoryItem('rail-left', {...this.tileTypes.rail, type: this.railTypes[1]}, 'Rail Left', 'tool', 'images/rail.png', {
             interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
-                tiles: [this.tileTypes.buttress, this.tileTypes.soil],
-                sides: ['below']
+                tiles: [this.tileTypes.buttress, this.tileTypes.soil, this.tileTypes.rail],
+                sides: ['below', 'left', 'right']
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         }, {rotate: this.railRotate});
 
         const railDiagonalRight = new InventoryItem('rail-right', {...this.tileTypes.rail, type: this.railTypes[2]}, 'Rail Right', 'tool', 'images/rail.png', {
             interactsWith: [this.tileTypes.empty], mustBeGroundedTo: {
-                tiles: [this.tileTypes.buttress, this.tileTypes.soil],
-                sides: ['below']
+                tiles: [this.tileTypes.buttress, this.tileTypes.soil, this.tileTypes.rail],
+                sides: ['below', 'left', 'right']
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         }, {rotate: -this.railRotate});
 
@@ -235,12 +236,12 @@ export default class GameScene extends Phaser.Scene {
             this.defaultGravityY = this.player.body.gravity.y;
             this.uiManager = new UiManager(this);
             this.toolBarManager.addItemToSlot(0, pickaxe);
-            this.toolBarManager.addItemToSlot(1, glowStick);
+            // this.toolBarManager.addItemToSlot(1, glowStick);
             this.toolBarManager.addItemToSlot(2, lamp);
             this.toolBarManager.addItemToSlot(3, buttress);
             this.toolBarManager.addItemToSlot(4, rail);
             this.toolBarManager.addItemToSlot(5, railDiagonalLeft);
-            // this.toolBarManager.addItemToSlot(6, railDiagonalRight);
+            this.toolBarManager.addItemToSlot(1, railDiagonalRight);
             // this.toolBarManager.addItemToSlot(6, liftControl);
             this.toolBarManager.addItemToSlot(6, mineCart);
 
@@ -257,6 +258,7 @@ export default class GameScene extends Phaser.Scene {
                 callback: () => {
                     // Option 1: If groups change rarely, you could cache this combined array externally.
                     // For now, we're computing it on every call.
+
                     const emptyChildren = this.emptyGroup.getChildren();
                     const lightChildren = this.lightGroup.getChildren();
                     const liquidChildren = this.liquidGroup.getChildren();
@@ -274,6 +276,7 @@ export default class GameScene extends Phaser.Scene {
                         }
                     }
                     currentIndex = (currentIndex + batchSize) >= total ? 0 : currentIndex + batchSize;
+
                 },
                 callbackScope: this,
                 loop: true
@@ -367,7 +370,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        this.accumulatedTime += delta;
         if (this.player) {
+            if (this.mineCartGroup.length) {
+                this.mineCartGroup.forEach(mineCart => mineCart.update());
+            }
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
