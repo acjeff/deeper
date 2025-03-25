@@ -17,7 +17,9 @@ export default class ControlsManager {
 
         window.addEventListener("keydown", (e) => {
             if (e.key === "e") {
-                if (this.game.showInteractionPrompt) this.game.showInteractionPrompt.tileRef.callCrane();
+                if (this.game.showInteractionPrompt) {
+                    this.game.showInteractionPrompt();
+                }
             }
         });
 
@@ -163,9 +165,15 @@ export default class ControlsManager {
             this.game.isFloating = true;
         });
         this.game.showInteractionPrompt = false;
+
         this.game.physics.overlap(this.game.player, this.game.interactableGroup, (obj1, obj2) => {
-            // console.log(obj2, ' : obj2');
-            this.game.showInteractionPrompt = obj2;
+            this.game.showInteractionPrompt = () => obj2?.tileRef?.callCrane();
+        });
+
+        this.game.physics.overlap(this.game.player, this.game.mineCartGroup, (obj1, obj2) => {
+            this.game.showInteractionPrompt = () => {
+                obj2.cartRef.toggleMoving();
+            }
         });
 
         if (this.game.freezePlayer) {

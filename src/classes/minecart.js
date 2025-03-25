@@ -7,9 +7,8 @@ export class MineCart {
         this.game = scene;
         this.sprite = this.game.add.sprite(x, y, 'minecart');
         this.sprite.setDisplaySize(this.sprite.width * 0.1, this.sprite.height * 0.1);
+        this.sprite.setDepth(-1);
         this.maxWeight = 1000;
-        // this.sprite.setOrigin(0.5, 0.7);
-
         this.id = uuid();
         this.percentageFull = 0
         this.sprite.cartRef = this;
@@ -22,17 +21,20 @@ export class MineCart {
             y: y
         }
         this.inventory = {};
-        let col = '#232323'
         this.percentageBarBacking = this.game.add.rectangle(this.sprite.x - this.sprite.width / 2, this.sprite.y, 1, 5, '0x232323');
         this.percentageBar = this.game.add.rectangle(this.sprite.x - this.sprite.width / 2, this.sprite.y, 1, 5 * this.percentageFull, '0xd78304');
-        this.percentageBarBacking.setOrigin(1, 1)
-        this.percentageBar.setOrigin(1, 1)
-        this.percentageBarBacking.setDepth(9999999)
-        this.percentageBar.setDepth(9999999)
+        this.percentageBarBacking.setOrigin(1, 1);
+        this.percentageBar.setOrigin(1, 1);
+        this.percentageBarBacking.setDepth(9999999);
+        this.percentageBar.setDepth(9999999);
     }
 
     showCartMenu() {
 
+    }
+
+    toggleMoving() {
+        this.moving = !this.moving;
     }
 
     changeDirections(directions) {
@@ -58,30 +60,24 @@ export class MineCart {
 
     setRotation(rotation) {
         this.rotation = rotation;
-        console.log('rotate: ', this.rotation);
 
-        // Determine the target originY based on the new rotation.
         let targetOriginY = 0.5;
         if (Phaser.Math.RadToDeg(this.rotation) === 45 || Phaser.Math.RadToDeg(this.rotation) === -45) {
             targetOriginY = 1;
         }
 
-        // Create a dummy object to tween the origin value.
         let originTweenObj = { originY: this.sprite.originY || 0.5 };
 
-        // Tween the dummy property.
         this.game.tweens.add({
             targets: originTweenObj,
             originY: targetOriginY,
             duration: 500,
             ease: 'linear',
             onUpdate: () => {
-                // Update the sprite's origin using the tweened value.
                 this.sprite.setOrigin(0.5, originTweenObj.originY);
             }
         });
 
-        // Tween the sprite's rotation.
         this.game.tweens.add({
             targets: this.sprite,
             rotation: this.rotation,
