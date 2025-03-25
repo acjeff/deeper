@@ -96,8 +96,8 @@ export class MineCart {
         this.percentageBar.y = this.sprite.y + 2;
         this.percentageBarBacking.x = this.sprite.x - (this.sprite.body.width / 2) - 1;
         this.percentageBarBacking.y = this.sprite.y + 2;
-        this.percentageBarBacking.setOrigin(1, 1)
-        this.percentageBar.setOrigin(1, 1)
+        this.percentageBarBacking.setOrigin(1, 1);
+        this.percentageBar.setOrigin(1, 1);
     }
 
     destroy() {
