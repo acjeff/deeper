@@ -58,6 +58,36 @@ export class MineCart {
 
     setRotation(rotation) {
         this.rotation = rotation;
+        console.log('rotate: ', this.rotation);
+
+        // Determine the target originY based on the new rotation.
+        let targetOriginY = 0.5;
+        if (Phaser.Math.RadToDeg(this.rotation) === 45 || Phaser.Math.RadToDeg(this.rotation) === -45) {
+            targetOriginY = 1;
+        }
+
+        // Create a dummy object to tween the origin value.
+        let originTweenObj = { originY: this.sprite.originY || 0.5 };
+
+        // Tween the dummy property.
+        this.game.tweens.add({
+            targets: originTweenObj,
+            originY: targetOriginY,
+            duration: 500,
+            ease: 'linear',
+            onUpdate: () => {
+                // Update the sprite's origin using the tweened value.
+                this.sprite.setOrigin(0.5, originTweenObj.originY);
+            }
+        });
+
+        // Tween the sprite's rotation.
+        this.game.tweens.add({
+            targets: this.sprite,
+            rotation: this.rotation,
+            duration: 500,
+            ease: 'linear'
+        });
     }
 
     setGoal(goal) {
@@ -80,8 +110,6 @@ export class MineCart {
             this.sprite.y += step * Math.sign(dy);
         }
 
-        this.sprite.setRotation(this.rotation);
-
         if (this.sprite.body) {
             this.sprite.body.updateFromGameObject();
         }
@@ -91,13 +119,14 @@ export class MineCart {
             currentWeight += this.game.tileTypes[key].weight * value;
         });
         this.percentageFull = currentWeight / this.maxWeight;
-        this.percentageBar.height = 5 * this.percentageFull;
         this.percentageBar.x = this.sprite.x - (this.sprite.body.width / 2) - 1;
         this.percentageBar.y = this.sprite.y + 2;
         this.percentageBarBacking.x = this.sprite.x - (this.sprite.body.width / 2) - 1;
         this.percentageBarBacking.y = this.sprite.y + 2;
         this.percentageBarBacking.setOrigin(1, 1);
         this.percentageBar.setOrigin(1, 1);
+        this.percentageBar.height = 5 * this.percentageFull;
+
     }
 
     destroy() {

@@ -72,10 +72,20 @@ export class Rail extends Tile {
                         const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
                         const blockLeft = adjacentBlocks?.left;
                         const blockRight = adjacentBlocks?.right;
+                        let blockTopRight, blockBottomRight;
+                        if (blockRight) {
+                            const RightAdjacentBlocks = this.game.mapService.getAdjacentBlocks(blockRight.tileRef?.worldX, blockRight.tileRef?.worldY);
+                            blockTopRight = RightAdjacentBlocks?.above;
+                            blockBottomRight = RightAdjacentBlocks?.below;
+                        }
                         if (blockLeft && mineCart.directions.includes('left') && blockLeft.tileRef.tileDetails.id === 6 && !blockLeft.tileRef.tileDetails.mineCart) {
                             block = blockLeft;
                         } else if (blockRight && mineCart.directions.includes('right') && blockRight.tileRef.tileDetails.id === 6 && !blockRight.tileRef.tileDetails.mineCart) {
                             block = blockRight;
+                        } else if (blockTopRight && mineCart.directions.includes('top_right') && blockTopRight.tileRef.tileDetails.id === 6 && !blockTopRight.tileRef.tileDetails.mineCart) {
+                            block = blockTopRight;
+                        } else if (blockBottomRight && mineCart.directions.includes('bottom_right') && blockBottomRight.tileRef.tileDetails.id === 6 && !blockBottomRight.tileRef.tileDetails.mineCart) {
+                            block = blockBottomRight;
                         }
                         if (block) {
                             this.tileDetails.mineCart = null;

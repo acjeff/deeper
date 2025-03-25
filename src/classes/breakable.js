@@ -84,7 +84,7 @@ export class Breakable extends Tile {
                 if (this.image) {
                     // TODO Throw out collision object
                     let debris = this.game.physics.add.image(this.worldX, this.worldY, this.image);
-                    debris.setDisplaySize(5, 5)
+                    debris.setDisplaySize(3, 3)
                     debris.materialRef = this;
                     debris.setVelocity(Phaser.Math.Between(-10, 10), Phaser.Math.Between(-10, -10));
                     debris.setBounce(0.6);
