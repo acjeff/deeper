@@ -1,11 +1,10 @@
 import {MineCart} from "./minecart";
+import {Tile} from "./tile";
 
 function degrees_to_radians(degrees) {
     let pi = Math.PI;
     return degrees * (pi / 180);
 }
-
-import {Tile} from "./tile";
 
 export class Rail extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
@@ -78,8 +77,18 @@ export class Rail extends Tile {
                             blockTopRight = RightAdjacentBlocks?.above;
                             blockBottomRight = RightAdjacentBlocks?.below;
                         }
+                        let blockTopLeft, blockBottomLeft;
+                        if (blockLeft) {
+                            const LeftAdjacentBlocks = this.game.mapService.getAdjacentBlocks(blockLeft.tileRef?.worldX, blockLeft.tileRef?.worldY);
+                            blockTopLeft = LeftAdjacentBlocks?.above;
+                            blockBottomLeft = LeftAdjacentBlocks?.below;
+                        }
                         if (blockLeft && mineCart.directions.includes('left') && blockLeft.tileRef.tileDetails.id === 6 && !blockLeft.tileRef.tileDetails.mineCart) {
                             block = blockLeft;
+                        } else if (blockTopLeft && mineCart.directions.includes('top_left') && blockTopLeft.tileRef.tileDetails.id === 6 && !blockTopLeft.tileRef.tileDetails.mineCart) {
+                            block = blockTopLeft;
+                        } else if (blockBottomLeft && mineCart.directions.includes('bottom_left') && blockBottomLeft.tileRef.tileDetails.id === 6 && !blockBottomLeft.tileRef.tileDetails.mineCart) {
+                            block = blockBottomLeft;
                         } else if (blockRight && mineCart.directions.includes('right') && blockRight.tileRef.tileDetails.id === 6 && !blockRight.tileRef.tileDetails.mineCart) {
                             block = blockRight;
                         } else if (blockTopRight && mineCart.directions.includes('top_right') && blockTopRight.tileRef.tileDetails.id === 6 && !blockTopRight.tileRef.tileDetails.mineCart) {
