@@ -56,7 +56,6 @@ export class Rail extends Tile {
     onClick() {
         if (this.game.selectedTool.id === 'minecart') {
             let mineCart = new MineCart(this.game, this.worldX, this.worldY);
-            console.log('Add mine cart: ', mineCart);
             this.tileDetails.mineCart = mineCart.id;
         } else {
             this.onClickHandler(this.setAsEmpty.bind(this));
@@ -67,7 +66,7 @@ export class Rail extends Tile {
         this.checkStateWrapper(() => {
                 if (this.tileDetails.mineCart) {
                     let _mineCart = this.game.mineCartGroup.getChildren().find(mc => mc.cartRef.id === this.tileDetails.mineCart);
-                    const mineCart = _mineCart.cartRef;
+                    const mineCart = _mineCart?.cartRef;
                     if (mineCart && mineCart.moving && mineCart.sprite.x === this.worldX && mineCart.sprite.y === this.worldY) {
                         let block;
                         const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);

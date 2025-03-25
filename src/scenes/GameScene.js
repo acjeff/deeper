@@ -65,7 +65,8 @@ export default class GameScene extends Phaser.Scene {
             },
             coal: {
                 id: 1,
-                strength: 5000,
+                strength: 1000,
+                weight: 100,
                 type: 1
             },
             liquid: {
@@ -232,10 +233,8 @@ export default class GameScene extends Phaser.Scene {
             this.physics.add.collider(this.debrisGroup, this.soilGroup);
             this.physics.add.collider(this.debrisGroup, this.buttressGroup);
             this.physics.add.collider(this.debrisGroup, this.mineCartGroup, (debris, minecart) => {
-                console.log('Debris hit mine cart');
                 const _mineCart = minecart.cartRef;
                 _mineCart.addMaterial(debris);
-                debris.destroy();
             });
             this.craneManager = new CraneManager(this);
             // this.physics.add.collider(this.player, this.glowStickGroup);
