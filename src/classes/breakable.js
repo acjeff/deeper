@@ -35,8 +35,8 @@ export class Breakable extends Tile {
     createSprite() {
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
         if (this.tileDetails.type) {
-            const image = this.game.soilTypes[this.tileDetails.type].image;
-            this.overlaySprite = this.game.add.image(this.worldX, this.worldY, image);
+            this.image = this.game.soilTypes[this.tileDetails.type].image;
+            this.overlaySprite = this.game.add.image(this.worldX, this.worldY, this.image);
             this.overlaySprite.setDisplaySize(this.game.tileSize, this.game.tileSize);
             this.overlaySprite.setDepth(3);
         }
@@ -81,6 +81,16 @@ export class Breakable extends Tile {
                 damageAmount += hitPower;
                 let health = -(damageAmount / this.tileDetails.strength - 1);
                 this.game.dustEmitter.setPosition(this.sprite.x, this.sprite.y);
+                if (this.image) {
+                    // TODO Throw out collision object
+                    let debris = this.game.physics.add.image(this.worldX, this.worldY, this.image);
+                    debris.setDisplaySize(5, 5)
+                    debris.materialRef = this;
+                    debris.setVelocity(Phaser.Math.Between(-10, 10), Phaser.Math.Between(-10, -10));
+                    debris.setBounce(0.6);
+                    this.game.debrisGroup.add(debris);
+                }
+
                 if (health <= 0) {
                     this.game.physics.world.disable(this.sprite);
                     this.crackSprite.setAlpha(0);

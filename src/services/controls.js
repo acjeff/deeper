@@ -70,7 +70,7 @@ export default class ControlsManager {
         window.addEventListener("mousemove", (event) => {
             // Update the scene's mouse position.
             this.game.mousePos = {x: event.clientX, y: event.clientY};
-            this.game.controlsManager.getInteractableBlock(15);
+
             if (this.game.playerHead) {
                 this.playerLooking();
             }
@@ -288,6 +288,8 @@ export default class ControlsManager {
                     .interactionText = null;
             }
         }
+
+        this.game.controlsManager.getInteractableBlock(15);
 
     }
 

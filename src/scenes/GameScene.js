@@ -123,7 +123,8 @@ export default class GameScene extends Phaser.Scene {
         this.soilGroup = this.physics.add.staticGroup();
         this.buttressGroup = this.physics.add.staticGroup();
         this.craneGroup = this.physics.add.staticGroup();
-        this.mineCartGroup = [];
+        this.mineCartGroup = this.physics.add.staticGroup();
+        this.debrisGroup = this.physics.add.staticGroup();
         this.railGroup = this.add.group();
         this.glowStickGroup = this.physics.add.group();
         this.glowSticks = [];
@@ -134,8 +135,6 @@ export default class GameScene extends Phaser.Scene {
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
         this.controlsManager = new ControlsManager(this);
-
-
         this.toolBarManager = new ToolbarManager(this);
         this.inventoryManager = new InventoryManager(this);
 
@@ -230,6 +229,14 @@ export default class GameScene extends Phaser.Scene {
             this.physics.add.collider(this.buttressGroup, this.player);
             this.physics.add.collider(this.buttressGroup, this.glowStickGroup);
             this.physics.add.collider(this.craneGroup, this.player);
+            this.physics.add.collider(this.debrisGroup, this.soilGroup);
+            this.physics.add.collider(this.debrisGroup, this.buttressGroup);
+            this.physics.add.collider(this.debrisGroup, this.mineCartGroup, (debris, minecart) => {
+                console.log('Debris hit mine cart');
+                const _mineCart = minecart.cartRef;
+                _mineCart.addMaterial(debris);
+                debris.destroy();
+            });
             this.craneManager = new CraneManager(this);
             // this.physics.add.collider(this.player, this.glowStickGroup);
             this.toolBarManager = new ToolbarManager(this);
@@ -372,8 +379,8 @@ export default class GameScene extends Phaser.Scene {
     update(time, delta) {
         this.accumulatedTime += delta;
         if (this.player) {
-            if (this.mineCartGroup.length) {
-                this.mineCartGroup.forEach(mineCart => mineCart.update());
+            if (this.mineCartGroup.getChildren().length) {
+                this.mineCartGroup.getChildren().forEach(mineCart => mineCart.cartRef.update());
             }
             this.controlsManager.handlePlayerMovement();
             this.lightingManager.updateLighting(delta);

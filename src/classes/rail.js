@@ -66,8 +66,9 @@ export class Rail extends Tile {
     checkState() {
         this.checkStateWrapper(() => {
                 if (this.tileDetails.mineCart) {
-                    const mineCart = this.game.mineCartGroup.find(mc => mc.id === this.tileDetails.mineCart);
-                    if (mineCart.moving && mineCart.sprite.x === this.worldX && mineCart.sprite.y === this.worldY) {
+                    let _mineCart = this.game.mineCartGroup.getChildren().find(mc => mc.cartRef.id === this.tileDetails.mineCart);
+                    const mineCart = _mineCart.cartRef;
+                    if (mineCart && mineCart.moving && mineCart.sprite.x === this.worldX && mineCart.sprite.y === this.worldY) {
                         let block;
                         const adjacentBlocks = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
                         const blockLeft = adjacentBlocks?.left;
