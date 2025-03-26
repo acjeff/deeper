@@ -170,7 +170,13 @@ export default class ControlsManager {
             this.game.showInteractionPrompt = () => obj2?.tileRef?.callCrane();
         });
 
+        this.game.mineCartGroup.getChildren().forEach(child => {
+            child.cartRef.playerOver = false;
+        })
+
         this.game.physics.overlap(this.game.player, this.game.mineCartGroup, (obj1, obj2) => {
+            obj2.cartRef.playerOver = true;
+            this.game.interactionText = obj2.cartRef.moving ? 'stop' : 'start';
             this.game.showInteractionPrompt = () => {
                 obj2.cartRef.toggleMoving();
             }
@@ -273,10 +279,10 @@ export default class ControlsManager {
             };
 
             if (!this.interactionText) {
-                this.interactionText = this.game.add.text(textX, textY, 'E to Interact', style);
+                this.interactionText = this.game.add.text(textX, textY, `E to ${this.game.interactionText || 'Interact'}`, style);
                 // this.interactionText.setOrigin(0.5);
             } else {
-                this.interactionText.setText('E to Interact');
+                this.interactionText.setText(`E to ${this.game.interactionText || 'Interact'}`);
                 this.interactionText.setPosition(textX, textY);
                 this.interactionText.setDepth(999999);
             }

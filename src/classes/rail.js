@@ -83,17 +83,17 @@ export class Rail extends Tile {
                             blockTopLeft = LeftAdjacentBlocks?.above;
                             blockBottomLeft = LeftAdjacentBlocks?.below;
                         }
-                        if (blockLeft && mineCart.directions.includes('left') && blockLeft.tileRef.tileDetails.id === 6 && !blockLeft.tileRef.tileDetails.mineCart) {
+                        if (blockLeft && mineCart.directions['left'] && blockLeft.tileRef.tileDetails.id === 6 && !blockLeft.tileRef.tileDetails.mineCart) {
                             block = blockLeft;
-                        } else if (blockTopLeft && mineCart.directions.includes('top_left') && blockTopLeft.tileRef.tileDetails.id === 6 && !blockTopLeft.tileRef.tileDetails.mineCart) {
+                        } else if (blockTopLeft && mineCart.directions['left'] && blockTopLeft.tileRef.tileDetails.id === 6 && !blockTopLeft.tileRef.tileDetails.mineCart) {
                             block = blockTopLeft;
-                        } else if (blockBottomLeft && mineCart.directions.includes('bottom_left') && blockBottomLeft.tileRef.tileDetails.id === 6 && !blockBottomLeft.tileRef.tileDetails.mineCart) {
+                        } else if (blockBottomLeft && mineCart.directions['left'] && blockBottomLeft.tileRef.tileDetails.id === 6 && !blockBottomLeft.tileRef.tileDetails.mineCart) {
                             block = blockBottomLeft;
-                        } else if (blockRight && mineCart.directions.includes('right') && blockRight.tileRef.tileDetails.id === 6 && !blockRight.tileRef.tileDetails.mineCart) {
+                        } else if (blockRight && mineCart.directions['right'] && blockRight.tileRef.tileDetails.id === 6 && !blockRight.tileRef.tileDetails.mineCart) {
                             block = blockRight;
-                        } else if (blockTopRight && mineCart.directions.includes('top_right') && blockTopRight.tileRef.tileDetails.id === 6 && !blockTopRight.tileRef.tileDetails.mineCart) {
+                        } else if (blockTopRight && mineCart.directions['right'] && blockTopRight.tileRef.tileDetails.id === 6 && !blockTopRight.tileRef.tileDetails.mineCart) {
                             block = blockTopRight;
-                        } else if (blockBottomRight && mineCart.directions.includes('bottom_right') && blockBottomRight.tileRef.tileDetails.id === 6 && !blockBottomRight.tileRef.tileDetails.mineCart) {
+                        } else if (blockBottomRight && mineCart.directions['right'] && blockBottomRight.tileRef.tileDetails.id === 6 && !blockBottomRight.tileRef.tileDetails.mineCart) {
                             block = blockBottomRight;
                         }
                         if (block) {

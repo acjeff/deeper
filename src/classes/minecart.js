@@ -1,6 +1,10 @@
+import {getColorForPercentage} from "../services/colourManager";
+
 const uuid = function () {
     return Math.random().toString(36).substr(2);
 }
+
+import MineCartUI from './minecartUI';
 
 export class MineCart {
     constructor(scene, x, y) {
@@ -13,8 +17,17 @@ export class MineCart {
         this.percentageFull = 0
         this.sprite.cartRef = this;
         this.game.mineCartGroup.add(this.sprite);
-        this.directions = ['right', 'bottom_right', 'top_right'];
-        this.moving = true;
+
+        this.directions = {
+            left: false,
+            top_left: false,
+            bottom_left: false,
+            right: true,
+            top_right: true,
+            bottom_right: true
+        }
+
+        this.moving = false;
         this.rotation = 0;
         this.goal = {
             x: x,
@@ -27,14 +40,19 @@ export class MineCart {
         this.percentageBar.setOrigin(1, 1);
         this.percentageBarBacking.setDepth(9999999);
         this.percentageBar.setDepth(9999999);
+        this.UI = new MineCartUI(this, this.sprite.x, this.sprite.y);
     }
 
     showCartMenu() {
-
     }
 
     toggleMoving() {
         this.moving = !this.moving;
+        // if (!this.moving) {
+        //     this.UI.show();
+        // } else {
+        //     this.UI.hide();
+        // }
     }
 
     changeDirections(directions) {
@@ -66,7 +84,7 @@ export class MineCart {
             targetOriginY = 1;
         }
 
-        let originTweenObj = { originY: this.sprite.originY || 0.5 };
+        let originTweenObj = {originY: this.sprite.originY || 0.5};
 
         this.game.tweens.add({
             targets: originTweenObj,
@@ -93,6 +111,7 @@ export class MineCart {
     update() {
         const step = 0.2;
         const dx = this.goal.x - this.sprite.x;
+        this.UI.update();
         if (Math.abs(dx) < step) {
             this.sprite.x = this.goal.x;
         } else {
@@ -114,6 +133,7 @@ export class MineCart {
         Object.entries(this.inventory).forEach(([key, value]) => {
             currentWeight += this.game.tileTypes[key].weight * value;
         });
+        this.currentWeight = currentWeight;
         this.percentageFull = currentWeight / this.maxWeight;
         this.percentageBar.x = this.sprite.x - (this.sprite.body.width / 2) - 1;
         this.percentageBar.y = this.sprite.y + 2;
@@ -121,7 +141,11 @@ export class MineCart {
         this.percentageBarBacking.y = this.sprite.y + 2;
         this.percentageBarBacking.setOrigin(1, 1);
         this.percentageBar.setOrigin(1, 1);
+        this.percentageBar.setFillStyle(getColorForPercentage(this.percentageFull));
         this.percentageBar.height = 5 * this.percentageFull;
+        if (this.UI.container) {
+            this.UI.container.setVisible(this.playerOver);
+        }
 
     }
 
