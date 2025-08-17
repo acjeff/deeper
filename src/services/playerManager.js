@@ -3,7 +3,6 @@ export default class PlayerManager {
         this.game = scene;
         this.game.startPoint = {x: 1500, y: 180};
         let x = this.game.playerX || this.game.startPoint.x;
-
         let y = this.game.playerY || this.game.startPoint.y;
         this.game.anims.create({
             key: 'walk',

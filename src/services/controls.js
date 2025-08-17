@@ -146,6 +146,7 @@ export default class ControlsManager {
     }
 
     handlePlayerMovement() {
+        if (!this.game.player || !this.game.player.body) return;
         this.game.isFloating = false;
         this.game.playerHead.x = this.game.player.body.x + 3;
         this.game.playerHead.y = this.game.player.body.y + 2.5;

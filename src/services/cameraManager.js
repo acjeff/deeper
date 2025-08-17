@@ -2,14 +2,13 @@ export default class CameraManager {
     constructor(scene) {
         this.game = scene;
         const { width, height } = this.game.scale;
-        const baseWidth = 1920;  // your default design width
-        const baseHeight = 1080; // your default design height
+        const baseWidth = 1920;
+        const baseHeight = 1080;
 
         const zoomX = width / baseWidth;
         const zoomY = height / baseHeight;
 
-        // const zoom = Math.min(zoomX, zoomY) + 5;
-        const zoom = Math.min(zoomX, zoomY) + 5.8;
+        const zoom = Math.min(zoomX, zoomY) + 3.5;
 
         this.game.cameras.main.setZoom(zoom);
 

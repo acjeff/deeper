@@ -10,57 +10,57 @@ export default class MineCartUI {
         // 1) Create a container at position (x, y)
         this.container = game.add.container(x, y);
 
-        // 2) Background rectangle (semi-transparent)
-        //    We position it at (0,0) *inside* the container, so its coordinates are relative to the container.
-        this.bg = game.add.rectangle(0, 0, 225, 115, 0x000000, 0.8);
+        // 2) Background rectangle with cyberpunk styling
+        this.bg = game.add.rectangle(0, 0, 260, 135, 0x000000, 0.9);
         this.bg.setOrigin(0, 0); // top-left origin
-        this.bg.setStrokeStyle(1, 0xffffff);
+        this.bg.setStrokeStyle(2, 0x00ffff);
         this.container.add(this.bg);
+        
+        // Add inner glow effect
+        this.innerGlow = game.add.rectangle(2, 2, 256, 131, 0x00ffff, 0.1);
+        this.innerGlow.setOrigin(0, 0);
+        this.container.add(this.innerGlow);
+        
         this.placeholders = {}
 
         for (let i = 0; i < 3; i++) {
-            let xPos = 28 + i * (34 + 5); // First is 28, then 28 + 39, 28 + 78, etc.
-            this.placeholders[i] = game.add.rectangle(xPos, 28, 34, 34, 0x212121, 0.8);
+            let xPos = 35 + i * (40 + 8); // Better spacing
+            this.placeholders[i] = game.add.rectangle(xPos, 35, 40, 40, 0x000000, 0.8);
+            this.placeholders[i].setStrokeStyle(1, 0x00ffff);
             this.container.add(this.placeholders[i]);
         }
 
-        // // 3) Numeric label (e.g., "12")
-        // this.amountText = game.add.text(10, 10, '12', {
-        //     fontFamily: 'Arial',
-        //     fontSize: '16px',
-        //     color: '#ffffff'
-        // });
-        // this.container.add(this.amountText);
-        //
-        // // 4) Resource name (e.g., "Coal")
-        // this.container.add(this.resourceName);
-        //
-        // // 5) Progress bar background
-        this.progressBg = game.add.rectangle(10, 80, 110, 8, 0x212121);
+        // Progress bar background with cyberpunk styling
+        this.progressBg = game.add.rectangle(15, 95, 130, 12, 0x000000);
         this.progressBg.setOrigin(0, 0);
+        this.progressBg.setStrokeStyle(1, 0x00ffff);
         this.container.add(this.progressBg);
-        //
-        // // 6) Progress bar fill
-        this.progressFill = game.add.rectangle(10, 80, 110 * this.cart.percentageFull, 8, getColorForPercentage(this.cart.percentageFull));
+        
+        // Progress bar fill with neon effect
+        this.progressFill = game.add.rectangle(15, 95, 130 * this.cart.percentageFull, 12, getColorForPercentage(this.cart.percentageFull));
         this.progressFill.setOrigin(0, 0);
         this.container.add(this.progressFill);
 
-        // 7) Progress text (e.g., "10 / 100")
-        this.progressText = game.add.text(10, 95, `${this.cart.currentWeight}kg / ${this.cart.maxWeight}kg`, {
+        // Progress text with cyberpunk styling
+        this.progressText = game.add.text(15, 112, `${this.cart.currentWeight}kg / ${this.cart.maxWeight}kg`, {
             fontSize: '11px',
-            color: '#ffffff'
+            color: '#00ffff',
+            fontFamily: 'monospace',
+            fontStyle: 'bold'
         });
         this.container.add(this.progressText);
 
+        // Direction arrows with cyberpunk styling
         this.arrowRight = this.game.add.triangle(
-            195, 45,
-            0, 0, 7.5, 5, 0, 10,
-            0xffffff,
+            210, 55,
+            0, 0, 10, 7, 0, 14,
+            0x00ffff,
             1
         );
+        this.arrowRight.setStrokeStyle(1, 0x000000);
 
         this.arrowRight.setInteractive(
-            new Phaser.Geom.Triangle(0, 0, 7.5, 5, 0, 10),
+            new Phaser.Geom.Triangle(0, 0, 10, 7, 0, 14),
             Phaser.Geom.Triangle.Contains
         );
 
@@ -74,14 +74,15 @@ export default class MineCartUI {
         this.container.add(this.arrowRight);
 
         this.arrowLeft = this.game.add.triangle(
-            165, 45,
-            0, 5, 7.5, 0, 7.5, 10,
-            0xffffff,
+            180, 55,
+            0, 7, 10, 0, 10, 14,
+            0x00ffff,
             1
         );
+        this.arrowLeft.setStrokeStyle(1, 0x000000);
 
         this.arrowLeft.setInteractive(
-            new Phaser.Geom.Triangle(0, 5, 7.5, 0, 7.5, 10),
+            new Phaser.Geom.Triangle(0, 7, 10, 0, 10, 14),
             Phaser.Geom.Triangle.Contains
         );
 
@@ -94,13 +95,17 @@ export default class MineCartUI {
 
         this.container.add(this.arrowLeft);
 
-        this.directionText = this.game.add.text(151, 70, 'Direction', {
-            fontSize: '11px',
-            color: '#ffffff'
+        // Direction text with cyberpunk styling
+        this.directionText = this.game.add.text(165, 80, 'DIRECTION', {
+            fontSize: '10px',
+            color: '#00ffff',
+            fontFamily: 'monospace',
+            fontStyle: 'bold'
         });
         this.container.add(this.directionText);
 
-        this.line = this.game.add.line(0, 0, 140, 58, 140, 140, 0xe8e8e8, 1);
+        // Separator line with cyberpunk styling
+        this.line = this.game.add.line(0, 0, 150, 65, 150, 150, 0x00ffff, 1);
         this.line.strokeWidth = 2;
         this.container.add(this.line);
 
@@ -119,19 +124,29 @@ export default class MineCartUI {
 
         let index = 1;
         Object.entries(this.cart.inventory).forEach(([key, value], index) => {
-            let xPos = 10 + index * (34 + 5);
+            let xPos = 15 + index * (40 + 8);
             if (!this.inventory[key]) {
-                this.inventory[`${key}_image`] = this.game.add.image(10, 10, key);
-                this.inventory[`${key}_image`].setDisplaySize(35, 35);
+                this.inventory[`${key}_image`] = this.game.add.image(15, 15, key);
+                this.inventory[`${key}_image`].setDisplaySize(40, 40);
                 this.inventory[`${key}_image`].setOrigin(0, 0);
-                this.inventory[`${key}_image`].setPosition(10, 10);
-                this.inventory[`${key}_count`] = this.game.add.text(15, 15, value, {
+                this.inventory[`${key}_image`].setPosition(15, 15);
+                
+                // Item count with cyberpunk styling
+                this.inventory[`${key}_count`] = this.game.add.text(22, 22, value, {
                     fontSize: '11px',
-                    color: '#ffffff'
+                    color: '#ffffff',
+                    fontFamily: 'monospace',
+                    fontStyle: 'bold',
+                    stroke: '#000000',
+                    strokeThickness: 2
                 });
-                this.inventory[key] = this.game.add.text(xPos, 50, key, {
-                    fontSize: '11px',
-                    color: '#ffffff'
+                
+                // Item name with cyberpunk styling
+                this.inventory[key] = this.game.add.text(xPos, 60, key.toUpperCase(), {
+                    fontSize: '10px',
+                    color: '#00ffff',
+                    fontFamily: 'monospace',
+                    fontStyle: 'bold'
                 });
                 this.container.add(this.inventory[key]);
                 this.container.add(this.inventory[`${key}_image`]);
@@ -141,10 +156,11 @@ export default class MineCartUI {
             }
             index++;
         });
-        this.progressFill.width = 110 * this.cart.percentageFull;
-        this.progressFill.setFillStyle(getColorForPercentage(this.cart.percentageFull))
-        this.progressText.setText(`${this.cart.currentWeight}kg / ${this.cart.maxWeight}kg`)
-
+        
+        // Update progress bar with neon glow
+        this.progressFill.width = 130 * this.cart.percentageFull;
+        this.progressFill.setFillStyle(getColorForPercentage(this.cart.percentageFull));
+        this.progressText.setText(`${this.cart.currentWeight}kg / ${this.cart.maxWeight}kg`);
     }
 
     setPosition(x, y) {
@@ -160,5 +176,4 @@ export default class MineCartUI {
     hide() {
         this.container.setVisible(false);
     }
-
 }

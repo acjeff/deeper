@@ -5,106 +5,28 @@ import LZString from "lz-string";
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super("MenuScene");
+        this.particles = [];
+        this.titleGlow = 0;
+        this.glowDirection = 1;
     }
 
     create() {
-        this.add.text(100, 100, "Deeper", {fontSize: "32px", fill: "#ffffff"});
-
-
-        // ✅ Google Sign-In Button
-        this.googleSignInButton = this.add.text(100, 200, "Sign in with Google", {
-            fontSize: "24px",
-            fill: "#ff0",
-            cursor: 'pointer'
-        })
-            .setInteractive()
-            .on("pointerover", () => {
-                this.googleSignInButton.setAlpha(0.7);
-                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
-            })
-            .on("pointerout", () => {
-                this.input.setDefaultCursor("default");
-                this.googleSignInButton.setAlpha(1);
-            })
-            .on("pointerdown", () => {
-                this.input.setDefaultCursor("default");
-                this.signInWithGoogle()
-            });
-
-        // ✅ Logout Button (Initially Hidden)
-        this.logoutButton = this.add.text(window.innerWidth - 200, 100, "Logout", {fontSize: "24px", fill: "#f00", cursor: 'pointer'})
-            .setInteractive()
-            .setVisible(false)
-            .on("pointerover", () => {
-                this.logoutButton.setAlpha(0.7);
-                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
-            })
-            .on("pointerout", () => {
-                this.input.setDefaultCursor("default");
-                this.logoutButton.setAlpha(1);
-            })
-            .on("pointerdown", () => {
-                this.input.setDefaultCursor("default");
-                this.logout()
-            });
-
-        // ✅ Load Game Button (Initially Hidden)
-        this.loadGameButton = this.add.text(100, 300, "Continue", {fontSize: "24px", fill: "#0f0", cursor: 'pointer'})
-            .setInteractive()
-            .setVisible(false)
-            .on("pointerover", () => {
-                this.loadGameButton.setAlpha(0.7);
-                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
-            })
-            .on("pointerout", () => {
-                this.input.setDefaultCursor("default");
-                this.loadGameButton.setAlpha(1);
-            })
-            .on("pointerdown", () => {
-                this.input.setDefaultCursor("default");
-                this.loadGame()
-            });
-
-        // ✅ Load Game Button (Initially Hidden)
-        this.deleteSaveButton = this.add.text(100, 350, "Start New Game", {
-            fontSize: "24px",
-            fill: "#0f0",
-            cursor: 'pointer'
-        })
-            .setInteractive()
-            .setVisible(false)
-            .on("pointerover", () => {
-                this.deleteSaveButton.setAlpha(0.7);
-                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
-            })
-            .on("pointerout", () => {
-                this.input.setDefaultCursor("default");
-                this.deleteSaveButton.setAlpha(1);
-            })
-            .on("pointerdown", async () => {
-                this.input.setDefaultCursor("default");
-                await this.deleteSaves();
-                await this.createNewGame();
-            });
-
-        // ✅ New Game Button (Initially Hidden)
-        this.newGameButton = this.add.text(100, 350, "New Game", {fontSize: "24px", fill: "#00f", cursor: 'pointer'})
-            .setInteractive()
-            .setVisible(false)
-            .on("pointerover", () => {
-                this.newGameButton.setAlpha(0.7);
-                this.input.setDefaultCursor("pointer"); // ✅ Change cursor to pointer
-            })
-            .on("pointerout", () => {
-                this.input.setDefaultCursor("default");
-                this.newGameButton.setAlpha(1);
-            })
-            .on("pointerdown", () => {
-                this.input.setDefaultCursor("default");
-                this.createNewGame()
-            });
-
-        // ✅ Check if the user is already logged in
+        // Create dark background
+        this.createBackground();
+        
+        // Create animated particles
+        this.createParticles();
+        
+        // Create main title with cyberpunk styling
+        this.createTitle();
+        
+        // Create styled buttons
+        this.createButtons();
+        
+        // Create atmospheric elements
+        this.createAtmosphericElements();
+        
+        // Check authentication status
         if (window.electronAPI?.isElectron) {
             this.updateUIForLoggedInUser();
         } else {
@@ -116,6 +38,324 @@ export default class MenuScene extends Phaser.Scene {
         }
     }
 
+    createBackground() {
+        // Create a dark background with subtle grid
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0x000000, 1);
+        graphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+        
+        // Add subtle grid lines for cyberpunk atmosphere
+        graphics.lineStyle(1, 0x00ffff, 0.1);
+        for (let i = 0; i < this.cameras.main.width; i += 100) {
+            graphics.moveTo(i, 0);
+            graphics.lineTo(i, this.cameras.main.height);
+        }
+        for (let i = 0; i < this.cameras.main.height; i += 100) {
+            graphics.moveTo(0, i);
+            graphics.lineTo(this.cameras.main.width, i);
+        }
+        graphics.stroke();
+    }
+
+    createParticles() {
+        // Create floating particles with cyan color
+        for (let i = 0; i < 15; i++) {
+            const particle = this.add.circle(
+                Phaser.Math.Between(0, this.cameras.main.width),
+                Phaser.Math.Between(0, this.cameras.main.height),
+                1,
+                0x00ffff,
+                0.4
+            );
+            
+            this.tweens.add({
+                targets: particle,
+                y: particle.y - 200,
+                alpha: 0,
+                duration: Phaser.Math.Between(4000, 8000),
+                ease: 'Power1',
+                repeat: -1,
+                delay: Phaser.Math.Between(0, 3000)
+            });
+            
+            this.particles.push(particle);
+        }
+    }
+
+    createTitle() {
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 3;
+        
+        // Create title shadow
+        this.titleShadow = this.add.text(centerX + 2, centerY + 2, "DEEPER", {
+            fontSize: '72px',
+            fontFamily: 'monospace',
+            fontStyle: 'bold',
+            fill: '#000000',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+        
+        // Create main title with white color
+        this.title = this.add.text(centerX, centerY, "DEEPER", {
+            fontSize: '72px',
+            fontFamily: 'monospace',
+            fontStyle: 'bold',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        
+        // Create subtitle with cyberpunk styling
+        this.subtitle = this.add.text(centerX, centerY + 80, "A MINING ADVENTURE", {
+            fontSize: '18px',
+            fontFamily: 'monospace',
+            fill: '#ff00ff',
+            fontStyle: 'bold',
+            letterSpacing: '2px'
+        }).setOrigin(0.5);
+        
+        // Animate title glow
+        this.tweens.add({
+            targets: this.title,
+            alpha: 0.7,
+            duration: 2000,
+            ease: 'Power2',
+            yoyo: true,
+            repeat: -1
+        });
+        
+        // Add pulsing effect to subtitle
+        this.tweens.add({
+            targets: this.subtitle,
+            alpha: 0.5,
+            duration: 1500,
+            ease: 'Power2',
+            yoyo: true,
+            repeat: -1
+        });
+    }
+
+    createButtons() {
+        const centerX = this.cameras.main.width / 2;
+        const buttonY = this.cameras.main.height / 2 + 50;
+        const buttonSpacing = 70;
+        
+        // Google Sign-In Button (Initially Visible)
+        this.googleSignInButton = this.createStyledButton(
+            centerX, 
+            buttonY, 
+            "SIGN IN WITH GOOGLE", 
+            '#ff00ff', 
+            '#cc00cc',
+            () => this.signInWithGoogle()
+        );
+        
+        // Continue Button (Initially Hidden)
+        this.loadGameButton = this.createStyledButton(
+            centerX, 
+            buttonY, 
+            "CONTINUE ADVENTURE", 
+            '#00ffff', 
+            '#00cccc',
+            () => this.loadGame()
+        ).setVisible(false);
+        
+        // Start New Game Button (Initially Hidden)
+        this.deleteSaveButton = this.createStyledButton(
+            centerX, 
+            buttonY + buttonSpacing, 
+            "START NEW GAME", 
+            '#ff6600', 
+            '#cc5500',
+            async () => {
+                await this.deleteSaves();
+                await this.createNewGame();
+            }
+        ).setVisible(false);
+        
+        // New Game Button (Initially Hidden)
+        this.newGameButton = this.createStyledButton(
+            centerX, 
+            buttonY, 
+            "BEGIN NEW ADVENTURE", 
+            '#00ff00', 
+            '#00cc00',
+            () => this.createNewGame()
+        ).setVisible(false);
+        
+        // Logout Button (Initially Hidden)
+        this.logoutButton = this.createStyledButton(
+            centerX, 
+            buttonY + buttonSpacing * 2, 
+            "LOGOUT", 
+            '#ff0066', 
+            '#cc0044',
+            () => this.logout()
+        ).setVisible(false);
+    }
+
+    createStyledButton(x, y, text, color, hoverColor, callback) {
+        // Convert hex colors to integers
+        const originalColor = parseInt(color.replace('#', ''), 16);
+        const hoverColorInt = parseInt(hoverColor.replace('#', ''), 16);
+        
+        // Create button background
+        const buttonBg = this.add.rectangle(x, y, 350, 50, 0x000000, 0.8);
+        buttonBg.setStrokeStyle(2, originalColor);
+        
+        // Create button text with matching border color
+        const buttonText = this.add.text(x, y, text, {
+            fontSize: '16px',
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        
+        // Set the text color to match the border
+        buttonText.setColor(color);
+        
+        // Make only the background interactive
+        buttonBg.setInteractive({ useHandCursor: true });
+        
+        // Store references for visibility control
+        buttonBg.buttonText = buttonText;
+        buttonText.buttonBg = buttonBg;
+        
+        // Store original color for restoration
+        buttonBg.originalColor = originalColor;
+        buttonBg.hoverColor = hoverColorInt;
+        
+        // Hover effects
+        buttonBg.on('pointerover', () => {
+            buttonBg.setFillStyle(0x000000, 0.9);
+            buttonBg.setStrokeStyle(3, buttonBg.hoverColor);
+            this.tweens.add({
+                targets: [buttonBg, buttonText],
+                scaleX: 1.02,
+                scaleY: 1.02,
+                duration: 200,
+                ease: 'Power2'
+            });
+        });
+        
+        buttonBg.on('pointerout', () => {
+            buttonBg.setFillStyle(0x000000, 0.8);
+            buttonBg.setStrokeStyle(2, buttonBg.originalColor);
+            this.tweens.add({
+                targets: [buttonBg, buttonText],
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+                ease: 'Power2'
+            });
+        });
+        
+        // Click effects
+        buttonBg.on('pointerdown', () => {
+            this.tweens.add({
+                targets: [buttonBg, buttonText],
+                scaleX: 0.98,
+                scaleY: 0.98,
+                duration: 100,
+                ease: 'Power2',
+                yoyo: true,
+                onComplete: () => {
+                    callback();
+                }
+            });
+        });
+        
+        return buttonBg;
+    }
+
+    createAtmosphericElements() {
+        // Add some mining-themed decorative elements with cyberpunk styling
+        const centerX = this.cameras.main.width / 2;
+        
+        // Add pickaxe icon
+        if (this.textures.exists('pickaxe')) {
+            const pickaxe = this.add.image(centerX - 200, 100, 'pickaxe');
+            pickaxe.setScale(2);
+            pickaxe.setAlpha(0.2);
+            pickaxe.setTint(0x00ffff);
+            
+            this.tweens.add({
+                targets: pickaxe,
+                angle: 5,
+                duration: 4000,
+                ease: 'Power2',
+                yoyo: true,
+                repeat: -1
+            });
+        }
+        
+        // Add coal icon
+        if (this.textures.exists('coal')) {
+            const coal = this.add.image(centerX + 200, 100, 'coal');
+            coal.setScale(2);
+            coal.setAlpha(0.2);
+            coal.setTint(0xff00ff);
+            
+            this.tweens.add({
+                targets: coal,
+                angle: -5,
+                duration: 4000,
+                ease: 'Power2',
+                yoyo: true,
+                repeat: -1
+            });
+        }
+        
+        // Add floating dust particles
+        for (let i = 0; i < 10; i++) {
+            const dust = this.add.circle(
+                Phaser.Math.Between(0, this.cameras.main.width),
+                Phaser.Math.Between(0, this.cameras.main.height),
+                0.5,
+                0x00ffff,
+                0.3
+            );
+            
+            this.tweens.add({
+                targets: dust,
+                x: dust.x + Phaser.Math.Between(-50, 50),
+                y: dust.y - Phaser.Math.Between(50, 150),
+                alpha: 0,
+                duration: Phaser.Math.Between(5000, 10000),
+                ease: 'Power1',
+                repeat: -1,
+                delay: Phaser.Math.Between(0, 4000)
+            });
+        }
+        
+        // Add corner decorative elements with cyberpunk styling
+        const cornerSize = 60;
+        const cornerAlpha = 0.3;
+        
+        // Top-left corner
+        const topLeft = this.add.graphics();
+        topLeft.lineStyle(2, 0x00ffff, cornerAlpha);
+        topLeft.strokeRect(20, 20, cornerSize, cornerSize);
+        
+        // Top-right corner
+        const topRight = this.add.graphics();
+        topRight.lineStyle(2, 0x00ffff, cornerAlpha);
+        topRight.strokeRect(this.cameras.main.width - 20 - cornerSize, 20, cornerSize, cornerSize);
+        
+        // Bottom-left corner
+        const bottomLeft = this.add.graphics();
+        bottomLeft.lineStyle(2, 0x00ffff, cornerAlpha);
+        bottomLeft.strokeRect(20, this.cameras.main.height - 20 - cornerSize, cornerSize, cornerSize);
+        
+        // Bottom-right corner
+        const bottomRight = this.add.graphics();
+        bottomRight.lineStyle(2, 0x00ffff, cornerAlpha);
+        bottomRight.strokeRect(this.cameras.main.width - 20 - cornerSize, this.cameras.main.height - 20 - cornerSize, cornerSize, cornerSize);
+    }
+
     async signInWithGoogle() {
         try {
             const result = await signInWithPopup(auth, provider);
@@ -125,9 +365,12 @@ export default class MenuScene extends Phaser.Scene {
 
             if (gameSave.exists()) {
                 this.loadGameButton.setVisible(true);
+                this.loadGameButton.buttonText.setVisible(true);
                 this.deleteSaveButton.setVisible(true);
+                this.deleteSaveButton.buttonText.setVisible(true);
             } else {
                 this.newGameButton.setVisible(true);
+                this.newGameButton.buttonText.setVisible(true);
             }
 
             this.updateUIForLoggedInUser(user);
@@ -147,7 +390,6 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     async loadGame() {
-
         if (window.electronAPI?.isElectron) {
             // ✅ Electron: Save Locally
             this.scene.start("GameScene", {
@@ -166,7 +408,10 @@ export default class MenuScene extends Phaser.Scene {
             alert("You must be logged in to load a game.");
             return;
         }
-        this.loadGameButton.setText('Loading').setInteractive(false).setAlpha(0.5);
+        this.loadGameButton.buttonText.setText('LOADING...');
+        this.loadGameButton.setInteractive(false);
+        this.loadGameButton.setAlpha(0.5);
+        this.loadGameButton.buttonText.setAlpha(0.5);
         try {
             const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
             const gameSaveDoc = await getDoc(gameSaveRef);
@@ -191,13 +436,19 @@ export default class MenuScene extends Phaser.Scene {
             console.error("Error loading game:", error);
             alert(error.message);
         }
-        this.loadGameButton.setText('Continue').setInteractive(true).setAlpha(1);
+        this.loadGameButton.buttonText.setText('CONTINUE ADVENTURE');
+        this.loadGameButton.setInteractive(true);
+        this.loadGameButton.setAlpha(1);
+        this.loadGameButton.buttonText.setAlpha(1);
     }
 
     async createNewGame() {
         let user;
 
-        this.deleteSaveButton.setText('Generating map...').setInteractive(false).setAlpha(0.5);
+        this.deleteSaveButton.buttonText.setText('GENERATING MAP...');
+        this.deleteSaveButton.setInteractive(false);
+        this.deleteSaveButton.setAlpha(0.5);
+        this.deleteSaveButton.buttonText.setAlpha(0.5);
         window.setTimeout(() => {
 
             if (!window.electronAPI?.isElectron) {
@@ -219,10 +470,15 @@ export default class MenuScene extends Phaser.Scene {
 
             // ✅ Reset UI
             this.googleSignInButton.setVisible(true);
+            this.googleSignInButton.buttonText.setVisible(true);
             this.logoutButton.setVisible(false);
+            this.logoutButton.buttonText.setVisible(false);
             this.loadGameButton.setVisible(false);
+            this.loadGameButton.buttonText.setVisible(false);
             this.deleteSaveButton.setVisible(false);
+            this.deleteSaveButton.buttonText.setVisible(false);
             this.newGameButton.setVisible(false);
+            this.newGameButton.buttonText.setVisible(false);
         } catch (error) {
             console.error("Error logging out:", error);
             alert(error.message);
@@ -230,18 +486,23 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     async updateUIForLoggedInUser(user) {
-
         this.googleSignInButton.setVisible(false);
+        this.googleSignInButton.buttonText.setVisible(false);
         this.logoutButton.setVisible(true);
+        this.logoutButton.buttonText.setVisible(true);
         this.loadGameButton.setVisible(false);
+        this.loadGameButton.buttonText.setVisible(false);
         this.deleteSaveButton.setVisible(false);
+        this.deleteSaveButton.buttonText.setVisible(false);
         this.newGameButton.setVisible(false);
+        this.newGameButton.buttonText.setVisible(false);
 
         let hasSaveData = false;
 
         try {
             if (window.electronAPI?.isElectron) {
                 this.logoutButton.setVisible(false);
+                this.logoutButton.buttonText.setVisible(false);
                 // ✅ Electron: Check local save
                 const savedData = await window.electronAPI.loadGame();
                 this.savedData = savedData;
@@ -263,10 +524,12 @@ export default class MenuScene extends Phaser.Scene {
         // ✅ Show the correct button based on whether save data exists
         if (hasSaveData) {
             this.loadGameButton.setVisible(true);
+            this.loadGameButton.buttonText.setVisible(true);
             this.deleteSaveButton.setVisible(true);
+            this.deleteSaveButton.buttonText.setVisible(true);
         } else {
             this.newGameButton.setVisible(true);
+            this.newGameButton.buttonText.setVisible(true);
         }
     }
-
 }

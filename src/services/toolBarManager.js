@@ -18,13 +18,16 @@ export default class ToolbarManager {
             Object.assign(this.container.style, {
                 position: 'absolute',
                 left: '50%',
-                bottom: '20px',
+                bottom: '30px',
                 transform: 'translateX(-50%)',
                 display: 'flex',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                padding: '10px',
-                borderRadius: '10px',
-                zIndex: '1000'
+                background: 'linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(40, 40, 40, 0.95) 100%)',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                zIndex: '1000',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(15px)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
             });
             document.body.appendChild(this.container);
         }
@@ -47,23 +50,45 @@ export default class ToolbarManager {
             slotEl.classList.add('toolbar-slot');
             slotEl.dataset.index = i;
             Object.assign(slotEl.style, {
-                width: '50px',
-                height: '50px',
-                backgroundColor: '#333',
-                border: '2px solid #000',
-                borderRadius: '5px',
-                margin: '0 5px',
+                width: '52px',
+                height: '52px',
+                background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(50, 50, 50, 0.9) 100%)',
+                border: '2px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '6px',
+                margin: '0 6px',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                position: 'relative'
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)'
             });
 
             // Apply a highlight if this is the selected slot.
             if (i === this.game.selectedIndex) {
-                slotEl.style.borderColor = '#FFD700';
-                slotEl.style.borderWidth = '3px';
+                slotEl.style.borderColor = '#4a9eff';
+                slotEl.style.boxShadow = '0 0 0 2px rgba(74, 158, 255, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.3)';
+                slotEl.style.transform = 'translateY(-2px)';
+                slotEl.style.background = 'linear-gradient(135deg, rgba(40, 40, 40, 0.95) 0%, rgba(60, 60, 60, 0.95) 100%)';
             }
+
+            // Add hover effects
+            slotEl.addEventListener('mouseenter', () => {
+                if (i !== this.game.selectedIndex) {
+                    slotEl.style.transform = 'translateY(-1px)';
+                    slotEl.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    slotEl.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.3)';
+                }
+            });
+
+            slotEl.addEventListener('mouseleave', () => {
+                if (i !== this.game.selectedIndex) {
+                    slotEl.style.transform = 'translateY(0)';
+                    slotEl.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    slotEl.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.3)';
+                }
+            });
 
             // Allow drops into the toolbar slot.
             slotEl.addEventListener('dragover', (e) => e.preventDefault());
@@ -108,7 +133,8 @@ export default class ToolbarManager {
                     width: '80%',
                     height: '80%',
                     objectFit: 'contain',
-                    transform: `rotate(${item.rotate}deg)`
+                    transform: `rotate(${item.rotate}deg)`,
+                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))'
                 });
                 // When dragging an item from the toolbar, include the source slot index.
                 img.addEventListener('dragstart', (e) => {
@@ -117,18 +143,41 @@ export default class ToolbarManager {
                     e.dataTransfer.setData('sourceIndex', i.toString());
                 });
                 if (item.metadata?.number) {
-                    const number = document.createElement('p');
+                    const number = document.createElement('div');
                     Object.assign(number.style, {
                         color: '#ffffff',
                         position: 'absolute',
-                        top: '-17px',
-                        left: '3px',
-                        fontWeight: '500'
+                        top: '-6px',
+                        right: '-6px',
+                        fontWeight: 'bold',
+                        fontSize: '11px',
+                        background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                        borderRadius: '10px',
+                        width: '18px',
+                        height: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                        fontFamily: 'Arial, sans-serif',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
                     });
                     number.innerHTML = item.metadata.number;
                     slotEl.appendChild(number);
                 }
                 slotEl.appendChild(img);
+            } else {
+                // Add empty slot indicator
+                const emptyIndicator = document.createElement('div');
+                emptyIndicator.innerHTML = '•';
+                Object.assign(emptyIndicator.style, {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    fontFamily: 'Arial, sans-serif'
+                });
+                slotEl.appendChild(emptyIndicator);
             }
             this.container.appendChild(slotEl);
         }
@@ -169,11 +218,15 @@ export default class ToolbarManager {
         const slotEls = this.container.children;
         for (let i = 0; i < slotEls.length; i++) {
             if (i === index) {
-                slotEls[i].style.borderColor = '#FFD700';
-                slotEls[i].style.borderWidth = '3px';
+                slotEls[i].style.borderColor = '#4a9eff';
+                slotEls[i].style.boxShadow = '0 0 0 2px rgba(74, 158, 255, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.3)';
+                slotEls[i].style.transform = 'translateY(-2px)';
+                slotEls[i].style.background = 'linear-gradient(135deg, rgba(40, 40, 40, 0.95) 0%, rgba(60, 60, 60, 0.95) 100%)';
             } else {
-                slotEls[i].style.borderColor = '#000';
-                slotEls[i].style.borderWidth = '2px';
+                slotEls[i].style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                slotEls[i].style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.3)';
+                slotEls[i].style.transform = 'translateY(0)';
+                slotEls[i].style.background = 'linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(50, 50, 50, 0.9) 100%)';
             }
         }
         // Set the selected tool on the scene.

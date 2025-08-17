@@ -21,13 +21,14 @@ export default class InventoryManager {
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 display: 'grid',
-                gridTemplateColumns: 'repeat(9, 60px)',
-                gap: '5px',
-                padding: '10px',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                border: '3px solid #5c4033',
-                borderRadius: '10px',
-                zIndex: '2000'
+                gridTemplateColumns: 'repeat(9, 70px)',
+                gap: '10px',
+                padding: '25px',
+                background: 'rgba(0, 0, 0, 0.95)',
+                border: '3px solid #00ffff',
+                borderRadius: '0px',
+                zIndex: '2000',
+                backdropFilter: 'blur(20px)'
             });
             document.body.appendChild(this.container);
         }
@@ -108,14 +109,27 @@ export default class InventoryManager {
             slotEl.classList.add('inventory-slot');
             slotEl.dataset.index = i;
             Object.assign(slotEl.style, {
-                width: '60px',
-                height: '60px',
-                backgroundColor: '#c0a080',
-                border: '2px solid #5c4033',
-                borderRadius: '4px',
+                width: '70px',
+                height: '70px',
+                background: 'rgba(0, 0, 0, 0.8)',
+                border: '2px solid #333333',
+                borderRadius: '0px',
                 boxSizing: 'border-box',
                 position: 'relative',
-                padding: '5px'
+                padding: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+            });
+
+            // Add hover effects
+            slotEl.addEventListener('mouseenter', () => {
+                slotEl.style.transform = 'scale(1.05)';
+                slotEl.style.borderColor = '#00ffff';
+            });
+
+            slotEl.addEventListener('mouseleave', () => {
+                slotEl.style.transform = 'scale(1)';
+                slotEl.style.borderColor = '#333333';
             });
 
             // Allow this slot to accept drops.
@@ -174,6 +188,21 @@ export default class InventoryManager {
                     e.dataTransfer.setData('sourceIndex', i.toString());
                 });
                 slotEl.appendChild(img);
+            } else {
+                // Add empty slot indicator
+                const emptyIndicator = document.createElement('div');
+                emptyIndicator.innerHTML = '□';
+                Object.assign(emptyIndicator.style, {
+                    color: 'rgba(0, 255, 255, 0.2)',
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    fontFamily: 'monospace'
+                });
+                slotEl.appendChild(emptyIndicator);
             }
             this.container.appendChild(slotEl);
         }
