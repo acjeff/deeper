@@ -37,6 +37,13 @@ export default class PlayerManager {
         this.headBaseY = 0;
         this.bobPhase = 0;
         this.wasGrounded = true;
+        // Capture the scale that setDisplaySize produced — tweens must work
+        // relative to this, not absolute 1.0 which would blow the sprite up
+        // to its raw texture size.
+        this.playerBaseScaleX = this.game.player.scaleX;
+        this.playerBaseScaleY = this.game.player.scaleY;
+        this.headBaseScaleX = this.game.playerHead.scaleX;
+        this.headBaseScaleY = this.game.playerHead.scaleY;
 
         this.game.player.maxHealth = 100;
         this.game.player.maxEnergy = 100;
@@ -189,23 +196,32 @@ export default class PlayerManager {
         // and arriving with a noticeable downward velocity.
         if (grounded && !this.wasGrounded && this.lastAirVy > 60) {
             const intensity = Math.min(1, this.lastAirVy / 220);
-            this.game.tweens.killTweensOf([player, this.game.playerHead]);
+            const head = this.game.playerHead;
+            this.game.tweens.killTweensOf([player, head]);
+            const stretch = 1 + 0.18 * intensity;
+            const squash = 1 - 0.22 * intensity;
             this.game.tweens.add({
-                targets: [player, this.game.playerHead],
-                scaleX: 1 + 0.18 * intensity,
-                scaleY: 1 - 0.22 * intensity,
+                targets: player,
+                scaleX: this.playerBaseScaleX * stretch,
+                scaleY: this.playerBaseScaleY * squash,
                 duration: 90,
                 ease: 'Quad.easeOut',
                 yoyo: true,
-                onYoyo: (tween, target) => {
-                    target.scaleX = 1;
-                    target.scaleY = 1;
-                },
                 onComplete: () => {
-                    player.scaleX = 1;
-                    player.scaleY = 1;
-                    this.game.playerHead.scaleX = 1;
-                    this.game.playerHead.scaleY = 1;
+                    player.scaleX = this.playerBaseScaleX;
+                    player.scaleY = this.playerBaseScaleY;
+                }
+            });
+            this.game.tweens.add({
+                targets: head,
+                scaleX: this.headBaseScaleX * stretch,
+                scaleY: this.headBaseScaleY * squash,
+                duration: 90,
+                ease: 'Quad.easeOut',
+                yoyo: true,
+                onComplete: () => {
+                    head.scaleX = this.headBaseScaleX;
+                    head.scaleY = this.headBaseScaleY;
                 }
             });
         }
