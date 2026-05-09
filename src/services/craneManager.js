@@ -104,6 +104,39 @@ export default class CraneManager {
     }
 
     /**
+     * Per-frame upkeep. The platform's static body is tweened, but Phaser
+     * Arcade has no concept of "moving platforms" — when the lift descends
+     * faster than gravity, the player gets left in mid-air for a beat and
+     * then catches up. This sticks the player to the platform top whenever
+     * they're horizontally over it and not actively jumping, so descending
+     * trips look continuous.
+     */
+    update() {
+        if (!this.moving) return;
+        const player = this.game.player;
+        const lift = this.craneFlat;
+        if (!player?.body || !lift?.body) return;
+
+        const halfLiftW = lift.body.width / 2;
+        const halfPlayerW = player.body.width / 2;
+        const horizOverlap = Math.abs(player.x - lift.x) <= halfLiftW + halfPlayerW;
+        if (!horizOverlap) return;
+
+        const playerBottom = player.body.y + player.body.height;
+        const liftTop = lift.body.y;
+        const gap = liftTop - playerBottom;
+
+        // Only snap when the lift has dropped out from under the player
+        // and they aren't moving upward (jumping / being pushed). Negative
+        // gap means the collider is already resolving an overlap, so leave
+        // it alone.
+        if (gap > 0 && gap <= 16 && player.body.velocity.y >= 0) {
+            player.body.y = liftTop - player.body.height;
+            player.body.velocity.y = 0;
+        }
+    }
+
+    /**
      * Travel to a level chosen from the on-platform terminal. Gated by the
      * rig's current rope length so the player can't drop past their reach.
      */

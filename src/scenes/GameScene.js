@@ -386,7 +386,7 @@ export default class GameScene extends Phaser.Scene {
             const playerX = this.player.x + playerOffset;
             const playerY = this.player.y + playerOffset;
             this.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
-            // this.craneManager.update();
+            this.craneManager?.update();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
             }
