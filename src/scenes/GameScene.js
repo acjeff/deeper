@@ -374,6 +374,9 @@ export default class GameScene extends Phaser.Scene {
             }
             this.controlsManager.handlePlayerMovement();
             this.playerManager.updateVisuals(time, delta);
+            if (this.ambientMoteEmitter) {
+                this.ambientMoteEmitter.setPosition(this.player.x, this.player.y - 8);
+            }
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();

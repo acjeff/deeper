@@ -19,6 +19,34 @@ export default class LightingManager {
     initSky() {
         this.game.skyBox = this.game.add.rectangle(0, 0, 9999, 410, 0xf9e4c8);
         this.game.skyBox.setDepth(-999);
+        this.spawnClouds();
+    }
+
+    spawnClouds() {
+        if (!this.game.textures.exists('clouds')) return;
+        // Slow drifting clouds across the sky band. Spread out so they drift
+        // independently in front of the warm sky.
+        const skyTop = -80;
+        const skyBottom = (this.game.aboveGround * this.game.tileSize) - 40;
+        const range = 4000;
+        for (let i = 0; i < 6; i++) {
+            const x = Phaser.Math.Between(-range / 2, range / 2);
+            const y = Phaser.Math.Between(skyTop, skyBottom);
+            const cloud = this.game.add.image(x, y, 'clouds');
+            const scale = Phaser.Math.FloatBetween(0.18, 0.32);
+            cloud.setScale(scale);
+            cloud.setAlpha(Phaser.Math.FloatBetween(0.45, 0.75));
+            cloud.setDepth(-998);
+            const speed = Phaser.Math.FloatBetween(60000, 120000);
+            this.game.tweens.add({
+                targets: cloud,
+                x: x + range,
+                duration: speed,
+                ease: 'Linear',
+                repeat: -1,
+                onRepeat: () => { cloud.x = x; }
+            });
+        }
     }
 
     initLighting() {

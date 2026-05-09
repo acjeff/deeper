@@ -35,6 +35,25 @@ export default class MapService {
             blendMode: 'NORMAL'
         });
         this.game.footstepEmitter.setDepth(2);
+
+        // Ambient dust motes — slow drifty motes near the player to give the
+        // air some life. Additive so they catch warm light. Position is
+        // updated each frame so they always emit around the player.
+        this.game.ambientMoteEmitter = this.game.add.particles(0, 0, 'dust', {
+            lifespan: {min: 4000, max: 8000},
+            speedX: {min: -6, max: 6},
+            speedY: {min: -8, max: -2},
+            scale: {start: 0.04, end: 0.08},
+            alpha: {start: 0.3, end: 0},
+            frequency: 600,
+            quantity: 1,
+            blendMode: 'ADD',
+            emitZone: {
+                type: 'random',
+                source: new Phaser.Geom.Rectangle(-60, -40, 120, 80)
+            }
+        });
+        this.game.ambientMoteEmitter.setDepth(2.5);
         this.layerCount = 7;
         this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);
         this.emptyPool = new TilePool((params) => new Empty(params));

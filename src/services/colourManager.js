@@ -37,4 +37,17 @@ function getColorForPercentage(percentage) {
     return Phaser.Display.Color.GetColor(interpolated.r, interpolated.g, interpolated.b);
 }
 
-export {darkenColor, getColorForPercentage};
+const lightenColor = function(hexColor, factor) {
+    hexColor = hexColor & 0xFFFFFF;
+    let r = (hexColor >> 16) & 0xFF;
+    let g = (hexColor >> 8) & 0xFF;
+    let b = hexColor & 0xFF;
+    let lightenFactor = Math.min(Math.max(factor / 100, 0), 1);
+    r = Math.round(r + (255 - r) * lightenFactor);
+    g = Math.round(g + (255 - g) * lightenFactor);
+    b = Math.round(b + (255 - b) * lightenFactor);
+    let lightenedHex = (r << 16) | (g << 8) | b;
+    return `0x${lightenedHex.toString(16).padStart(6, '0')}`;
+}
+
+export {darkenColor, lightenColor, getColorForPercentage};
