@@ -10,6 +10,10 @@ export class LiftControl extends Tile {
         this.game.craneManager.moveTo(this.worldY, this);
     }
 
+    get interactionText() {
+        return 'Call Lift';
+    }
+
     moving(direction) {
         if (direction === "up") {
             this.switchSprite.setFrame(1);

@@ -1,3 +1,5 @@
+import LiftTerminal from './liftTerminal';
+
 function degrees_to_radians(degrees) {
     let pi = Math.PI;
     return degrees * (pi / 180);
@@ -12,6 +14,7 @@ export default class CraneManager {
         const width = (this.game.chasmRange[1] - this.game.chasmRange[0]) * 10;
         const platformX = (this.game.chasmRange[0] * 10) + width / 2;
         const platformY = (this.game.aboveGround * 10) + 10;
+        this.platformWidth = width;
         // this.craneFlat = this.game.add.image(1500, 210, 'wood');
         this.craneFlat = this.game.add.image(platformX, platformY, 'wood');
         this.craneFlat.setDisplaySize(width - 15, 5);
@@ -40,63 +43,73 @@ export default class CraneManager {
         this.ropeThree.setRotation(degrees_to_radians(-45))
         this.ropeThree.setDepth(2);
 
-        this.createPlatformButton(platformX, platformY);
+        this.createControlPanel(platformX, platformY);
 
-        // Snapshot the platform's surface position so the on-platform button
-        // can return the player to a pixel-perfect "back at the top" state.
+        // Snapshot initial visual state so "return to surface" via the
+        // terminal lands the platform exactly back where it started.
         this.surfaceState = this._snapshotState();
-        // Last activated wall-mounted lift point. Pressing the on-platform
-        // button toggles between this and the surface.
-        this.savedDeepState = null;
+
+        // Terminal owns rope length, resource count, and the level UI.
+        this.liftTerminal = new LiftTerminal(this);
     }
 
-    createPlatformButton(platformX, platformY) {
-        // Lift-control spritesheet: frame 0 idle, 1 going up, 2 going down.
-        this.platformButton = this.game.add.sprite(platformX, platformY - 7, 'lift-control');
-        this.platformButton.setDisplaySize(this.game.tileSize, this.game.tileSize);
-        this.platformButton.setDepth(4);
-        this.platformButton.setFrame(0);
-        this.game.liftControlGroup.add(this.platformButton);
+    createControlPanel(platformX, platformY) {
+        // Mining-rig control panel: lives on the right edge of the platform
+        // and opens the terminal when the player presses E next to it.
+        // Reuses the lift-control spritesheet (frames 0/1/2 = idle/up/down).
+        const panelX = platformX + (this.platformWidth / 2) - 12;
+        this.controlPanel = this.game.add.sprite(panelX, platformY - 7, 'lift-control');
+        this.controlPanel.setDisplaySize(this.game.tileSize, this.game.tileSize);
+        this.controlPanel.setDepth(4);
+        this.controlPanel.setFrame(0);
+        // Marker so the terminal can filter this entry out of the levels
+        // list — every other liftControlGroup member is a placed wall switch.
+        this.controlPanel.isPlatformPanel = true;
+        this.game.liftControlGroup.add(this.controlPanel);
 
-        this.platformButton.tileRef = {
-            callCrane: () => this.activatePlatformButton(),
+        this.controlPanel.tileRef = {
+            interactionText: 'Use Terminal',
+            callCrane: () => this.liftTerminal.toggle(),
             moving: (direction) => {
-                if (direction === 'up') {
-                    this.platformButton.setFrame(1);
-                } else if (direction === 'down') {
-                    this.platformButton.setFrame(2);
-                } else {
-                    this.platformButton.setFrame(0);
-                }
+                if (direction === 'up') this.controlPanel.setFrame(1);
+                else if (direction === 'down') this.controlPanel.setFrame(2);
+                else this.controlPanel.setFrame(0);
             },
-            // The hovered-block hooks expect these to exist on every tileRef.
+            // The hovered-block hooks expect these on every tileRef.
             onMouseEnter: () => {},
             onMouseLeave: () => {},
             onClick: () => {}
         };
     }
 
-    activatePlatformButton() {
-        if (this.moving) return;
-        const currentBodyY = this.craneFlat.body.y;
-        let target;
-        if (this.savedDeepState && Math.abs(currentBodyY - this.savedDeepState.craneFlatBodyY) > 1) {
-            target = this.savedDeepState;
-        } else if (Math.abs(currentBodyY - this.surfaceState.craneFlatBodyY) > 1) {
-            target = this.surfaceState;
-        } else {
-            return;
-        }
-        this._moveCrane(target, this.platformButton.tileRef);
+    surfaceWorldY() {
+        return this.surfaceState.craneFlatBodyY - 5;
     }
 
-    moveTo(y, liftControl) {
+    /**
+     * Travel to a level chosen from the on-platform terminal. Gated by the
+     * rig's current rope length so the player can't drop past their reach.
+     */
+    travelToLevel(y) {
+        if (this.moving) return;
+        if (!this.liftTerminal.canReach(y)) return;
         const target = this._stateForDepth(y);
-        // Remember any non-surface destination so the on-platform button can
-        // bring the player back to it after returning to the top.
-        if (Math.abs(target.craneFlatBodyY - this.surfaceState.craneFlatBodyY) > 1) {
-            this.savedDeepState = target;
+        this._moveCrane(target, this.controlPanel.tileRef);
+    }
+
+    /**
+     * Wall-mounted lift switches summon the platform to themselves as a
+     * "call lift here" beacon. Same rope-length gate as the terminal.
+     */
+    moveTo(y, liftControl) {
+        if (this.moving) return;
+        if (!this.liftTerminal.canReach(y)) {
+            // Out of rope — drop the call. TODO: visual/audio feedback so
+            // the player knows the rig can't reach here yet.
+            liftControl.moving();
+            return;
         }
+        const target = this._stateForDepth(y);
         this._moveCrane(target, liftControl);
     }
 
@@ -107,8 +120,8 @@ export default class CraneManager {
             ropeTwoY: this.ropeTwo.y,
             ropeThreeY: this.ropeThree.y,
             ropeHeight: this.rope.height,
-            platformButtonY: this.platformButton.y,
-            platformButtonBodyY: this.platformButton.body ? this.platformButton.body.y : this.platformButton.y
+            controlPanelY: this.controlPanel.y,
+            controlPanelBodyY: this.controlPanel.body ? this.controlPanel.body.y : this.controlPanel.y
         };
     }
 
@@ -119,8 +132,8 @@ export default class CraneManager {
             ropeTwoY: y - 10,
             ropeThreeY: y - 10,
             ropeHeight: y - this.rope.y - 15,
-            platformButtonY: y + 7.4 - 7,
-            platformButtonBodyY: y + 5 - 7
+            controlPanelY: y + 7.4 - 7,
+            controlPanelBodyY: y + 5 - 7
         };
     }
 
@@ -140,7 +153,7 @@ export default class CraneManager {
         this.game.tweens.add({
             targets: [this.craneFlat],
             y: target.craneFlatY,
-            duration: this.liftSpeed, // Duration in ms; adjust as needed
+            duration: this.liftSpeed,
             ease: 'ease-out',
             onComplete: () => {
                 liftControl.moving();
@@ -151,35 +164,35 @@ export default class CraneManager {
         this.game.tweens.add({
             targets: [this.craneFlat.body],
             y: target.craneFlatBodyY,
-            duration: this.liftSpeed, // Duration in ms; adjust as needed
+            duration: this.liftSpeed,
             ease: 'ease-out'
         });
 
         this.game.tweens.add({
             targets: [this.ropeTwo, this.ropeThree],
             y: target.ropeTwoY,
-            duration: this.liftSpeed, // Duration in ms; adjust as needed
+            duration: this.liftSpeed,
             ease: 'ease-out'
         });
 
         this.game.tweens.add({
             targets: [this.rope],
             height: target.ropeHeight,
-            duration: this.liftSpeed, // Duration in ms; adjust as needed
-            ease: 'ease-out'
-        });
-
-        this.game.tweens.add({
-            targets: [this.platformButton],
-            y: target.platformButtonY,
             duration: this.liftSpeed,
             ease: 'ease-out'
         });
 
-        if (this.platformButton.body) {
+        this.game.tweens.add({
+            targets: [this.controlPanel],
+            y: target.controlPanelY,
+            duration: this.liftSpeed,
+            ease: 'ease-out'
+        });
+
+        if (this.controlPanel.body) {
             this.game.tweens.add({
-                targets: [this.platformButton.body],
-                y: target.platformButtonBodyY,
+                targets: [this.controlPanel.body],
+                y: target.controlPanelBodyY,
                 duration: this.liftSpeed,
                 ease: 'ease-out'
             });

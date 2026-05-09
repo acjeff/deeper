@@ -187,6 +187,7 @@ export default class ControlsManager {
         this.game.showInteractionPrompt = false;
 
         this.game.physics.overlap(this.game.player, this.game.interactableGroup, (obj1, obj2) => {
+            this.game.interactionText = obj2?.tileRef?.interactionText || 'Interact';
             this.game.showInteractionPrompt = () => obj2?.tileRef?.callCrane();
         });
 
