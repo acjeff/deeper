@@ -21,6 +21,11 @@ export default class ControlsManager {
                     this.game.showInteractionPrompt();
                 }
             }
+            if (e.key === "q") {
+                if (this.game.showSecondaryInteractionPrompt) {
+                    this.game.showSecondaryInteractionPrompt();
+                }
+            }
         });
 
         window.addEventListener("mousedown", (e) => {
@@ -185,10 +190,17 @@ export default class ControlsManager {
             this.game.isFloating = true;
         });
         this.game.showInteractionPrompt = false;
+        this.game.showSecondaryInteractionPrompt = null;
+        this.game.secondaryInteractionText = null;
 
         this.game.physics.overlap(this.game.player, this.game.interactableGroup, (obj1, obj2) => {
-            this.game.interactionText = obj2?.tileRef?.interactionText || 'Interact';
-            this.game.showInteractionPrompt = () => obj2?.tileRef?.callCrane();
+            const ref = obj2?.tileRef;
+            this.game.interactionText = ref?.interactionText || 'Interact';
+            this.game.showInteractionPrompt = () => ref?.callCrane();
+            if (ref?.secondaryAction) {
+                this.game.secondaryInteractionText = ref.secondaryInteractionText || null;
+                this.game.showSecondaryInteractionPrompt = () => ref.secondaryAction();
+            }
         });
 
         this.game.mineCartGroup.getChildren().forEach(child => {
@@ -290,7 +302,7 @@ export default class ControlsManager {
             const playerY = this.game.player.body.y - 5;
 
             const textX = playerX;
-            const textY = playerY - 5;
+            const textY = playerY - (this.game.secondaryInteractionText ? 9 : 5);
 
             const style = {
                 font: '3px',
@@ -299,11 +311,17 @@ export default class ControlsManager {
                 padding: {left: 3, right: 3, top: 2, bottom: 1}
             };
 
+            const primary = `E to ${this.game.interactionText || 'Interact'}`;
+            const secondary = this.game.secondaryInteractionText
+                ? `\nQ to ${this.game.secondaryInteractionText}`
+                : '';
+            const promptText = primary + secondary;
+
             if (!this.interactionText) {
-                this.interactionText = this.game.add.text(textX, textY, `E to ${this.game.interactionText || 'Interact'}`, style);
+                this.interactionText = this.game.add.text(textX, textY, promptText, style);
                 // this.interactionText.setOrigin(0.5);
             } else {
-                this.interactionText.setText(`E to ${this.game.interactionText || 'Interact'}`);
+                this.interactionText.setText(promptText);
                 this.interactionText.setPosition(textX, textY);
                 this.interactionText.setDepth(999999);
             }

@@ -10,8 +10,26 @@ export class LiftControl extends Tile {
         this.game.craneManager.moveTo(this.worldY, this);
     }
 
+    teleportToLift() {
+        const cm = this.game.craneManager;
+        if (!cm) return;
+        // Land the player just above the platform's collider top so gravity
+        // settles them onto the platform and the existing collider takes over.
+        const x = cm.craneFlat.x;
+        const y = cm.craneFlat.body.y - 6;
+        this.game.playerManager.teleportTo(x, y);
+    }
+
     get interactionText() {
         return 'Call Lift';
+    }
+
+    get secondaryInteractionText() {
+        return 'Teleport to Lift';
+    }
+
+    secondaryAction() {
+        this.teleportToLift();
     }
 
     moving(direction) {
