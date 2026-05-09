@@ -78,86 +78,112 @@ export class Breakable extends Tile {
         const x = this.worldX - half;
         const y = this.worldY - half;
 
-        // Round corners only where two adjacent sides are both exposed —
-        // these are real cave corners. Internal corners stay sharp so
-        // stacks of soil don't develop visible seams.
-        const r = 2;
-        const tl = (top && left) ? r : 0;
-        const tr = (top && right) ? r : 0;
-        const br = (bottom && right) ? r : 0;
-        const bl = (bottom && left) ? r : 0;
-
+        // Sharp pixel-art body. Edges get small deterministic 1px bumps
+        // and erosions on sides that face air — adjacent tiles' bumps
+        // don't have to align, which breaks the grid alignment naturally.
         g.fillStyle(this.tileBaseColor, 1);
-        g.fillRoundedRect(x, y, ts, ts, {tl, tr, br, bl});
+        g.fillRect(x, y, ts, ts);
 
-        // Skip extra decoration on coal — its overlay sprite covers most
-        // of the surface area anyway.
-        if (!this.tileDetails.type) {
-            // Speckles: small darker dots scattered across the body.
-            const speckleHex = hexStringToInt(darkenColor(this.tileBaseColor, 25));
-            const speckleCount = 1 + Math.floor(this.posHash(2) * 3);
-            for (let i = 0; i < speckleCount; i++) {
-                const sx = (this.posHash(10 + i) - 0.5) * (ts - 3);
-                const sy = (this.posHash(20 + i) - 0.5) * (ts - 3);
-                const size = 0.4 + this.posHash(30 + i) * 0.7;
-                g.fillStyle(speckleHex, 0.8);
-                g.fillCircle(this.worldX + sx, this.worldY + sy, size);
-            }
+        if (this.tileDetails.type) return; // coal — overlay covers the rest
 
-            // Grass tufts on the topmost soil rows where the sky meets the surface.
-            const aboveGroundY = this.game.aboveGround * ts;
-            const isNearSurface = this.worldY >= aboveGroundY && this.worldY <= aboveGroundY + ts * 4;
-            if (top && isNearSurface) {
-                const tuftCount = 3 + Math.floor(this.posHash(50) * 3);
-                for (let i = 0; i < tuftCount; i++) {
-                    const tx = x + 1 + this.posHash(60 + i) * (ts - 2);
-                    const tHeight = 1.2 + this.posHash(70 + i) * 1.8;
-                    const grassShade = this.posHash(80 + i) < 0.5 ? 0x6e9c47 : 0x7faa53;
-                    g.fillStyle(grassShade, 1);
-                    g.fillTriangle(
-                        tx - 0.55, y + 0.5,
-                        tx + 0.55, y + 0.5,
-                        tx, y - tHeight
-                    );
-                }
-            }
+        const erodeColor = hexStringToInt(darkenColor(this.tileBaseColor, 35));
 
-            // Embedded curiosities: rare worms and fossils. Stable per tile
-            // via the position hash.
-            const detailRoll = this.posHash(100);
-            if (detailRoll < 0.04) {
-                const detailType = this.posHash(101);
-                if (detailType < 0.5) this.drawWorm(g);
-                else this.drawFossil(g);
-            } else if (detailRoll < 0.07) {
-                this.drawPebbleCluster(g);
+        // Helper: place a 1px nub just outside the tile in tile-base colour,
+        // and a 1px darker erosion just inside, at hash-positioned spots.
+        const decorateEdge = (axis, edgeOpen, salt) => {
+            if (!edgeOpen) return;
+            // 0-2 nubs sticking out
+            const nubCount = Math.floor(this.posHash(salt) * 2.6);
+            for (let i = 0; i < nubCount; i++) {
+                const t = Math.floor(this.posHash(salt + 10 + i) * (ts - 2)) + 1;
+                let px, py;
+                if (axis === 'top')    { px = x + t;       py = y - 1; }
+                if (axis === 'bottom') { px = x + t;       py = y + ts; }
+                if (axis === 'left')   { px = x - 1;       py = y + t; }
+                if (axis === 'right')  { px = x + ts;      py = y + t; }
+                g.fillStyle(this.tileBaseColor, 1);
+                g.fillRect(px, py, 1, 1);
             }
+            // 1-3 erosions just inside the body
+            const eroCount = 1 + Math.floor(this.posHash(salt + 20) * 2);
+            for (let i = 0; i < eroCount; i++) {
+                const t = Math.floor(this.posHash(salt + 30 + i) * (ts - 2)) + 1;
+                let px, py;
+                if (axis === 'top')    { px = x + t;       py = y; }
+                if (axis === 'bottom') { px = x + t;       py = y + ts - 1; }
+                if (axis === 'left')   { px = x;           py = y + t; }
+                if (axis === 'right')  { px = x + ts - 1;  py = y + t; }
+                g.fillStyle(erodeColor, 0.9);
+                g.fillRect(px, py, 1, 1);
+            }
+        };
+        decorateEdge('top', top, 200);
+        decorateEdge('right', right, 220);
+        decorateEdge('bottom', bottom, 240);
+        decorateEdge('left', left, 260);
+
+        // Speckles for organic texture inside the body.
+        const speckleHex = hexStringToInt(darkenColor(this.tileBaseColor, 22));
+        const speckleCount = 1 + Math.floor(this.posHash(2) * 3);
+        for (let i = 0; i < speckleCount; i++) {
+            const sx = (this.posHash(10 + i) - 0.5) * (ts - 3);
+            const sy = (this.posHash(20 + i) - 0.5) * (ts - 3);
+            g.fillStyle(speckleHex, 0.75);
+            g.fillRect(Math.round(this.worldX + sx), Math.round(this.worldY + sy), 1, 1);
+        }
+
+        // Grass tufts on the topmost soil rows where the sky meets the surface.
+        const aboveGroundY = this.game.aboveGround * ts;
+        const isNearSurface = this.worldY >= aboveGroundY && this.worldY <= aboveGroundY + ts * 4;
+        if (top && isNearSurface) {
+            const tuftCount = 2 + Math.floor(this.posHash(50) * 3);
+            for (let i = 0; i < tuftCount; i++) {
+                const tx = x + 1 + this.posHash(60 + i) * (ts - 2);
+                const tHeight = 1 + this.posHash(70 + i) * 1.5;
+                const grassShade = this.posHash(80 + i) < 0.5 ? 0x6e9c47 : 0x7faa53;
+                g.fillStyle(grassShade, 1);
+                g.fillTriangle(
+                    tx - 0.5, y + 0.5,
+                    tx + 0.5, y + 0.5,
+                    tx, y - tHeight
+                );
+            }
+        }
+
+        // Embedded curiosities — rare and small.
+        const detailRoll = this.posHash(100);
+        if (detailRoll < 0.04) {
+            const detailType = this.posHash(101);
+            if (detailType < 0.5) this.drawWorm(g);
+            else this.drawFossil(g);
+        } else if (detailRoll < 0.07) {
+            this.drawPebbleCluster(g);
         }
     }
 
     drawWorm(g) {
         const cx = this.worldX;
-        const cy = this.worldY + (this.posHash(112) - 0.5) * 2;
+        const cy = this.worldY + (this.posHash(112) - 0.5) * 1.4;
         const wormColor = 0xc9846f;
-        const startX = cx - 3 + this.posHash(110) * 0.6;
-        const endX = cx + 2.4 + this.posHash(113) * 0.6;
+        const startX = cx - 1.8 + this.posHash(110) * 0.4;
+        const endX = cx + 1.6 + this.posHash(113) * 0.4;
         const phase = this.posHash(114) * Math.PI * 2;
-        const amp = 1.2 + this.posHash(115) * 0.6;
-        const segments = 14;
-        g.lineStyle(0.9, wormColor, 0.95);
+        const amp = 0.6 + this.posHash(115) * 0.4;
+        const segments = 8;
+        g.lineStyle(0.6, wormColor, 0.95);
         g.beginPath();
         g.moveTo(startX, cy);
         for (let i = 1; i <= segments; i++) {
             const t = i / segments;
-            const x = startX + (endX - startX) * t;
+            const wx = startX + (endX - startX) * t;
             const wave = Math.sin(t * Math.PI * 2.2 + phase) * amp;
-            g.lineTo(x, cy + wave);
+            g.lineTo(wx, cy + wave);
         }
         g.strokePath();
-        // Tiny head dot at the end
-        g.fillStyle(wormColor, 1);
+        // Tiny head pixel
         const headWave = Math.sin(Math.PI * 2.2 + phase) * amp;
-        g.fillCircle(endX, cy + headWave, 0.55);
+        g.fillStyle(wormColor, 1);
+        g.fillRect(Math.round(endX - 0.5), Math.round(cy + headWave - 0.5), 1, 1);
     }
 
     drawFossil(g) {
@@ -166,25 +192,25 @@ export class Breakable extends Tile {
         const baseAngle = (this.posHash(120) - 0.5) * 0.9;
         const cos = Math.cos(baseAngle);
         const sin = Math.sin(baseAngle);
-        g.fillStyle(0xd9c4a0, 0.95);
-        // Vertebrae spaced along a slightly curved spine.
-        for (let i = 0; i < 5; i++) {
-            const t = (i - 2) * 1.2;
-            const wobble = Math.sin(i * 0.9 + this.posHash(121) * 6) * 0.4;
-            const px = cx + cos * t - sin * wobble;
-            const py = cy + sin * t + cos * wobble;
-            g.fillCircle(px, py, 0.65);
+        const boneColor = 0xd9c4a0;
+        // Three vertebrae as 1px squares along a slightly curved spine.
+        g.fillStyle(boneColor, 0.95);
+        for (let i = 0; i < 3; i++) {
+            const t = (i - 1) * 1.1;
+            const px = cx + cos * t;
+            const py = cy + sin * t;
+            g.fillRect(Math.round(px - 0.5), Math.round(py - 0.5), 1, 1);
         }
-        // Two ribbon-rib hints either side of the spine.
-        g.lineStyle(0.45, 0xd9c4a0, 0.7);
+        // Two short rib hints
+        g.lineStyle(0.4, boneColor, 0.7);
         for (let side = -1; side <= 1; side += 2) {
             g.beginPath();
-            for (let i = -2; i <= 2; i++) {
-                const t = i * 1.2;
-                const px = cx + cos * t - sin * 1.2 * side;
-                const py = cy + sin * t + cos * 1.2 * side;
-                if (i === -2) g.moveTo(px, py); else g.lineTo(px, py);
-            }
+            const startX = cx - sin * 0.7 * side;
+            const startY = cy + cos * 0.7 * side;
+            const endX = cx + cos * 1.0 - sin * 1.4 * side;
+            const endY = cy + sin * 1.0 + cos * 1.4 * side;
+            g.moveTo(startX, startY);
+            g.lineTo(endX, endY);
             g.strokePath();
         }
     }
@@ -192,14 +218,13 @@ export class Breakable extends Tile {
     drawPebbleCluster(g) {
         const cx = this.worldX;
         const cy = this.worldY;
-        const pebbleHex = hexStringToInt(darkenColor(this.tileBaseColor, 38));
-        const count = 3 + Math.floor(this.posHash(130) * 2);
+        const pebbleHex = hexStringToInt(darkenColor(this.tileBaseColor, 40));
+        const count = 2 + Math.floor(this.posHash(130) * 2);
         g.fillStyle(pebbleHex, 0.95);
         for (let i = 0; i < count; i++) {
-            const px = cx + (this.posHash(131 + i) - 0.5) * 5;
-            const py = cy + (this.posHash(141 + i) - 0.5) * 5;
-            const r = 0.5 + this.posHash(151 + i) * 0.6;
-            g.fillCircle(px, py, r);
+            const px = cx + (this.posHash(131 + i) - 0.5) * 4;
+            const py = cy + (this.posHash(141 + i) - 0.5) * 4;
+            g.fillRect(Math.round(px - 0.5), Math.round(py - 0.5), 1, 1);
         }
     }
 

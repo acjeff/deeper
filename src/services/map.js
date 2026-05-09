@@ -524,7 +524,6 @@ export default class MapService {
         // Prevent duplicate rendering of chunks
         if (!this.game.grid[chunkKey] || this.game.loadedChunks.has(chunkKey)) return;
 
-        const newTilePositions = [];
         for (let y = 0; y < this.game.chunkSize; y++) {
             for (let x = 0; x < this.game.chunkSize; x++) {
                 let worldX = (cx + x) * this.game.tileSize;
@@ -532,18 +531,12 @@ export default class MapService {
                 let tileType = this.game.grid[chunkKey][y][x];
 
                 this.placeObject(tileType, worldX, worldY, {chunkKey: chunkKey, cellX: x, cellY: y});
-                newTilePositions.push({worldX, worldY});
             }
         }
-
-        // Once the new chunk is in place, ask each new tile's neighbours to
-        // re-evaluate their edges. Tiles at the chunk boundary in adjacent
-        // already-loaded chunks were drawn assuming this region was empty.
-        this.game.time.delayedCall(100, () => {
-            newTilePositions.forEach(({worldX, worldY}) => {
-                this.refreshNeighborEdges(worldX, worldY);
-            });
-        });
+        // Each new tile already self-evaluates its edges shortly after
+        // creation via its own delayed callback. We deliberately skip a
+        // bulk neighbour refresh here — it caused a frame hitch on chunk
+        // load, and any far-side artefact is outside the lit view radius.
     }
 
     unloadChunk(chunkKey) {
