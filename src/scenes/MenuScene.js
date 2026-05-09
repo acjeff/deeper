@@ -20,14 +20,14 @@ export default class MenuScene extends Phaser.Scene {
         this.buildFooter();
 
         this.scale.on("resize", this.handleResize, this);
-        this.events.once("shutdown", () => this.scale.off("resize", this.handleResize, this));
 
         this.showAuthState("loading");
 
+        let unsubscribeAuth = null;
         if (window.electronAPI?.isElectron) {
             this.updateUIForLoggedInUser();
         } else {
-            auth.onAuthStateChanged((user) => {
+            unsubscribeAuth = auth.onAuthStateChanged((user) => {
                 if (user) {
                     this.updateUIForLoggedInUser(user);
                 } else {
@@ -35,6 +35,11 @@ export default class MenuScene extends Phaser.Scene {
                 }
             });
         }
+
+        this.events.once("shutdown", () => {
+            this.scale.off("resize", this.handleResize, this);
+            if (unsubscribeAuth) unsubscribeAuth();
+        });
     }
 
     computeLayout() {
@@ -44,7 +49,6 @@ export default class MenuScene extends Phaser.Scene {
             w,
             h,
             cx: w / 2,
-            cy: h / 2,
             titleY: Math.max(120, h * 0.22),
             panelY: h * 0.62,
             panelW: Math.min(460, w * 0.85),
