@@ -11,7 +11,7 @@
 //   the "tile seam" grain that makes a wall read as one mass
 // - 3 variants per edge mask for visual variety
 
-const VARIANT_COUNT = 3;
+const VARIANT_COUNT = 6;
 
 function makeRng(seed) {
     let s = seed | 0;
@@ -221,16 +221,22 @@ export default class TileTextureAtlas {
         seam(0, ts - 1,        !bottom && !left);
         seam(ts - 1, ts - 1,   !bottom && !right);
 
-        // Pass 3: body speckles — small interior pixels (not on edge) of
-        // mixed darker/lighter shades for soil grain.
-        const speckleCount = 3 + Math.floor(rng() * 3);
+        // Pass 3: body speckles — small interior pixels (not on edge) in
+        // a few different shades for richer soil grain. More variation per
+        // tile makes a wall of same-mask tiles feel less copy-paste.
+        const speckleCount = 6 + Math.floor(rng() * 4);
+        const dark3 = darken(baseColor, 18);
         for (let i = 0; i < speckleCount; i++) {
             const sx = 1 + Math.floor(rng() * (ts - 2));
             const sy = 1 + Math.floor(rng() * (ts - 2));
             if (!filled[sy][sx]) continue;
             if (this.isSilhouetteEdge(filled, sx, sy, mask)) continue;
-            const useLight = rng() > 0.78;
-            ctx.fillStyle = toCss(useLight ? hi : lo);
+            const shade = rng();
+            let color;
+            if (shade > 0.82) color = hi;
+            else if (shade > 0.55) color = dark3;
+            else color = lo;
+            ctx.fillStyle = toCss(color);
             ctx.fillRect(sx, yOff + sy, 1, 1);
         }
 

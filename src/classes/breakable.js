@@ -217,6 +217,18 @@ export class Breakable extends Tile {
         this.tileImage.setOrigin(0.5, 0.5);
         this.tileImage.setDepth(0);
 
+        // Per-tile tint jitter so neighbouring tiles of the same mask+variant
+        // still look subtly different. Tint multiplies the texture so we
+        // can only darken; range is a gentle ~88-100% brightness with a
+        // small warm/cool shift.
+        const baseT = 0.88 + this.posHash(500) * 0.12;
+        const warmShift = (this.posHash(501) - 0.5) * 0.05;
+        const tr = Math.max(0, Math.min(1, baseT + warmShift));
+        const tg = Math.max(0, Math.min(1, baseT));
+        const tb = Math.max(0, Math.min(1, baseT - warmShift));
+        const tintInt = (Math.round(tr * 255) << 16) | (Math.round(tg * 255) << 8) | Math.round(tb * 255);
+        this.tileImage.setTint(tintInt);
+
         if (this.tileDetails.type) {
             this.image = this.game.soilTypes[this.tileDetails.type].image;
             this.overlaySprite = this.game.add.image(this.worldX, this.worldY, this.image);
