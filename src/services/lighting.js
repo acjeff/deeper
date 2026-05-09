@@ -263,7 +263,10 @@ export default class LightingManager {
 
         const ctx = this.game.lightCtx;
 
-        const cachedCanvas = this.cachedCanvases[light.color] || this.cachedCanvases['255,255,255'];
+        let cachedCanvas = this.cachedCanvases[light.color];
+        if (!cachedCanvas) {
+            cachedCanvas = this.createCachedLightTexture(light.color, 256, 10);
+        }
 
         // Soft outer bloom: gently lifts the dark in a wider area than the core light.
         // This makes lamps feel like they breathe warmth into the cave instead of
