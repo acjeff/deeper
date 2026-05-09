@@ -98,10 +98,6 @@ export default class TileTextureAtlas {
         const right = !!(mask & 2);
         const bottom = !!(mask & 4);
         const left = !!(mask & 8);
-        const innerTL = !!(mask & 16);
-        const innerTR = !!(mask & 32);
-        const innerBL = !!(mask & 64);
-        const innerBR = !!(mask & 128);
         const ts = this.tileSize;
 
         const filled = [];
@@ -125,14 +121,6 @@ export default class TileTextureAtlas {
         if (top && right)    cutCorner(ts - 1, 0, -1, 1, cornerDepth());
         if (bottom && left)  cutCorner(0, ts - 1, 1, -1, cornerDepth());
         if (bottom && right) cutCorner(ts - 1, ts - 1, -1, -1, cornerDepth());
-
-        // Single-pixel chip at each INSIDE corner — where this tile's corner
-        // pokes into a concave cave corner. The dark outline picked up by
-        // the silhouette pass naturally rounds the cave's inside corner.
-        if (innerTL) filled[0][0] = false;
-        if (innerTR) filled[0][ts - 1] = false;
-        if (innerBL) filled[ts - 1][0] = false;
-        if (innerBR) filled[ts - 1][ts - 1] = false;
 
         // Tiny edge erosion — 0-1 chips per exposed side, away from corners
         const erodeEdge = (axis, isOpen) => {
@@ -312,6 +300,60 @@ export default class TileTextureAtlas {
         ctx.clearRect(0, 0, this.tileSize, this.textureHeight);
         const filled = this.drawBody(ctx, mask, variant, this.dirtBaseColor);
         this.drawGrass(ctx, mask, variant, filled);
+        tex.refresh();
+    }
+
+    // ----- Inside-corner curves rendered into empty tiles -----
+    // When an empty tile sits in an inside cave corner (e.g. top + left
+    // neighbours and the top-left diagonal are all solid), it draws a
+    // 3-pixel L of dirt-coloured pixels in that corner so the cave's
+    // concave corner reads as rounded rather than 90°.
+
+    emptyCurveKey(mask) {
+        return `tile_emptycurve_${mask}`;
+    }
+
+    ensureEmptyCurveTexture(mask) {
+        const key = this.emptyCurveKey(mask);
+        if (this.game.textures.exists(key)) return key;
+        this.makeEmptyCurveTexture(mask, key);
+        return key;
+    }
+
+    makeEmptyCurveTexture(mask, key) {
+        const ts = this.tileSize;
+        const tex = this.game.textures.createCanvas(key, ts, ts);
+        const ctx = tex.context;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, ts, ts);
+
+        const mid = toCss(this.dirtBaseColor);
+        const outline = toCss(darken(this.dirtBaseColor, 55));
+
+        // Each set bit = a corner that needs a curve. The corner pixel is
+        // mid dirt; the two adjacent pixels along the cave wall are the
+        // dark silhouette outline so the curve blends into the dirt mass.
+        if (mask & 1) {           // top-left corner of the empty tile
+            ctx.fillStyle = mid;     ctx.fillRect(0, 0, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(1, 0, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(0, 1, 1, 1);
+        }
+        if (mask & 2) {           // top-right
+            ctx.fillStyle = mid;     ctx.fillRect(ts - 1, 0, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(ts - 2, 0, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(ts - 1, 1, 1, 1);
+        }
+        if (mask & 4) {           // bottom-left
+            ctx.fillStyle = mid;     ctx.fillRect(0, ts - 1, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(1, ts - 1, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(0, ts - 2, 1, 1);
+        }
+        if (mask & 8) {           // bottom-right
+            ctx.fillStyle = mid;     ctx.fillRect(ts - 1, ts - 1, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(ts - 2, ts - 1, 1, 1);
+            ctx.fillStyle = outline; ctx.fillRect(ts - 1, ts - 2, 1, 1);
+        }
+
         tex.refresh();
     }
 }
