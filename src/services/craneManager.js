@@ -69,6 +69,12 @@ export default class CraneManager {
 
         this.controlPanel.tileRef = {
             interactionText: 'Use Terminal',
+            // getAdjacentBlocks scans every entityChildren group, so the
+            // panel can show up as a neighbour of a real tile being
+            // destroyed; that path reads tileDetails.attachedTo, so we
+            // need an object here even though the panel never participates
+            // in attachment chains.
+            tileDetails: {},
             callCrane: () => this.liftTerminal.toggle(),
             moving: (direction) => {
                 if (direction === 'up') this.controlPanel.setFrame(1);
