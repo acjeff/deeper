@@ -8,9 +8,11 @@ function degrees_to_radians(degrees) {
 export default class CraneManager {
     constructor(scene) {
         // Lift moves at a constant velocity: travel time scales with the
-        // distance covered. Tuned so a one-level jump (~300 units) takes a
-        // little over a second; full-shaft moves take proportionally longer.
-        this.liftMsPerUnit = 4;
+        // distance covered. Kept just below the player's terminal fall
+        // velocity (~100 px/s) so the platform never out-paces a falling
+        // player and the ride feels like a deliberate descent. Higher
+        // value = slower lift.
+        this.liftMsPerUnit = 12;
         // Floor so very short corrections still animate visibly instead of
         // snapping in a single frame.
         this.liftMinDurationMs = 150;
