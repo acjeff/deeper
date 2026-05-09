@@ -270,8 +270,9 @@ export default class GameScene extends Phaser.Scene {
                     const liquidChildren = this.liquidGroup.getChildren();
                     const railChildren = this.railGroup.getChildren();
                     const soilChildren = this.soilGroup.getChildren();
+                    const buttressChildren = this.buttressGroup.getChildren();
                     // Combine arrays using spread syntax (more readable and possibly more optimized)
-                    const softSoil = [...emptyChildren, ...lightChildren, ...liquidChildren, ...railChildren, ...soilChildren];
+                    const softSoil = [...emptyChildren, ...lightChildren, ...liquidChildren, ...railChildren, ...soilChildren, ...buttressChildren];
                     const total = softSoil.length;
 
                     // Process a batch of blocks using a for loop.

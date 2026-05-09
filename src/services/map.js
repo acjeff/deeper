@@ -470,19 +470,28 @@ export default class MapService {
     }
 
     refreshNeighborEdges(worldX, worldY) {
-        // Refresh all 8 surrounding tiles so inner-corner diagonals update too.
+        // Refresh all 8 surrounding solid tiles so silhouette edges and
+        // inner-corner curves update on dig/place.
         const ts = this.game.tileSize;
-        if (!this.game.soilGroup?.children) return;
-        this.game.soilGroup.children.each(entity => {
-            const dx = entity.x - worldX;
-            const dy = entity.y - worldY;
-            if ((dx === 0 && dy === 0) || Math.abs(dx) > ts || Math.abs(dy) > ts) return;
-            const ref = entity.tileRef;
-            if (ref?.redrawTile) {
-                ref.lastEdgeMask = -1;
-                ref.redrawTile();
-            }
-        });
+        const groups = [this.game.soilGroup, this.game.buttressGroup];
+        for (const group of groups) {
+            if (!group?.children) continue;
+            group.children.each(entity => {
+                const dx = entity.x - worldX;
+                const dy = entity.y - worldY;
+                if ((dx === 0 && dy === 0) || Math.abs(dx) > ts || Math.abs(dy) > ts) return;
+                const ref = entity.tileRef;
+                if (!ref) return;
+                if (ref.redrawTile) {
+                    ref.lastEdgeMask = -1;
+                    ref.redrawTile();
+                }
+                if (ref.refreshCurveOverlay) {
+                    ref.lastCurveMask = -1;
+                    ref.refreshCurveOverlay();
+                }
+            });
+        }
     }
 
     getTileAt(chunkKey, cellY, cellX) {

@@ -23,14 +23,29 @@ export class Breakable extends Tile {
     }
 
     checkState() {
-        // Self-healing edge refresh. Cheap because redrawTile early-outs if
-        // the mask hasn't changed.
+        // Self-healing refresh. Cheap because redrawTile and
+        // refreshCurveOverlay early-out when state hasn't changed.
         //
         // We deliberately skip checkStateWrapper here — that wrapper is
         // designed for tiles that loose soil falls INTO (empty/light/rail).
         // It transforms its target into a falling block, which is the wrong
         // behaviour for actual soil that already occupies its cell.
         this.redrawTile();
+        this.refreshCurveOverlay();
+    }
+
+    refreshCurveOverlay() {
+        if (!this.curveOverlay) return;
+        const mask = this.game.tileAtlas.cornerCurveMaskFor(this.worldX, this.worldY);
+        if (mask === this.lastCurveMask) return;
+        this.lastCurveMask = mask;
+        if (mask === 0) {
+            this.curveOverlay.setVisible(false);
+            return;
+        }
+        const key = this.game.tileAtlas.ensureCornerCurveTexture(mask);
+        if (this.curveOverlay.texture.key !== key) this.curveOverlay.setTexture(key);
+        this.curveOverlay.setVisible(true);
     }
 
     addToGroup() {
@@ -241,15 +256,28 @@ export class Breakable extends Tile {
         this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
         this.crackSprite.setDepth(4);
 
+        // Inside-corner curve overlay — small Image rendered above the body
+        // depth, with curve pixels in its corner overhang regions that
+        // extend INTO adjacent open diagonal cells. Uses the dark outline
+        // colour so it blends with the surrounding tile borders.
+        this.curveOverlay = this.game.add.image(this.worldX, this.worldY, atlas.cornerCurveKey(0));
+        this.curveOverlay.setOrigin(0.5, 0.5);
+        this.curveOverlay.setDepth(0.5);
+        this.curveOverlay.setVisible(false);
+        this.lastCurveMask = -1;
+
         this.fadeElements = [this.tileImage];
         this.lastEdgeMask = -1;
 
         // Initial draw — neighbours may not exist yet, so do an initial
         // pass and a delayed follow-up.
         this.redrawTile();
+        this.refreshCurveOverlay();
         this.edgeRefreshDelay = this.game.time.delayedCall(80, () => {
             this.lastEdgeMask = -1;
+            this.lastCurveMask = -1;
             this.redrawTile();
+            this.refreshCurveOverlay();
         });
 
         // Rare embedded detail: drawn once as a tiny Graphics overlay since
@@ -266,6 +294,7 @@ export class Breakable extends Tile {
         this.sprite.destroy();
         if (this.overlaySprite) this.overlaySprite.destroy();
         if (this.tileImage) this.tileImage.destroy();
+        if (this.curveOverlay) this.curveOverlay.destroy();
         if (this.detailGraphics) this.detailGraphics.destroy();
         if (this.edgeRefreshDelay) this.edgeRefreshDelay.remove();
     }

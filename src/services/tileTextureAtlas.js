@@ -303,57 +303,106 @@ export default class TileTextureAtlas {
         tex.refresh();
     }
 
-    // ----- Inside-corner curves rendered into empty tiles -----
-    // When an empty tile sits in an inside cave corner (e.g. top + left
-    // neighbours and the top-left diagonal are all solid), it draws a
-    // 3-pixel L of dirt-coloured pixels in that corner so the cave's
-    // concave corner reads as rounded rather than 90°.
+    // ----- Corner curve overlays for solid tiles -----
+    // Each solid tile can add a small overlay Image centred on its world
+    // position. The overlay's texture is the same size as the tile body
+    // plus a 2px overhang on each side (so e.g. 14x14 for a 10px tile).
+    // Curve pixels are drawn ONLY in the corner overhang regions — never
+    // in the body region — so the overlay sits cleanly outside the
+    // tile's bounds, extending into the adjacent diagonal cell.
+    //
+    // Pixels use the dark outline colour so they blend with the
+    // surrounding tile silhouette borders regardless of tile type.
 
-    emptyCurveKey(mask) {
-        return `tile_emptycurve_${mask}`;
+    cornerCurveOverhang() {
+        return 2;
     }
 
-    ensureEmptyCurveTexture(mask) {
-        const key = this.emptyCurveKey(mask);
-        if (this.game.textures.exists(key)) return key;
-        this.makeEmptyCurveTexture(mask, key);
+    cornerCurveSize() {
+        return this.tileSize + this.cornerCurveOverhang() * 2;
+    }
+
+    cornerCurveKey(mask) {
+        return `tile_corner_curve_${mask}`;
+    }
+
+    ensureCornerCurveTexture(mask) {
+        const key = this.cornerCurveKey(mask);
+        if (!this.game.textures.exists(key)) this.makeCornerCurveTexture(mask, key);
         return key;
     }
 
-    makeEmptyCurveTexture(mask, key) {
-        const ts = this.tileSize;
-        const tex = this.game.textures.createCanvas(key, ts, ts);
+    makeCornerCurveTexture(mask, key) {
+        const size = this.cornerCurveSize();
+        const tex = this.game.textures.createCanvas(key, size, size);
         const ctx = tex.context;
         ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, ts, ts);
+        ctx.clearRect(0, 0, size, size);
 
-        const mid = toCss(this.dirtBaseColor);
         const outline = toCss(darken(this.dirtBaseColor, 55));
+        ctx.fillStyle = outline;
 
-        // Each set bit = a corner that needs a curve. The corner pixel is
-        // mid dirt; the two adjacent pixels along the cave wall are the
-        // dark silhouette outline so the curve blends into the dirt mass.
-        if (mask & 1) {           // top-left corner of the empty tile
-            ctx.fillStyle = mid;     ctx.fillRect(0, 0, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(1, 0, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(0, 1, 1, 1);
+        // 3-pixel L per corner. The "near" pixel sits diagonally adjacent
+        // to the tile body; the other two extend along the cave walls
+        // formed by the two solid neighbours.
+        if (mask & 1) {                         // top-left
+            ctx.fillRect(1, 1, 1, 1);
+            ctx.fillRect(0, 1, 1, 1);
+            ctx.fillRect(1, 0, 1, 1);
         }
-        if (mask & 2) {           // top-right
-            ctx.fillStyle = mid;     ctx.fillRect(ts - 1, 0, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(ts - 2, 0, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(ts - 1, 1, 1, 1);
+        if (mask & 2) {                         // top-right
+            ctx.fillRect(size - 2, 1, 1, 1);
+            ctx.fillRect(size - 1, 1, 1, 1);
+            ctx.fillRect(size - 2, 0, 1, 1);
         }
-        if (mask & 4) {           // bottom-left
-            ctx.fillStyle = mid;     ctx.fillRect(0, ts - 1, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(1, ts - 1, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(0, ts - 2, 1, 1);
+        if (mask & 4) {                         // bottom-left
+            ctx.fillRect(1, size - 2, 1, 1);
+            ctx.fillRect(0, size - 2, 1, 1);
+            ctx.fillRect(1, size - 1, 1, 1);
         }
-        if (mask & 8) {           // bottom-right
-            ctx.fillStyle = mid;     ctx.fillRect(ts - 1, ts - 1, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(ts - 2, ts - 1, 1, 1);
-            ctx.fillStyle = outline; ctx.fillRect(ts - 1, ts - 2, 1, 1);
+        if (mask & 8) {                         // bottom-right
+            ctx.fillRect(size - 2, size - 2, 1, 1);
+            ctx.fillRect(size - 1, size - 2, 1, 1);
+            ctx.fillRect(size - 2, size - 1, 1, 1);
         }
 
         tex.refresh();
+    }
+
+    // True when the cell at (worldX, worldY) is a solid wall-forming tile.
+    isSolidAt(worldX, worldY) {
+        const ts = this.tileSize;
+        const cs = this.game.chunkSize;
+        const gcx = Math.floor(worldX / ts);
+        const gcy = Math.floor(worldY / ts);
+        const chunkX = Math.floor(gcx / cs) * cs;
+        const chunkY = Math.floor(gcy / cs) * cs;
+        const chunk = this.game.grid[`${chunkX}_${chunkY}`];
+        if (!chunk) return false;
+        const lx = ((gcx % cs) + cs) % cs;
+        const ly = ((gcy % cs) + cs) % cs;
+        const tile = chunk[ly]?.[lx];
+        if (!tile) return false;
+        // Anything that forms part of a continuous wall mass.
+        return tile.id === 1 || tile.id === 5;
+    }
+
+    // For a tile centred at (worldX, worldY): compute the 4-bit mask of
+    // corners where this tile is at an inside cave corner — both adjacent
+    // sides are solid neighbours AND the diagonal cell is open. These are
+    // the corners where the tile should extend curve pixels into the
+    // diagonal open cell.
+    cornerCurveMaskFor(worldX, worldY) {
+        const ts = this.tileSize;
+        const top = this.isSolidAt(worldX, worldY - ts);
+        const right = this.isSolidAt(worldX + ts, worldY);
+        const bottom = this.isSolidAt(worldX, worldY + ts);
+        const left = this.isSolidAt(worldX - ts, worldY);
+        let mask = 0;
+        if (top && left && !this.isSolidAt(worldX - ts, worldY - ts)) mask |= 1;
+        if (top && right && !this.isSolidAt(worldX + ts, worldY - ts)) mask |= 2;
+        if (bottom && left && !this.isSolidAt(worldX - ts, worldY + ts)) mask |= 4;
+        if (bottom && right && !this.isSolidAt(worldX + ts, worldY + ts)) mask |= 8;
+        return mask;
     }
 }
