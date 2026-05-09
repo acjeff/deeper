@@ -1,5 +1,5 @@
 import {Tile} from "./tile";
-import {darkenColor, lightenColor} from "../services/colourManager";
+import {darkenColor} from "../services/colourManager";
 
 export class Breakable extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
@@ -33,26 +33,14 @@ export class Breakable extends Tile {
     }
 
     createSprite() {
-        const baseHex = darkenColor(0x6e4525, parseInt(this.tileDetails.strength) / 10);
+        // Per-tile lightness jitter breaks the uniform colour-field so the
+        // cave wall reads as organic dirt rather than a flat plane. Coal
+        // tiles get less jitter since their overlay dominates.
+        const jitterRange = this.tileDetails.type ? 4 : 9;
+        const jitter = Phaser.Math.Between(-jitterRange, jitterRange);
+        const baseFactor = parseInt(this.tileDetails.strength) / 10 + jitter;
+        const baseHex = darkenColor(0x6e4525, baseFactor);
         let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, baseHex);
-
-        // Soft bevel: top highlight + bottom shadow read as crumbly soil
-        // instead of flat squares. Skipped on coal (overlay covers them).
-        if (!this.tileDetails.type) {
-            const highlightHex = lightenColor(parseInt(baseHex, 16), 18);
-            const shadowHex = darkenColor(parseInt(baseHex, 16), 30);
-            const halfTile = this.game.tileSize / 2;
-            this.highlightSprite = this.game.add.rectangle(
-                this.worldX, this.worldY - halfTile + 0.5,
-                this.game.tileSize, 1, highlightHex
-            );
-            this.highlightSprite.setDepth(2);
-            this.shadowSprite = this.game.add.rectangle(
-                this.worldX, this.worldY + halfTile - 0.5,
-                this.game.tileSize, 1, shadowHex
-            );
-            this.shadowSprite.setDepth(2);
-        }
 
         if (this.tileDetails.type) {
             this.image = this.game.soilTypes[this.tileDetails.type].image;
@@ -66,8 +54,6 @@ export class Breakable extends Tile {
         this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
         this.crackSprite.setDepth(4);
         this.fadeElements = [baseSprite];
-        if (this.highlightSprite) this.fadeElements.push(this.highlightSprite);
-        if (this.shadowSprite) this.fadeElements.push(this.shadowSprite);
 
         return baseSprite;
     }
@@ -78,8 +64,6 @@ export class Breakable extends Tile {
         this.crackSprite.destroy();
         this.sprite.destroy();
         if (this.overlaySprite) this.overlaySprite.destroy();
-        if (this.highlightSprite) this.highlightSprite.destroy();
-        if (this.shadowSprite) this.shadowSprite.destroy();
     }
 
     destroy(prefs) {
@@ -120,7 +104,6 @@ export class Breakable extends Tile {
                     this.crackSprite.setAlpha(0);
                     this.sprite.setStrokeStyle(0, 0);
                     this.game.dustEmitter.explode(50);
-                    this.game.cameras.main.shake(80, 0.0018);
                     baseCell = this.tileDetails.trapped || {...this.game.tileTypes.empty};
                     this.clicking = false;
                     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
