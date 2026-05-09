@@ -23,10 +23,13 @@ export class Breakable extends Tile {
     }
 
     checkState() {
-        this.checkStateWrapper();
-        // Cheap self-healing: re-evaluate edges so any tile whose neighbour
-        // changed without a direct refresh (e.g. cross-chunk boundary loads)
-        // still picks up the new state. Early-outs if the mask is unchanged.
+        // Self-healing edge refresh. Cheap because redrawTile early-outs if
+        // the mask hasn't changed.
+        //
+        // We deliberately skip checkStateWrapper here — that wrapper is
+        // designed for tiles that loose soil falls INTO (empty/light/rail).
+        // It transforms its target into a falling block, which is the wrong
+        // behaviour for actual soil that already occupies its cell.
         this.redrawTile();
     }
 
