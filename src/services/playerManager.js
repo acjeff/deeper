@@ -197,10 +197,13 @@ export default class PlayerManager {
         if (grounded && !this.wasGrounded && this.lastAirVy > 60) {
             const intensity = Math.min(1, this.lastAirVy / 220);
             const head = this.game.playerHead;
-            this.game.tweens.killTweensOf([player, head]);
+            // Stop only our own scale tweens — using killTweensOf on the
+            // sprite would also kill the spawn-in alpha fade from teleportTo.
+            if (this.squashTween) this.squashTween.stop();
+            if (this.headSquashTween) this.headSquashTween.stop();
             const stretch = 1 + 0.18 * intensity;
             const squash = 1 - 0.22 * intensity;
-            this.game.tweens.add({
+            this.squashTween = this.game.tweens.add({
                 targets: player,
                 scaleX: this.playerBaseScaleX * stretch,
                 scaleY: this.playerBaseScaleY * squash,
@@ -212,7 +215,7 @@ export default class PlayerManager {
                     player.scaleY = this.playerBaseScaleY;
                 }
             });
-            this.game.tweens.add({
+            this.headSquashTween = this.game.tweens.add({
                 targets: head,
                 scaleX: this.headBaseScaleX * stretch,
                 scaleY: this.headBaseScaleY * squash,
