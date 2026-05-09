@@ -461,8 +461,21 @@ export default class MapService {
         this.game.grid[chunkKey][cellY][cellX] = {...tileType};
         if (cellItem?.tileRef) cellItem.tileRef.destroy(prefs);
         if (this.game.loadedChunks.has(chunkKey)) {
-            return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX}, prefs);
+            const result = this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX}, prefs);
+            this.refreshNeighborEdges(worldX, worldY);
+            return result;
         }
+    }
+
+    refreshNeighborEdges(worldX, worldY) {
+        const adj = this.getAdjacentBlocks(worldX, worldY);
+        Object.values(adj).forEach(block => {
+            const ref = block?.tileRef;
+            if (ref?.redrawTile) {
+                ref.lastEdgeMask = -1;
+                ref.redrawTile();
+            }
+        });
     }
 
     getTileAt(chunkKey, cellY, cellX) {
@@ -511,6 +524,7 @@ export default class MapService {
         // Prevent duplicate rendering of chunks
         if (!this.game.grid[chunkKey] || this.game.loadedChunks.has(chunkKey)) return;
 
+        const newTilePositions = [];
         for (let y = 0; y < this.game.chunkSize; y++) {
             for (let x = 0; x < this.game.chunkSize; x++) {
                 let worldX = (cx + x) * this.game.tileSize;
@@ -518,8 +532,18 @@ export default class MapService {
                 let tileType = this.game.grid[chunkKey][y][x];
 
                 this.placeObject(tileType, worldX, worldY, {chunkKey: chunkKey, cellX: x, cellY: y});
+                newTilePositions.push({worldX, worldY});
             }
         }
+
+        // Once the new chunk is in place, ask each new tile's neighbours to
+        // re-evaluate their edges. Tiles at the chunk boundary in adjacent
+        // already-loaded chunks were drawn assuming this region was empty.
+        this.game.time.delayedCall(100, () => {
+            newTilePositions.forEach(({worldX, worldY}) => {
+                this.refreshNeighborEdges(worldX, worldY);
+            });
+        });
     }
 
     unloadChunk(chunkKey) {
