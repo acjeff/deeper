@@ -72,7 +72,20 @@ export class Breakable extends Tile {
         const right = this.isOpenAt(this.worldX + ts, this.worldY);
         const bottom = this.isOpenAt(this.worldX, this.worldY + ts);
         const left = this.isOpenAt(this.worldX - ts, this.worldY);
-        return (top ? 1 : 0) | (right ? 2 : 0) | (bottom ? 4 : 0) | (left ? 8 : 0);
+
+        let mask = (top ? 1 : 0) | (right ? 2 : 0) | (bottom ? 4 : 0) | (left ? 8 : 0);
+
+        // Diagonal-only bits: track inner corners. A bit is set when both
+        // adjacent orthogonals are solid neighbours (so this corner is inside
+        // the cave silhouette) AND the diagonal cell is open. That's the
+        // configuration where this tile's corner pixel pokes into a concave
+        // cave corner and should be chipped to round the cave's inside.
+        if (!top && !left && this.isOpenAt(this.worldX - ts, this.worldY - ts)) mask |= 16;
+        if (!top && !right && this.isOpenAt(this.worldX + ts, this.worldY - ts)) mask |= 32;
+        if (!bottom && !left && this.isOpenAt(this.worldX - ts, this.worldY + ts)) mask |= 64;
+        if (!bottom && !right && this.isOpenAt(this.worldX + ts, this.worldY + ts)) mask |= 128;
+
+        return mask;
     }
 
     isNearSurface() {
@@ -95,7 +108,8 @@ export class Breakable extends Tile {
         const top = !!(mask & 1);
         const variant = Math.floor(this.posHash(0) * atlas.variantCount);
         const useGrass = top && this.isNearSurface();
-        const key = atlas.keyFor(useGrass ? 'grass' : 'dirt', mask, variant);
+        const kind = useGrass ? 'grass' : 'dirt';
+        const key = atlas.ensureTexture(kind, mask, variant);
         if (this.tileImage.texture.key !== key) {
             this.tileImage.setTexture(key);
         }

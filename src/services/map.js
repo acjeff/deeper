@@ -470,9 +470,14 @@ export default class MapService {
     }
 
     refreshNeighborEdges(worldX, worldY) {
-        const adj = this.getAdjacentBlocks(worldX, worldY);
-        Object.values(adj).forEach(block => {
-            const ref = block?.tileRef;
+        // Refresh all 8 surrounding tiles so inner-corner diagonals update too.
+        const ts = this.game.tileSize;
+        if (!this.game.soilGroup?.children) return;
+        this.game.soilGroup.children.each(entity => {
+            const dx = entity.x - worldX;
+            const dy = entity.y - worldY;
+            if ((dx === 0 && dy === 0) || Math.abs(dx) > ts || Math.abs(dy) > ts) return;
+            const ref = entity.tileRef;
             if (ref?.redrawTile) {
                 ref.lastEdgeMask = -1;
                 ref.redrawTile();

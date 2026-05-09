@@ -64,6 +64,9 @@ export default class TileTextureAtlas {
     }
 
     generate() {
+        // Pre-generate the simple 4-bit (no-inner-corner) cases. Inner-corner
+        // variants (mask bits 16/32/64/128) are generated lazily on first use
+        // since most aren't needed in any given playthrough.
         for (let mask = 0; mask < 16; mask++) {
             for (let variant = 0; variant < this.variantCount; variant++) {
                 this.makeDirtTexture(mask, variant);
@@ -78,6 +81,15 @@ export default class TileTextureAtlas {
         return `tile_${kind}_${mask}_${variant}`;
     }
 
+    ensureTexture(kind, mask, variant) {
+        const key = this.keyFor(kind, mask, variant);
+        if (!this.game.textures.exists(key)) {
+            if (kind === 'grass') this.makeGrassTexture(mask, variant);
+            else this.makeDirtTexture(mask, variant);
+        }
+        return key;
+    }
+
     // Build a per-pixel filled mask for the body, applying corner cuts
     // where two adjacent sides face air, plus optional edge erosion for
     // variant-level silhouette variation.
@@ -86,6 +98,10 @@ export default class TileTextureAtlas {
         const right = !!(mask & 2);
         const bottom = !!(mask & 4);
         const left = !!(mask & 8);
+        const innerTL = !!(mask & 16);
+        const innerTR = !!(mask & 32);
+        const innerBL = !!(mask & 64);
+        const innerBR = !!(mask & 128);
         const ts = this.tileSize;
 
         const filled = [];
@@ -103,12 +119,20 @@ export default class TileTextureAtlas {
             }
         };
 
-        // 1-2 deep L-shape cuts at each exposed corner
+        // 1-2 deep L-shape cuts at each exposed (outside) corner
         const cornerDepth = () => 1 + (rng() > 0.5 ? 1 : 0);
         if (top && left)     cutCorner(0, 0, 1, 1, cornerDepth());
         if (top && right)    cutCorner(ts - 1, 0, -1, 1, cornerDepth());
         if (bottom && left)  cutCorner(0, ts - 1, 1, -1, cornerDepth());
         if (bottom && right) cutCorner(ts - 1, ts - 1, -1, -1, cornerDepth());
+
+        // Single-pixel chip at each INSIDE corner — where this tile's corner
+        // pokes into a concave cave corner. The dark outline picked up by
+        // the silhouette pass naturally rounds the cave's inside corner.
+        if (innerTL) filled[0][0] = false;
+        if (innerTR) filled[0][ts - 1] = false;
+        if (innerBL) filled[ts - 1][0] = false;
+        if (innerBR) filled[ts - 1][ts - 1] = false;
 
         // Tiny edge erosion — 0-1 chips per exposed side, away from corners
         const erodeEdge = (axis, isOpen) => {
