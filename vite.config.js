@@ -9,7 +9,6 @@ export default defineConfig({
         target: "esnext"
     },
     server: {
-        open: true, // Auto-open in browser
-        debug: true  // ✅ Shows physics bodies
+        open: true
     }
 });
