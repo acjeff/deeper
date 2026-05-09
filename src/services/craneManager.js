@@ -7,7 +7,13 @@ function degrees_to_radians(degrees) {
 
 export default class CraneManager {
     constructor(scene) {
-        this.liftSpeed = 3000;
+        // Lift moves at a constant velocity: travel time scales with the
+        // distance covered. Tuned so a one-level jump (~300 units) takes a
+        // little over a second; full-shaft moves take proportionally longer.
+        this.liftMsPerUnit = 4;
+        // Floor so very short corrections still animate visibly instead of
+        // snapping in a single frame.
+        this.liftMinDurationMs = 150;
         this.game = scene;
         this.ropeColor = '0x6B3E22';
         let color = '#6b3e22'
@@ -161,11 +167,18 @@ export default class CraneManager {
         }
         this.moving = true;
 
+        const distance = Math.abs(target.craneFlatBodyY - currentBodyY);
+        const duration = Math.max(this.liftMinDurationMs, distance * this.liftMsPerUnit);
+        // Linear so velocity is constant within the trip — no easing means
+        // the platform looks like it's running on a real cable rather than
+        // a UI animation that smoothly slows to a stop.
+        const ease = 'Linear';
+
         this.game.tweens.add({
             targets: [this.craneFlat],
             y: target.craneFlatY,
-            duration: this.liftSpeed,
-            ease: 'ease-out',
+            duration,
+            ease,
             onComplete: () => {
                 liftControl.moving();
                 this.moving = false;
@@ -175,37 +188,37 @@ export default class CraneManager {
         this.game.tweens.add({
             targets: [this.craneFlat.body],
             y: target.craneFlatBodyY,
-            duration: this.liftSpeed,
-            ease: 'ease-out'
+            duration,
+            ease
         });
 
         this.game.tweens.add({
             targets: [this.ropeTwo, this.ropeThree],
             y: target.ropeTwoY,
-            duration: this.liftSpeed,
-            ease: 'ease-out'
+            duration,
+            ease
         });
 
         this.game.tweens.add({
             targets: [this.rope],
             height: target.ropeHeight,
-            duration: this.liftSpeed,
-            ease: 'ease-out'
+            duration,
+            ease
         });
 
         this.game.tweens.add({
             targets: [this.controlPanel],
             y: target.controlPanelY,
-            duration: this.liftSpeed,
-            ease: 'ease-out'
+            duration,
+            ease
         });
 
         if (this.controlPanel.body) {
             this.game.tweens.add({
                 targets: [this.controlPanel.body],
                 y: target.controlPanelBodyY,
-                duration: this.liftSpeed,
-                ease: 'ease-out'
+                duration,
+                ease
             });
         }
     }
