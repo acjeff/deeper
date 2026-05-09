@@ -267,13 +267,7 @@ export default class LiftTerminal {
         this.fields.extendIncrement.textContent = String(this.extendIncrement);
         this.fields.extendCost.textContent = String(this.extendCost);
 
-        // Levels are wall-mounted lift controls placed by the player along
-        // the shaft. The on-platform panel itself is filtered out via the
-        // isPlatformPanel marker that CraneManager sets on its sprite.
-        const levels = this.game.liftControlGroup.getChildren()
-            .filter(c => !c.isPlatformPanel)
-            .map(c => ({ entity: c, worldY: c.tileRef?.worldY ?? c.y }))
-            .sort((a, b) => a.worldY - b.worldY);
+        const levels = this._scanLevelsFromGrid();
 
         const list = this.fields.levels;
         list.innerHTML = '';
@@ -303,6 +297,48 @@ export default class LiftTerminal {
             });
             list.appendChild(btn);
         });
+    }
+
+    /**
+     * Scan the saved grid for every lift-control tile and dedupe by row.
+     *
+     * Sourcing from liftControlGroup only sees sprites in currently-loaded
+     * chunks, so faraway levels would disappear after the player descended.
+     * The grid is the source of truth and persists regardless of render
+     * distance. Lift controls are auto-placed on both chasm walls at the
+     * same Y, so we merge entries that share a row into a single level.
+     */
+    _scanLevelsFromGrid() {
+        const tileSize = this.game.tileSize;
+        const liftId = this.game.tileTypes?.liftControl?.id;
+        const grid = this.game.grid;
+        if (liftId == null || !grid) return [];
+
+        const seenRows = new Set();
+        const levels = [];
+
+        for (const chunkKey of Object.keys(grid)) {
+            const chunkArray = grid[chunkKey];
+            if (!chunkArray) continue;
+            const [chunkStartCellX, chunkStartCellY] = chunkKey.split('_').map(Number);
+            for (let cy = 0; cy < chunkArray.length; cy++) {
+                const row = chunkArray[cy];
+                if (!row) continue;
+                for (let cx = 0; cx < row.length; cx++) {
+                    const cell = row[cx];
+                    if (!cell || cell.id !== liftId) continue;
+                    const cellAbsY = chunkStartCellY + cy;
+                    if (seenRows.has(cellAbsY)) continue;
+                    seenRows.add(cellAbsY);
+                    levels.push({
+                        worldX: (chunkStartCellX + cx) * tileSize,
+                        worldY: cellAbsY * tileSize
+                    });
+                }
+            }
+        }
+        levels.sort((a, b) => a.worldY - b.worldY);
+        return levels;
     }
 
     destroy() {
