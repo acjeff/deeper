@@ -246,17 +246,22 @@ export default class PlayerManager {
             this.bobPhase = 0;
         }
 
-        // Soft drop shadow — sits at the player's feet, fades and shrinks
-        // when airborne to sell weight.
+        // Soft drop shadow — anchored to the last ground position so it
+        // stays on the floor while the player jumps, then shrinks and
+        // fades as they rise.
         if (this.game.playerShadow) {
             const shadow = this.game.playerShadow;
+            if (grounded) {
+                this.lastGroundY = player.body.bottom;
+            }
+            const groundY = this.lastGroundY ?? player.body.bottom;
             shadow.x = player.x;
-            shadow.y = player.body.y + 8.2;
-            const airHeight = grounded ? 0 : Math.min(40, Math.abs(vy) * 0.15);
-            const t = 1 - Math.min(1, airHeight / 30);
-            shadow.scaleX = 0.6 + 0.4 * t;
-            shadow.scaleY = 0.6 + 0.4 * t;
-            shadow.alpha = 0.12 + 0.23 * t;
+            shadow.y = groundY + 0.2;
+            const airHeight = Math.max(0, groundY - player.body.bottom);
+            const t = 1 - Math.min(1, airHeight / 24);
+            shadow.scaleX = 0.55 + 0.45 * t;
+            shadow.scaleY = 0.55 + 0.45 * t;
+            shadow.alpha = 0.08 + 0.27 * t;
         }
     }
 
