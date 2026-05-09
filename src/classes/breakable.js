@@ -139,19 +139,25 @@ export class Breakable extends Tile {
         const cx = this.worldX;
         const cy = this.worldY + (this.posHash(112) - 0.5) * 2;
         const wormColor = 0xc9846f;
-        g.lineStyle(0.9, wormColor, 0.95);
-        g.beginPath();
         const startX = cx - 3 + this.posHash(110) * 0.6;
         const endX = cx + 2.4 + this.posHash(113) * 0.6;
-        const cp1Y = cy - 1.6 - this.posHash(114) * 0.6;
-        const cp2Y = cy + 1.6 + this.posHash(115) * 0.6;
+        const phase = this.posHash(114) * Math.PI * 2;
+        const amp = 1.2 + this.posHash(115) * 0.6;
+        const segments = 14;
+        g.lineStyle(0.9, wormColor, 0.95);
+        g.beginPath();
         g.moveTo(startX, cy);
-        g.quadraticCurveTo(cx - 1.2, cp1Y, cx, cy);
-        g.quadraticCurveTo(cx + 1.2, cp2Y, endX, cy);
+        for (let i = 1; i <= segments; i++) {
+            const t = i / segments;
+            const x = startX + (endX - startX) * t;
+            const wave = Math.sin(t * Math.PI * 2.2 + phase) * amp;
+            g.lineTo(x, cy + wave);
+        }
         g.strokePath();
-        // Tiny head
+        // Tiny head dot at the end
         g.fillStyle(wormColor, 1);
-        g.fillCircle(endX, cy, 0.55);
+        const headWave = Math.sin(Math.PI * 2.2 + phase) * amp;
+        g.fillCircle(endX, cy + headWave, 0.55);
     }
 
     drawFossil(g) {
