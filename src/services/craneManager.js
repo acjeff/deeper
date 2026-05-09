@@ -133,7 +133,10 @@ export default class CraneManager {
         // gap means the collider is already resolving an overlap, so leave
         // it alone.
         if (gap > 0 && gap <= 16 && player.body.velocity.y >= 0) {
-            player.body.y = liftTop - player.body.height;
+            // Set the sprite, not the body — Arcade's preUpdate copies the
+            // sprite into the body each frame, so body.y assignments get
+            // clobbered and produce the visible stutter.
+            player.y = liftTop - player.body.height / 2;
             player.body.velocity.y = 0;
         }
     }
@@ -209,22 +212,28 @@ export default class CraneManager {
         // a UI animation that smoothly slows to a stop.
         const ease = 'Linear';
 
+        // Sync each static body to its sprite every tween tick. Tweening
+        // the body and the sprite separately let them drift apart by one
+        // frame, which read as stutter — especially because the player's
+        // snap and the sprite's render don't share the same position.
+        const syncCraneBody = () => {
+            if (this.craneFlat.body) this.craneFlat.body.updateFromGameObject();
+        };
+        const syncPanelBody = () => {
+            if (this.controlPanel.body) this.controlPanel.body.updateFromGameObject();
+        };
+
         this.game.tweens.add({
             targets: [this.craneFlat],
             y: target.craneFlatY,
             duration,
             ease,
+            onUpdate: syncCraneBody,
             onComplete: () => {
+                syncCraneBody();
                 liftControl.moving();
                 this.moving = false;
             }
-        });
-
-        this.game.tweens.add({
-            targets: [this.craneFlat.body],
-            y: target.craneFlatBodyY,
-            duration,
-            ease
         });
 
         this.game.tweens.add({
@@ -245,17 +254,10 @@ export default class CraneManager {
             targets: [this.controlPanel],
             y: target.controlPanelY,
             duration,
-            ease
+            ease,
+            onUpdate: syncPanelBody,
+            onComplete: syncPanelBody
         });
-
-        if (this.controlPanel.body) {
-            this.game.tweens.add({
-                targets: [this.controlPanel.body],
-                y: target.controlPanelBodyY,
-                duration,
-                ease
-            });
-        }
     }
 
 }
