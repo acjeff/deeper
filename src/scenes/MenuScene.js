@@ -5,377 +5,540 @@ import LZString from "lz-string";
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super("MenuScene");
-        this.particles = [];
-        this.titleGlow = 0;
-        this.glowDirection = 1;
     }
 
     create() {
-        // Create dark background
-        this.createBackground();
-        
-        // Create animated particles
-        this.createParticles();
-        
-        // Create main title with cyberpunk styling
-        this.createTitle();
-        
-        // Create styled buttons
-        this.createButtons();
-        
-        // Create atmospheric elements
-        this.createAtmosphericElements();
-        
-        // Check authentication status
+        this.cameras.main.setBackgroundColor(0x05070b);
+
+        this.layout = this.computeLayout();
+
+        this.buildBackground();
+        this.buildAtmosphere();
+        this.buildTitle();
+        this.buildButtonPanel();
+        this.buildVignette();
+        this.buildFooter();
+
+        this.scale.on("resize", this.handleResize, this);
+        this.events.once("shutdown", () => this.scale.off("resize", this.handleResize, this));
+
+        this.showAuthState("loading");
+
         if (window.electronAPI?.isElectron) {
             this.updateUIForLoggedInUser();
         } else {
             auth.onAuthStateChanged((user) => {
                 if (user) {
                     this.updateUIForLoggedInUser(user);
+                } else {
+                    this.showAuthState("signedOut");
                 }
             });
         }
     }
 
-    createBackground() {
-        // Create a dark background with subtle grid
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0x000000, 1);
-        graphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
-        
-        // Add subtle grid lines for cyberpunk atmosphere
-        graphics.lineStyle(1, 0x00ffff, 0.1);
-        for (let i = 0; i < this.cameras.main.width; i += 100) {
-            graphics.moveTo(i, 0);
-            graphics.lineTo(i, this.cameras.main.height);
-        }
-        for (let i = 0; i < this.cameras.main.height; i += 100) {
-            graphics.moveTo(0, i);
-            graphics.lineTo(this.cameras.main.width, i);
-        }
-        graphics.stroke();
+    computeLayout() {
+        const w = this.cameras.main.width;
+        const h = this.cameras.main.height;
+        return {
+            w,
+            h,
+            cx: w / 2,
+            cy: h / 2,
+            titleY: Math.max(120, h * 0.22),
+            panelY: h * 0.62,
+            panelW: Math.min(460, w * 0.85),
+        };
     }
 
-    createParticles() {
-        // Create floating particles with cyan color
-        for (let i = 0; i < 15; i++) {
-            const particle = this.add.circle(
-                Phaser.Math.Between(0, this.cameras.main.width),
-                Phaser.Math.Between(0, this.cameras.main.height),
-                1,
-                0x00ffff,
-                0.4
-            );
-            
-            this.tweens.add({
-                targets: particle,
-                y: particle.y - 200,
-                alpha: 0,
-                duration: Phaser.Math.Between(4000, 8000),
-                ease: 'Power1',
-                repeat: -1,
-                delay: Phaser.Math.Between(0, 3000)
-            });
-            
-            this.particles.push(particle);
+    buildBackground() {
+        const {w, h} = this.layout;
+
+        // Deep gradient sky-to-stone
+        const bg = this.add.graphics();
+        const steps = 24;
+        for (let i = 0; i < steps; i++) {
+            const t = i / (steps - 1);
+            const top = Phaser.Display.Color.ValueToColor(0x0a0d14);
+            const mid = Phaser.Display.Color.ValueToColor(0x110a14);
+            const bot = Phaser.Display.Color.ValueToColor(0x1a0a08);
+            const c1 = Phaser.Display.Color.Interpolate.ColorWithColor(top, mid, 1, Math.min(1, t * 2));
+            const c2 = Phaser.Display.Color.Interpolate.ColorWithColor(mid, bot, 1, Math.max(0, t * 2 - 1));
+            const color = (t < 0.5 ? c1 : c2);
+            const hex = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
+            bg.fillStyle(hex, 1);
+            bg.fillRect(0, (h * i) / steps, w, h / steps + 1);
         }
-    }
 
-    createTitle() {
-        const centerX = this.cameras.main.width / 2;
-        const centerY = this.cameras.main.height / 3;
-        
-        // Create title shadow
-        this.titleShadow = this.add.text(centerX + 2, centerY + 2, "DEEPER", {
-            fontSize: '72px',
-            fontFamily: 'monospace',
-            fontStyle: 'bold',
-            fill: '#000000',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
-        
-        // Create main title with white color
-        this.title = this.add.text(centerX, centerY, "DEEPER", {
-            fontSize: '72px',
-            fontFamily: 'monospace',
-            fontStyle: 'bold',
-            fill: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-        
-        // Create subtitle with cyberpunk styling
-        this.subtitle = this.add.text(centerX, centerY + 80, "A MINING ADVENTURE", {
-            fontSize: '18px',
-            fontFamily: 'monospace',
-            fill: '#ff00ff',
-            fontStyle: 'bold',
-            letterSpacing: '2px'
-        }).setOrigin(0.5);
-        
-        // Animate title glow
-        this.tweens.add({
-            targets: this.title,
-            alpha: 0.7,
-            duration: 2000,
-            ease: 'Power2',
-            yoyo: true,
-            repeat: -1
-        });
-        
-        // Add pulsing effect to subtitle
-        this.tweens.add({
-            targets: this.subtitle,
-            alpha: 0.5,
-            duration: 1500,
-            ease: 'Power2',
-            yoyo: true,
-            repeat: -1
-        });
-    }
-
-    createButtons() {
-        const centerX = this.cameras.main.width / 2;
-        const buttonY = this.cameras.main.height / 2 + 50;
-        const buttonSpacing = 70;
-        
-        // Google Sign-In Button (Initially Visible)
-        this.googleSignInButton = this.createStyledButton(
-            centerX, 
-            buttonY, 
-            "SIGN IN WITH GOOGLE", 
-            '#ff00ff', 
-            '#cc00cc',
-            () => this.signInWithGoogle()
-        );
-        
-        // Continue Button (Initially Hidden)
-        this.loadGameButton = this.createStyledButton(
-            centerX, 
-            buttonY, 
-            "CONTINUE ADVENTURE", 
-            '#00ffff', 
-            '#00cccc',
-            () => this.loadGame()
-        ).setVisible(false);
-        
-        // Start New Game Button (Initially Hidden)
-        this.deleteSaveButton = this.createStyledButton(
-            centerX, 
-            buttonY + buttonSpacing, 
-            "START NEW GAME", 
-            '#ff6600', 
-            '#cc5500',
-            async () => {
-                await this.deleteSaves();
-                await this.createNewGame();
+        // Faint geological strata lines
+        const strata = this.add.graphics();
+        strata.lineStyle(1, 0xff7a3a, 0.05);
+        for (let y = 60; y < h; y += Phaser.Math.Between(40, 90)) {
+            strata.beginPath();
+            const segs = Math.ceil(w / 40);
+            strata.moveTo(0, y);
+            for (let i = 1; i <= segs; i++) {
+                strata.lineTo(i * 40, y + Phaser.Math.Between(-3, 3));
             }
-        ).setVisible(false);
-        
-        // New Game Button (Initially Hidden)
-        this.newGameButton = this.createStyledButton(
-            centerX, 
-            buttonY, 
-            "BEGIN NEW ADVENTURE", 
-            '#00ff00', 
-            '#00cc00',
-            () => this.createNewGame()
-        ).setVisible(false);
-        
-        // Logout Button (Initially Hidden)
-        this.logoutButton = this.createStyledButton(
-            centerX, 
-            buttonY + buttonSpacing * 2, 
-            "LOGOUT", 
-            '#ff0066', 
-            '#cc0044',
-            () => this.logout()
-        ).setVisible(false);
+            strata.strokePath();
+        }
+
+        // Distant cave silhouette layer (back)
+        this.drawCaveLayer(0x0a0810, 0.55, h * 0.55, 38);
+        // Mid silhouette
+        this.drawCaveLayer(0x080509, 0.85, h * 0.7, 60);
+        // Foreground floor
+        this.drawCaveLayer(0x000000, 1, h * 0.88, 90);
+
+        // Hanging stalactites at top
+        const stalGfx = this.add.graphics();
+        stalGfx.fillStyle(0x000000, 1);
+        for (let x = 0; x < w; x += Phaser.Math.Between(50, 110)) {
+            const baseW = Phaser.Math.Between(18, 38);
+            const len = Phaser.Math.Between(40, 110);
+            stalGfx.beginPath();
+            stalGfx.moveTo(x, 0);
+            stalGfx.lineTo(x + baseW / 2, len);
+            stalGfx.lineTo(x + baseW, 0);
+            stalGfx.closePath();
+            stalGfx.fillPath();
+        }
+        // subtle highlight on stalactites
+        stalGfx.lineStyle(1, 0xff7a3a, 0.08);
+        for (let x = 0; x < w; x += 30) {
+            stalGfx.lineBetween(x, 0, x, Phaser.Math.Between(2, 12));
+        }
     }
 
-    createStyledButton(x, y, text, color, hoverColor, callback) {
-        // Convert hex colors to integers
-        const originalColor = parseInt(color.replace('#', ''), 16);
-        const hoverColorInt = parseInt(hoverColor.replace('#', ''), 16);
-        
-        // Create button background
-        const buttonBg = this.add.rectangle(x, y, 350, 50, 0x000000, 0.8);
-        buttonBg.setStrokeStyle(2, originalColor);
-        
-        // Create button text with matching border color
-        const buttonText = this.add.text(x, y, text, {
-            fontSize: '16px',
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fill: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-        
-        // Set the text color to match the border
-        buttonText.setColor(color);
-        
-        // Make only the background interactive
-        buttonBg.setInteractive({ useHandCursor: true });
-        
-        // Store references for visibility control
-        buttonBg.buttonText = buttonText;
-        buttonText.buttonBg = buttonBg;
-        
-        // Store original color for restoration
-        buttonBg.originalColor = originalColor;
-        buttonBg.hoverColor = hoverColorInt;
-        
-        // Hover effects
-        buttonBg.on('pointerover', () => {
-            buttonBg.setFillStyle(0x000000, 0.9);
-            buttonBg.setStrokeStyle(3, buttonBg.hoverColor);
-            this.tweens.add({
-                targets: [buttonBg, buttonText],
-                scaleX: 1.02,
-                scaleY: 1.02,
-                duration: 200,
-                ease: 'Power2'
-            });
-        });
-        
-        buttonBg.on('pointerout', () => {
-            buttonBg.setFillStyle(0x000000, 0.8);
-            buttonBg.setStrokeStyle(2, buttonBg.originalColor);
-            this.tweens.add({
-                targets: [buttonBg, buttonText],
-                scaleX: 1,
-                scaleY: 1,
-                duration: 200,
-                ease: 'Power2'
-            });
-        });
-        
-        // Click effects
-        buttonBg.on('pointerdown', () => {
-            this.tweens.add({
-                targets: [buttonBg, buttonText],
-                scaleX: 0.98,
-                scaleY: 0.98,
-                duration: 100,
-                ease: 'Power2',
-                yoyo: true,
-                onComplete: () => {
-                    callback();
-                }
-            });
-        });
-        
-        return buttonBg;
+    drawCaveLayer(color, alpha, baseY, jag) {
+        const {w, h} = this.layout;
+        const g = this.add.graphics();
+        g.fillStyle(color, alpha);
+        g.beginPath();
+        g.moveTo(0, h);
+        g.lineTo(0, baseY);
+        const segWidth = 50;
+        let lastY = baseY;
+        for (let x = 0; x <= w; x += segWidth) {
+            const y = baseY + Phaser.Math.Between(-jag, jag);
+            const cpX = x - segWidth / 2;
+            const cpY = (lastY + y) / 2 + Phaser.Math.Between(-10, 10);
+            g.lineTo(cpX, cpY);
+            g.lineTo(x, y);
+            lastY = y;
+        }
+        g.lineTo(w, h);
+        g.closePath();
+        g.fillPath();
     }
 
-    createAtmosphericElements() {
-        // Add some mining-themed decorative elements with cyberpunk styling
-        const centerX = this.cameras.main.width / 2;
-        
-        // Add pickaxe icon
-        if (this.textures.exists('pickaxe')) {
-            const pickaxe = this.add.image(centerX - 200, 100, 'pickaxe');
-            pickaxe.setScale(2);
-            pickaxe.setAlpha(0.2);
-            pickaxe.setTint(0x00ffff);
-            
+    buildAtmosphere() {
+        const {w, h} = this.layout;
+
+        // Glowing ore specks scattered in the dark
+        for (let i = 0; i < 22; i++) {
+            const x = Phaser.Math.Between(0, w);
+            const y = Phaser.Math.Between(h * 0.4, h * 0.95);
+            const size = Phaser.Math.Between(1, 2);
+            const color = Phaser.Math.RND.pick([0xffaa55, 0xff6622, 0xffd27a, 0x88aaff]);
+            const ore = this.add.circle(x, y, size, color, 0.8);
+            const halo = this.add.circle(x, y, size * 4, color, 0.12);
             this.tweens.add({
-                targets: pickaxe,
-                angle: 5,
-                duration: 4000,
-                ease: 'Power2',
+                targets: [ore, halo],
+                alpha: {from: 0.15, to: 0.9},
+                duration: Phaser.Math.Between(1400, 3200),
                 yoyo: true,
-                repeat: -1
+                repeat: -1,
+                delay: Phaser.Math.Between(0, 2000),
+                ease: "Sine.easeInOut",
             });
         }
-        
-        // Add coal icon
-        if (this.textures.exists('coal')) {
-            const coal = this.add.image(centerX + 200, 100, 'coal');
-            coal.setScale(2);
-            coal.setAlpha(0.2);
-            coal.setTint(0xff00ff);
-            
-            this.tweens.add({
-                targets: coal,
-                angle: -5,
-                duration: 4000,
-                ease: 'Power2',
-                yoyo: true,
-                repeat: -1
-            });
-        }
-        
-        // Add floating dust particles
-        for (let i = 0; i < 10; i++) {
-            const dust = this.add.circle(
-                Phaser.Math.Between(0, this.cameras.main.width),
-                Phaser.Math.Between(0, this.cameras.main.height),
-                0.5,
-                0x00ffff,
-                0.3
-            );
-            
+
+        // Falling dust
+        for (let i = 0; i < 28; i++) {
+            const startX = Phaser.Math.Between(0, w);
+            const dust = this.add.circle(startX, Phaser.Math.Between(-20, h * 0.3), 1, 0xfff1d6, 0.35);
             this.tweens.add({
                 targets: dust,
-                x: dust.x + Phaser.Math.Between(-50, 50),
-                y: dust.y - Phaser.Math.Between(50, 150),
-                alpha: 0,
-                duration: Phaser.Math.Between(5000, 10000),
-                ease: 'Power1',
+                y: h + 20,
+                x: startX + Phaser.Math.Between(-40, 40),
+                alpha: {from: 0.0, to: 0.5},
+                duration: Phaser.Math.Between(7000, 14000),
                 repeat: -1,
-                delay: Phaser.Math.Between(0, 4000)
+                delay: Phaser.Math.Between(0, 6000),
+                ease: "Sine.easeIn",
+                onRepeat: () => {
+                    dust.x = Phaser.Math.Between(0, w);
+                    dust.y = -10;
+                },
             });
         }
-        
-        // Add corner decorative elements with cyberpunk styling
-        const cornerSize = 60;
-        const cornerAlpha = 0.3;
-        
-        // Top-left corner
-        const topLeft = this.add.graphics();
-        topLeft.lineStyle(2, 0x00ffff, cornerAlpha);
-        topLeft.strokeRect(20, 20, cornerSize, cornerSize);
-        
-        // Top-right corner
-        const topRight = this.add.graphics();
-        topRight.lineStyle(2, 0x00ffff, cornerAlpha);
-        topRight.strokeRect(this.cameras.main.width - 20 - cornerSize, 20, cornerSize, cornerSize);
-        
-        // Bottom-left corner
-        const bottomLeft = this.add.graphics();
-        bottomLeft.lineStyle(2, 0x00ffff, cornerAlpha);
-        bottomLeft.strokeRect(20, this.cameras.main.height - 20 - cornerSize, cornerSize, cornerSize);
-        
-        // Bottom-right corner
-        const bottomRight = this.add.graphics();
-        bottomRight.lineStyle(2, 0x00ffff, cornerAlpha);
-        bottomRight.strokeRect(this.cameras.main.width - 20 - cornerSize, this.cameras.main.height - 20 - cornerSize, cornerSize, cornerSize);
+
+        // Distant fireflies / light motes that drift
+        for (let i = 0; i < 8; i++) {
+            const x = Phaser.Math.Between(0, w);
+            const y = Phaser.Math.Between(h * 0.3, h * 0.8);
+            const mote = this.add.circle(x, y, 2, 0xffb066, 0.7);
+            this.tweens.add({
+                targets: mote,
+                x: x + Phaser.Math.Between(-120, 120),
+                y: y + Phaser.Math.Between(-80, 80),
+                alpha: {from: 0.2, to: 0.9},
+                duration: Phaser.Math.Between(4000, 7000),
+                yoyo: true,
+                repeat: -1,
+                ease: "Sine.easeInOut",
+            });
+        }
+
+        // Bottom warm glow (suggesting depths/lava)
+        const glow = this.add.graphics();
+        const steps = 14;
+        for (let i = 0; i < steps; i++) {
+            const t = i / (steps - 1);
+            const a = Phaser.Math.Linear(0, 0.18, t);
+            glow.fillStyle(0xff5a1c, a);
+            glow.fillRect(0, h - (1 - t) * 220, w, 16);
+        }
     }
+
+    buildTitle() {
+        const {cx, titleY} = this.layout;
+
+        // Title backing plate
+        const plate = this.add.graphics();
+        plate.fillStyle(0x000000, 0.45);
+        plate.fillRoundedRect(cx - 280, titleY - 70, 560, 140, 8);
+        plate.lineStyle(1, 0xff7a3a, 0.35);
+        plate.strokeRoundedRect(cx - 280, titleY - 70, 560, 140, 8);
+
+        // Outer glow (multiple stacked texts for cheap glow)
+        const glowColors = [0x3a1605, 0x6e2606, 0xff7a3a];
+        glowColors.forEach((c, i) => {
+            const g = this.add.text(cx, titleY, "DEEPER", {
+                fontSize: "92px",
+                fontFamily: "Impact, 'Arial Black', sans-serif",
+                fontStyle: "bold",
+                color: Phaser.Display.Color.IntegerToColor(c).rgba,
+            }).setOrigin(0.5);
+            g.setAlpha(0.18 + i * 0.1);
+            g.setScale(1 + (glowColors.length - i) * 0.015);
+        });
+
+        // Title shadow
+        this.add.text(cx + 3, titleY + 4, "DEEPER", {
+            fontSize: "92px",
+            fontFamily: "Impact, 'Arial Black', sans-serif",
+            fontStyle: "bold",
+            color: "#000000",
+        }).setOrigin(0.5).setAlpha(0.7);
+
+        // Main title
+        this.title = this.add.text(cx, titleY, "DEEPER", {
+            fontSize: "92px",
+            fontFamily: "Impact, 'Arial Black', sans-serif",
+            fontStyle: "bold",
+            color: "#ffe6c2",
+            stroke: "#2a0d04",
+            strokeThickness: 6,
+        }).setOrigin(0.5);
+
+        // Subtle breathing animation
+        this.tweens.add({
+            targets: this.title,
+            scale: {from: 1, to: 1.025},
+            duration: 2400,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+        });
+
+        // Subtitle
+        this.subtitle = this.add.text(cx, titleY + 60, "— A MINING DESCENT —", {
+            fontSize: "16px",
+            fontFamily: "monospace",
+            color: "#ff9a4a",
+            fontStyle: "bold",
+        }).setOrigin(0.5);
+        this.subtitle.setLetterSpacing(6);
+
+        this.tweens.add({
+            targets: this.subtitle,
+            alpha: {from: 0.55, to: 1},
+            duration: 1800,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+        });
+
+        // Decorative pickaxes flanking the title
+        if (this.textures.exists("pickaxe")) {
+            const left = this.add.image(cx - 230, titleY + 4, "pickaxe").setScale(2.4).setTint(0xff9a4a).setAlpha(0.7);
+            left.setFlipX(true);
+            const right = this.add.image(cx + 230, titleY + 4, "pickaxe").setScale(2.4).setTint(0xff9a4a).setAlpha(0.7);
+            this.tweens.add({targets: left, angle: -8, duration: 2200, yoyo: true, repeat: -1, ease: "Sine.easeInOut"});
+            this.tweens.add({targets: right, angle: 8, duration: 2200, yoyo: true, repeat: -1, ease: "Sine.easeInOut"});
+        }
+    }
+
+    buildButtonPanel() {
+        const {cx, panelY, panelW} = this.layout;
+        const panelH = 280;
+
+        // Stone panel backing
+        const panel = this.add.graphics();
+        panel.fillStyle(0x0c0a0a, 0.85);
+        panel.fillRoundedRect(cx - panelW / 2, panelY - panelH / 2, panelW, panelH, 12);
+        panel.lineStyle(2, 0xff7a3a, 0.5);
+        panel.strokeRoundedRect(cx - panelW / 2, panelY - panelH / 2, panelW, panelH, 12);
+
+        // Inner bevel highlight
+        panel.lineStyle(1, 0xffb27a, 0.18);
+        panel.strokeRoundedRect(cx - panelW / 2 + 4, panelY - panelH / 2 + 4, panelW - 8, panelH - 8, 10);
+
+        // Rivets in corners
+        const rivetPositions = [
+            [cx - panelW / 2 + 14, panelY - panelH / 2 + 14],
+            [cx + panelW / 2 - 14, panelY - panelH / 2 + 14],
+            [cx - panelW / 2 + 14, panelY + panelH / 2 - 14],
+            [cx + panelW / 2 - 14, panelY + panelH / 2 - 14],
+        ];
+        rivetPositions.forEach(([rx, ry]) => {
+            this.add.circle(rx, ry, 3, 0x1a1310).setStrokeStyle(1, 0xff9a4a, 0.6);
+            this.add.circle(rx - 1, ry - 1, 1, 0xffd6a8, 0.7);
+        });
+
+        // Slot 1: primary action (continue OR new game OR sign-in)
+        // Slot 2: secondary (start new game when there is a save)
+        // Slot 3: logout
+        this.primaryButton = this.makeButton(cx, panelY - 70, panelW - 60, 56, "BEGIN NEW ADVENTURE", "primary");
+        this.secondaryButton = this.makeButton(cx, panelY, panelW - 60, 44, "START NEW GAME", "secondary");
+        this.tertiaryButton = this.makeButton(cx, panelY + 70, panelW - 60, 36, "LOGOUT", "tertiary");
+
+        // Hide all by default; the auth flow re-shows the right ones
+        this.primaryButton.setVisible(false);
+        this.secondaryButton.setVisible(false);
+        this.tertiaryButton.setVisible(false);
+    }
+
+    makeButton(x, y, w, h, label, variant) {
+        const palette = {
+            primary: {fill: 0x2a1208, stroke: 0xff7a3a, hover: 0xffb066, text: "#ffe6c2", accent: 0xff9a4a},
+            secondary: {fill: 0x12161f, stroke: 0x4a6a8a, hover: 0x88b4dc, text: "#cfe1f2", accent: 0x88b4dc},
+            tertiary: {fill: 0x150909, stroke: 0x6a2030, hover: 0xff5577, text: "#ff8aa0", accent: 0xff5577},
+        };
+        const p = palette[variant];
+
+        const container = this.add.container(x, y);
+
+        const bg = this.add.graphics();
+        const drawBg = (fill, stroke, glow = 0) => {
+            bg.clear();
+            if (glow > 0) {
+                bg.fillStyle(stroke, 0.18);
+                bg.fillRoundedRect(-w / 2 - glow, -h / 2 - glow, w + glow * 2, h + glow * 2, 10);
+            }
+            bg.fillStyle(fill, 0.95);
+            bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+            bg.lineStyle(2, stroke, 1);
+            bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+            // bevel
+            bg.lineStyle(1, 0xffffff, 0.08);
+            bg.strokeRoundedRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, 6);
+        };
+        drawBg(p.fill, p.stroke);
+
+        const accentLeft = this.add.rectangle(-w / 2 + 12, 0, 4, h - 16, p.accent, 0.9);
+        const accentRight = this.add.rectangle(w / 2 - 12, 0, 4, h - 16, p.accent, 0.9);
+
+        const text = this.add.text(0, 0, label, {
+            fontSize: variant === "primary" ? "20px" : variant === "secondary" ? "16px" : "14px",
+            fontFamily: "'Arial Black', Impact, sans-serif",
+            color: p.text,
+            stroke: "#000000",
+            strokeThickness: 3,
+        }).setOrigin(0.5);
+        text.setLetterSpacing(variant === "primary" ? 3 : 2);
+
+        // Hit area: full button rectangle
+        const hit = this.add.rectangle(0, 0, w, h, 0x000000, 0).setInteractive({useHandCursor: true});
+
+        container.add([bg, accentLeft, accentRight, text, hit]);
+        container.bgGraphics = bg;
+        container.label = text;
+        container.palette = p;
+        container.size = {w, h};
+        container.busy = false;
+
+        // Idle pulse on accent strips
+        this.tweens.add({
+            targets: [accentLeft, accentRight],
+            alpha: {from: 0.5, to: 1},
+            duration: 1600,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+        });
+
+        hit.on("pointerover", () => {
+            if (container.busy) return;
+            drawBg(p.fill, p.hover, 6);
+            this.tweens.add({targets: container, scale: 1.04, duration: 160, ease: "Quad.easeOut"});
+            this.tweens.add({targets: text, x: 4, duration: 160, ease: "Quad.easeOut", yoyo: true});
+        });
+        hit.on("pointerout", () => {
+            if (container.busy) return;
+            drawBg(p.fill, p.stroke);
+            this.tweens.add({targets: container, scale: 1, duration: 160, ease: "Quad.easeOut"});
+        });
+        hit.on("pointerdown", () => {
+            if (container.busy) return;
+            this.tweens.add({
+                targets: container,
+                scale: 0.97,
+                duration: 80,
+                yoyo: true,
+                ease: "Quad.easeOut",
+                onComplete: () => container.callback && container.callback(),
+            });
+        });
+
+        container.setLabel = (newText) => text.setText(newText);
+        container.setBusy = (isBusy, busyText) => {
+            container.busy = isBusy;
+            if (isBusy) {
+                container.originalLabel = text.text;
+                if (busyText) text.setText(busyText);
+                container.setAlpha(0.6);
+            } else {
+                if (container.originalLabel) text.setText(container.originalLabel);
+                container.setAlpha(1);
+            }
+        };
+        container.onClick = (cb) => {
+            container.callback = cb;
+            return container;
+        };
+
+        return container;
+    }
+
+    buildVignette() {
+        const {w, h} = this.layout;
+        // Cheap radial vignette using stacked rounded rectangles
+        const v = this.add.graphics();
+        const steps = 18;
+        for (let i = 0; i < steps; i++) {
+            const t = i / (steps - 1);
+            const inset = Phaser.Math.Linear(0, 220, t);
+            v.lineStyle(2, 0x000000, (1 - t) * 0.06);
+            v.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
+        }
+
+        // Hard edges
+        const edge = this.add.graphics();
+        edge.lineStyle(2, 0xff7a3a, 0.25);
+        edge.strokeRect(8, 8, w - 16, h - 16);
+        edge.lineStyle(1, 0x3a1605, 0.6);
+        edge.strokeRect(11, 11, w - 22, h - 22);
+
+        // Corner brackets
+        const drawBracket = (x, y, sx, sy) => {
+            const len = 24;
+            const g = this.add.graphics();
+            g.lineStyle(2, 0xff9a4a, 0.7);
+            g.beginPath();
+            g.moveTo(x, y + sy * len);
+            g.lineTo(x, y);
+            g.lineTo(x + sx * len, y);
+            g.strokePath();
+        };
+        drawBracket(20, 20, 1, 1);
+        drawBracket(w - 20, 20, -1, 1);
+        drawBracket(20, h - 20, 1, -1);
+        drawBracket(w - 20, h - 20, -1, -1);
+    }
+
+    buildFooter() {
+        const {cx, h} = this.layout;
+        this.add.text(cx, h - 28, "v1.0   ·   Roo Boo Games", {
+            fontSize: "11px",
+            fontFamily: "monospace",
+            color: "#7a5a44",
+        }).setOrigin(0.5).setAlpha(0.7);
+    }
+
+    handleResize(gameSize) {
+        // Redraw the scene on resize for a clean layout
+        this.scene.restart();
+    }
+
+    // ========= AUTH STATE PRESENTATION =========
+
+    showAuthState(state) {
+        // Single source of truth for which buttons are visible.
+        // states: "loading" | "signedOut" | "hasSave" | "noSave" | "electron-hasSave" | "electron-noSave"
+        this.primaryButton.setVisible(false);
+        this.secondaryButton.setVisible(false);
+        this.tertiaryButton.setVisible(false);
+
+        switch (state) {
+            case "loading":
+                this.primaryButton.setLabel("LOADING...");
+                this.primaryButton.setVisible(true);
+                this.primaryButton.setBusy(true, "LOADING...");
+                break;
+            case "signedOut":
+                this.primaryButton.setBusy(false);
+                this.primaryButton.setLabel("SIGN IN WITH GOOGLE");
+                this.primaryButton.onClick(() => this.signInWithGoogle());
+                this.primaryButton.setVisible(true);
+                break;
+            case "hasSave":
+                this.primaryButton.setBusy(false);
+                this.primaryButton.setLabel("CONTINUE ADVENTURE");
+                this.primaryButton.onClick(() => this.loadGame());
+                this.primaryButton.setVisible(true);
+
+                this.secondaryButton.setBusy(false);
+                this.secondaryButton.setLabel("START NEW GAME");
+                this.secondaryButton.onClick(async () => {
+                    await this.deleteSaves();
+                    await this.createNewGame();
+                });
+                this.secondaryButton.setVisible(true);
+
+                this.tertiaryButton.setBusy(false);
+                this.tertiaryButton.setLabel("LOGOUT");
+                this.tertiaryButton.onClick(() => this.logout());
+                this.tertiaryButton.setVisible(!window.electronAPI?.isElectron);
+                break;
+            case "noSave":
+                this.primaryButton.setBusy(false);
+                this.primaryButton.setLabel("BEGIN NEW ADVENTURE");
+                this.primaryButton.onClick(() => this.createNewGame());
+                this.primaryButton.setVisible(true);
+
+                this.tertiaryButton.setBusy(false);
+                this.tertiaryButton.setLabel("LOGOUT");
+                this.tertiaryButton.onClick(() => this.logout());
+                this.tertiaryButton.setVisible(!window.electronAPI?.isElectron);
+                break;
+        }
+    }
+
+    // ========= AUTH ACTIONS =========
 
     async signInWithGoogle() {
         try {
+            this.primaryButton.setBusy(true, "SIGNING IN...");
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
-
-            const gameSave = await getDoc(doc(db, "game_saves", user.uid, "map_data", "grid"));
-
-            if (gameSave.exists()) {
-                this.loadGameButton.setVisible(true);
-                this.loadGameButton.buttonText.setVisible(true);
-                this.deleteSaveButton.setVisible(true);
-                this.deleteSaveButton.buttonText.setVisible(true);
-            } else {
-                this.newGameButton.setVisible(true);
-                this.newGameButton.buttonText.setVisible(true);
-            }
-
-            this.updateUIForLoggedInUser(user);
+            this.primaryButton.setBusy(false);
+            await this.updateUIForLoggedInUser(user);
         } catch (error) {
             console.error("Error signing in:", error);
+            this.primaryButton.setBusy(false);
             alert(error.message);
         }
     }
@@ -383,21 +546,17 @@ export default class MenuScene extends Phaser.Scene {
     async deleteSaves() {
         if (window.electronAPI?.isElectron) {
             await window.electronAPI.deleteGameSave();
-        } else {
-            //     Delete cloud save
         }
         return Promise.resolve();
     }
 
     async loadGame() {
         if (window.electronAPI?.isElectron) {
-            // ✅ Electron: Save Locally
             this.scene.start("GameScene", {
                 grid: this.savedData.grid,
-                playerData: this.savedData.playerData
+                playerData: this.savedData.playerData,
             });
         } else {
-            // ✅ Browser: Save to Firebase
             await this.loadGameFromCloud();
         }
     }
@@ -408,77 +567,52 @@ export default class MenuScene extends Phaser.Scene {
             alert("You must be logged in to load a game.");
             return;
         }
-        this.loadGameButton.buttonText.setText('LOADING...');
-        this.loadGameButton.setInteractive(false);
-        this.loadGameButton.setAlpha(0.5);
-        this.loadGameButton.buttonText.setAlpha(0.5);
+        this.primaryButton.setBusy(true, "LOADING...");
         try {
             const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
             const gameSaveDoc = await getDoc(gameSaveRef);
             const gameSave = JSON.parse(LZString.decompressFromUTF16(gameSaveDoc.data().data));
 
             const playerDataCollection = collection(db, "game_saves", user.uid, "player_data");
-
             const playerDataSnapshot = await getDocs(playerDataCollection);
+            const playerData = playerDataSnapshot.docs.map((d) => ({id: d.id, ...d.data()}));
 
-            const playerData = playerDataSnapshot.docs.map(doc => ({
-                id: doc.id,  // Document ID
-                ...doc.data() // Document fields
-            }));
             if (gameSave) {
-
-                // ✅ Hide menu and start the game with loaded data
-                this.scene.start("GameScene", {grid: gameSave, user: user, playerData: playerData});
+                this.scene.start("GameScene", {grid: gameSave, user, playerData});
             } else {
                 alert("No game save found.");
+                this.primaryButton.setBusy(false);
             }
         } catch (error) {
             console.error("Error loading game:", error);
+            this.primaryButton.setBusy(false);
             alert(error.message);
         }
-        this.loadGameButton.buttonText.setText('CONTINUE ADVENTURE');
-        this.loadGameButton.setInteractive(true);
-        this.loadGameButton.setAlpha(1);
-        this.loadGameButton.buttonText.setAlpha(1);
     }
 
     async createNewGame() {
         let user;
-
-        this.deleteSaveButton.buttonText.setText('GENERATING MAP...');
-        this.deleteSaveButton.setInteractive(false);
-        this.deleteSaveButton.setAlpha(0.5);
-        this.deleteSaveButton.buttonText.setAlpha(0.5);
+        this.primaryButton.setBusy(true, "GENERATING MAP...");
+        if (this.secondaryButton.visible) this.secondaryButton.setBusy(true, "GENERATING MAP...");
         window.setTimeout(() => {
-
             if (!window.electronAPI?.isElectron) {
                 user = auth.currentUser;
             }
-
             try {
-                this.scene.start("GameScene", {newGame: true, user: user});
+                this.scene.start("GameScene", {newGame: true, user});
             } catch (error) {
                 console.error("Error creating new game:", error);
+                this.primaryButton.setBusy(false);
+                if (this.secondaryButton.visible) this.secondaryButton.setBusy(false);
                 alert(error.message);
             }
-        }, 100)
+        }, 100);
     }
 
     async logout() {
         try {
             await signOut(auth);
-
-            // ✅ Reset UI
-            this.googleSignInButton.setVisible(true);
-            this.googleSignInButton.buttonText.setVisible(true);
-            this.logoutButton.setVisible(false);
-            this.logoutButton.buttonText.setVisible(false);
-            this.loadGameButton.setVisible(false);
-            this.loadGameButton.buttonText.setVisible(false);
-            this.deleteSaveButton.setVisible(false);
-            this.deleteSaveButton.buttonText.setVisible(false);
-            this.newGameButton.setVisible(false);
-            this.newGameButton.buttonText.setVisible(false);
+            this.showAuthState("signedOut");
         } catch (error) {
             console.error("Error logging out:", error);
             alert(error.message);
@@ -486,50 +620,21 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     async updateUIForLoggedInUser(user) {
-        this.googleSignInButton.setVisible(false);
-        this.googleSignInButton.buttonText.setVisible(false);
-        this.logoutButton.setVisible(true);
-        this.logoutButton.buttonText.setVisible(true);
-        this.loadGameButton.setVisible(false);
-        this.loadGameButton.buttonText.setVisible(false);
-        this.deleteSaveButton.setVisible(false);
-        this.deleteSaveButton.buttonText.setVisible(false);
-        this.newGameButton.setVisible(false);
-        this.newGameButton.buttonText.setVisible(false);
-
         let hasSaveData = false;
-
         try {
             if (window.electronAPI?.isElectron) {
-                this.logoutButton.setVisible(false);
-                this.logoutButton.buttonText.setVisible(false);
-                // ✅ Electron: Check local save
                 const savedData = await window.electronAPI.loadGame();
                 this.savedData = savedData;
-                if (savedData) {
-                    hasSaveData = true;
-                }
+                if (savedData) hasSaveData = true;
             } else {
-                // ✅ Browser: Check Firebase save
                 const gameSaveRef = doc(db, "game_saves", user.uid, "map_data", "grid");
                 const gameSave = await getDoc(gameSaveRef);
-                if (gameSave.exists()) {
-                    hasSaveData = true;
-                }
+                if (gameSave.exists()) hasSaveData = true;
             }
         } catch (error) {
             console.error("Error checking save data:", error);
         }
 
-        // ✅ Show the correct button based on whether save data exists
-        if (hasSaveData) {
-            this.loadGameButton.setVisible(true);
-            this.loadGameButton.buttonText.setVisible(true);
-            this.deleteSaveButton.setVisible(true);
-            this.deleteSaveButton.buttonText.setVisible(true);
-        } else {
-            this.newGameButton.setVisible(true);
-            this.newGameButton.buttonText.setVisible(true);
-        }
+        this.showAuthState(hasSaveData ? "hasSave" : "noSave");
     }
 }
