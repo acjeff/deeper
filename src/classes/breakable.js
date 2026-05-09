@@ -1,5 +1,5 @@
 import {Tile} from "./tile";
-import {darkenColor} from "../services/colourManager";
+import {darkenColor, lightenColor} from "../services/colourManager";
 
 const hexStringToInt = (str) => parseInt(str.replace(/^0x/, ''), 16);
 
@@ -74,86 +74,101 @@ export class Breakable extends Tile {
         g.clear();
 
         const ts = this.game.tileSize;
-        const half = ts / 2;
-        const x = this.worldX - half;
-        const y = this.worldY - half;
+        const x = this.worldX - ts / 2;
+        const y = this.worldY - ts / 2;
 
-        // Sharp pixel-art body. Edges get small deterministic 1px bumps
-        // and erosions on sides that face air — adjacent tiles' bumps
-        // don't have to align, which breaks the grid alignment naturally.
+        // Sharp Terraria-style body. The "uneven" feel comes from internal
+        // texture, not silhouette.
         g.fillStyle(this.tileBaseColor, 1);
         g.fillRect(x, y, ts, ts);
 
         if (this.tileDetails.type) return; // coal — overlay covers the rest
 
-        const erodeColor = hexStringToInt(darkenColor(this.tileBaseColor, 35));
+        const lightHex = hexStringToInt(lightenColor(this.tileBaseColor, 22));
+        const dark1 = hexStringToInt(darkenColor(this.tileBaseColor, 22));
+        const dark2 = hexStringToInt(darkenColor(this.tileBaseColor, 40));
 
-        // Helper: place a 1px nub just outside the tile in tile-base colour,
-        // and a 1px darker erosion just inside, at hash-positioned spots.
-        const decorateEdge = (axis, edgeOpen, salt) => {
-            if (!edgeOpen) return;
-            // 0-2 nubs sticking out
-            const nubCount = Math.floor(this.posHash(salt) * 2.6);
-            for (let i = 0; i < nubCount; i++) {
-                const t = Math.floor(this.posHash(salt + 10 + i) * (ts - 2)) + 1;
-                let px, py;
-                if (axis === 'top')    { px = x + t;       py = y - 1; }
-                if (axis === 'bottom') { px = x + t;       py = y + ts; }
-                if (axis === 'left')   { px = x - 1;       py = y + t; }
-                if (axis === 'right')  { px = x + ts;      py = y + t; }
-                g.fillStyle(this.tileBaseColor, 1);
-                g.fillRect(px, py, 1, 1);
+        // Top edge: a brighter row when light hits from above.
+        if (top) {
+            g.fillStyle(lightHex, 0.95);
+            g.fillRect(x, y, ts, 1);
+            // Weather it with a few scattered dark pixels
+            const wear = 2 + Math.floor(this.posHash(70) * 3);
+            for (let i = 0; i < wear; i++) {
+                const px = x + Math.floor(this.posHash(71 + i) * ts);
+                g.fillStyle(dark1, 1);
+                g.fillRect(px, y, 1, 1);
             }
-            // 1-3 erosions just inside the body
-            const eroCount = 1 + Math.floor(this.posHash(salt + 20) * 2);
-            for (let i = 0; i < eroCount; i++) {
-                const t = Math.floor(this.posHash(salt + 30 + i) * (ts - 2)) + 1;
-                let px, py;
-                if (axis === 'top')    { px = x + t;       py = y; }
-                if (axis === 'bottom') { px = x + t;       py = y + ts - 1; }
-                if (axis === 'left')   { px = x;           py = y + t; }
-                if (axis === 'right')  { px = x + ts - 1;  py = y + t; }
-                g.fillStyle(erodeColor, 0.9);
-                g.fillRect(px, py, 1, 1);
-            }
-        };
-        decorateEdge('top', top, 200);
-        decorateEdge('right', right, 220);
-        decorateEdge('bottom', bottom, 240);
-        decorateEdge('left', left, 260);
-
-        // Speckles for organic texture inside the body.
-        const speckleHex = hexStringToInt(darkenColor(this.tileBaseColor, 22));
-        const speckleCount = 1 + Math.floor(this.posHash(2) * 3);
-        for (let i = 0; i < speckleCount; i++) {
-            const sx = (this.posHash(10 + i) - 0.5) * (ts - 3);
-            const sy = (this.posHash(20 + i) - 0.5) * (ts - 3);
-            g.fillStyle(speckleHex, 0.75);
-            g.fillRect(Math.round(this.worldX + sx), Math.round(this.worldY + sy), 1, 1);
+        }
+        // Bottom edge: a darker row to suggest shadow falloff.
+        if (bottom) {
+            g.fillStyle(dark2, 0.85);
+            g.fillRect(x, y + ts - 1, ts, 1);
+        }
+        // Side edges: subtle vertical shading.
+        if (left) {
+            g.fillStyle(dark1, 0.55);
+            g.fillRect(x, y, 1, ts);
+        }
+        if (right) {
+            g.fillStyle(dark1, 0.55);
+            g.fillRect(x + ts - 1, y, 1, ts);
         }
 
-        // Grass tufts on the topmost soil rows where the sky meets the surface.
+        // Chipped corners — where two adjacent sides face air, the corner
+        // pixel reads as crumbled. Stops corners feeling perfectly square
+        // without rounding the silhouette.
+        const chip = (cx, cy) => { g.fillStyle(dark2, 1); g.fillRect(cx, cy, 1, 1); };
+        if (top && left)     chip(x, y);
+        if (top && right)    chip(x + ts - 1, y);
+        if (bottom && left)  chip(x, y + ts - 1);
+        if (bottom && right) chip(x + ts - 1, y + ts - 1);
+
+        // Body texture: scatter darker and lighter pixels for soil grain.
+        const speckleCount = 4 + Math.floor(this.posHash(2) * 3);
+        for (let i = 0; i < speckleCount; i++) {
+            const sx = x + 1 + Math.floor(this.posHash(10 + i) * (ts - 2));
+            const sy = y + 1 + Math.floor(this.posHash(20 + i) * (ts - 2));
+            const useLight = this.posHash(30 + i) > 0.78;
+            g.fillStyle(useLight ? lightHex : dark1, useLight ? 0.7 : 0.85);
+            g.fillRect(sx, sy, 1, 1);
+        }
+
+        // Grass on the topmost soil rows where the sky meets the surface.
         const aboveGroundY = this.game.aboveGround * ts;
-        const isNearSurface = this.worldY >= aboveGroundY && this.worldY <= aboveGroundY + ts * 4;
+        const isNearSurface = this.worldY >= aboveGroundY && this.worldY <= aboveGroundY + ts * 3;
         if (top && isNearSurface) {
-            const tuftCount = 2 + Math.floor(this.posHash(50) * 3);
-            for (let i = 0; i < tuftCount; i++) {
-                const tx = x + 1 + this.posHash(60 + i) * (ts - 2);
-                const tHeight = 1 + this.posHash(70 + i) * 1.5;
-                const grassShade = this.posHash(80 + i) < 0.5 ? 0x6e9c47 : 0x7faa53;
-                g.fillStyle(grassShade, 1);
-                g.fillTriangle(
-                    tx - 0.5, y + 0.5,
-                    tx + 0.5, y + 0.5,
-                    tx, y - tHeight
-                );
+            const grassA = 0x6e9c47;
+            const grassB = 0x88b85c;
+            const grassDark = 0x4f7330;
+            // Solid green band along the top
+            g.fillStyle(grassA, 1);
+            g.fillRect(x, y, ts, 1);
+            // Mottle with darker greens
+            const mottle = 2 + Math.floor(this.posHash(60) * 3);
+            for (let i = 0; i < mottle; i++) {
+                const px = x + Math.floor(this.posHash(61 + i) * ts);
+                g.fillStyle(grassDark, 1);
+                g.fillRect(px, y, 1, 1);
+            }
+            // A second softer row of green underneath (Terraria-ish)
+            g.fillStyle(grassA, 0.45);
+            g.fillRect(x, y + 1, ts, 1);
+            // Hanging/standing grass blades on top
+            const blades = 2 + Math.floor(this.posHash(80) * 3);
+            for (let i = 0; i < blades; i++) {
+                const px = x + 1 + Math.floor(this.posHash(81 + i) * (ts - 2));
+                const blen = 1 + Math.floor(this.posHash(91 + i) * 3);
+                const useLight = this.posHash(101 + i) > 0.5;
+                g.fillStyle(useLight ? grassB : grassA, 1);
+                g.fillRect(px, y - blen, 1, blen);
             }
         }
 
         // Embedded curiosities — rare and small.
-        const detailRoll = this.posHash(100);
+        const detailRoll = this.posHash(200);
         if (detailRoll < 0.04) {
-            const detailType = this.posHash(101);
+            const detailType = this.posHash(201);
             if (detailType < 0.5) this.drawWorm(g);
             else this.drawFossil(g);
         } else if (detailRoll < 0.07) {
