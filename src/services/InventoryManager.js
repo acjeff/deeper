@@ -1,62 +1,111 @@
+import { HUD } from './uiManager.js';
+
 export default class InventoryManager {
     /**
      * @param {Phaser.Scene} scene - Your game scene.
      * @param {string} containerId - The DOM element ID for the inventory container.
-     * @param {number} numSlots - Number of fixed inventory slots (default 27 for a 9×3 grid).
+     * @param {number} numSlots - Number of fixed inventory slots.
      */
     constructor(scene, containerId = 'inventoryContainer', numSlots = 12) {
         this.game = scene;
         this.numSlots = numSlots;
-        // Create a fixed array of slots; each slot holds either an item object or null.
         this.slots = new Array(numSlots).fill(null);
 
-        // Create or select the inventory container.
         this.container = document.getElementById(containerId);
         if (!this.container) {
             this.container = document.createElement('div');
             this.container.id = containerId;
+            this.container.className = 'hud-panel';
             Object.assign(this.container.style, {
                 position: 'fixed',
                 top: '50%',
                 left: '50%',
-                transform: 'translate(-50%, -50%)',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(9, 70px)',
-                gap: '10px',
-                padding: '25px',
-                background: 'rgba(0, 0, 0, 0.95)',
-                border: '3px solid #00ffff',
-                borderRadius: '0px',
+                transform: 'translate(-50%, -50%) scale(0.96)',
+                opacity: '0',
+                padding: '0',
                 zIndex: '2000',
-                backdropFilter: 'blur(20px)'
+                fontFamily: HUD.font,
+                minWidth: '420px',
+                transition: 'opacity 180ms ease, transform 180ms ease',
+                pointerEvents: 'none',
             });
-            document.body.appendChild(this.container);
-        }
-        // Hide the inventory by default.
-        this.container.style.display = 'none';
 
-        // Bind key event listener to toggle inventory on pressing "I".
+            // Header
+            const header = document.createElement('div');
+            Object.assign(header.style, {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 18px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            });
+
+            const titleWrap = document.createElement('div');
+            Object.assign(titleWrap.style, { display: 'flex', alignItems: 'center', gap: '10px' });
+            const dot = document.createElement('span');
+            Object.assign(dot.style, {
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: HUD.accent,
+                boxShadow: `0 0 10px ${HUD.accent}`,
+            });
+            const title = document.createElement('span');
+            title.textContent = 'Inventory';
+            Object.assign(title.style, {
+                fontFamily: HUD.font,
+                fontSize: '13px',
+                fontWeight: '600',
+                color: HUD.text,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+            });
+            titleWrap.appendChild(dot);
+            titleWrap.appendChild(title);
+
+            const hint = document.createElement('span');
+            hint.innerHTML = `Press <kbd style="font-family:${HUD.fontMono};font-size:10px;font-weight:600;color:${HUD.text};background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:2px 6px;margin:0 2px;">I</kbd> to close`;
+            Object.assign(hint.style, {
+                fontFamily: HUD.font,
+                fontSize: '11px',
+                color: HUD.textMuted,
+            });
+
+            header.appendChild(titleWrap);
+            header.appendChild(hint);
+            this.container.appendChild(header);
+
+            // Grid
+            this.grid = document.createElement('div');
+            Object.assign(this.grid.style, {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, 64px)',
+                gap: '8px',
+                padding: '18px',
+            });
+            this.container.appendChild(this.grid);
+
+            document.body.appendChild(this.container);
+        } else {
+            this.grid = this.container;
+        }
+        this._visible = false;
+
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
 
-        // Render the fixed grid of slots.
         this.render();
     }
 
     handleKeyDown(e) {
-        if (e.key.toLowerCase() === 'i') {
-            this.toggleVisibility();
-        }
+        if (e.key.toLowerCase() === 'i') this.toggleVisibility();
+        if (e.key === 'Escape' && this._visible) this.toggleVisibility();
     }
 
     toggleVisibility() {
-        this.container.style.display =
-            this.container.style.display === 'none' ? 'grid' : 'none';
+        this._visible = !this._visible;
+        this.container.style.opacity = this._visible ? '1' : '0';
+        this.container.style.transform = `translate(-50%, -50%) scale(${this._visible ? 1 : 0.96})`;
+        this.container.style.pointerEvents = this._visible ? 'auto' : 'none';
     }
 
-    /**
-     * Add an item to the first empty slot.
-     * @param {Object} item - The item to add.
-     */
     addItem(item) {
         const index = this.slots.findIndex(slot => slot === null);
         if (index !== -1) {
@@ -67,32 +116,18 @@ export default class InventoryManager {
         }
     }
 
-    /**
-     * Directly add an item into a specific inventory slot.
-     * @param {number} index - The target slot index.
-     * @param {Object} item - The item to add.
-     */
     addItemToSlot(index, item) {
         if (index < 0 || index >= this.numSlots) return;
         this.slots[index] = item;
         this.render();
     }
 
-    /**
-     * Remove an item from a specific slot.
-     * @param {number} index - The slot index.
-     */
     removeItemFromSlot(index) {
         if (index < 0 || index >= this.numSlots) return;
         this.slots[index] = null;
         this.render();
     }
 
-    /**
-     * Swap items between two inventory slots.
-     * @param {number} sourceIndex - Index of the dragged item.
-     * @param {number} targetIndex - Index of the drop target.
-     */
     swapItems(sourceIndex, targetIndex) {
         const temp = this.slots[sourceIndex];
         this.slots[sourceIndex] = this.slots[targetIndex];
@@ -101,38 +136,41 @@ export default class InventoryManager {
     }
 
     render() {
-        // Clear the inventory container.
-        this.container.innerHTML = '';
-        // Create fixed slots.
+        this.grid.innerHTML = '';
         for (let i = 0; i < this.numSlots; i++) {
             const slotEl = document.createElement('div');
             slotEl.classList.add('inventory-slot');
             slotEl.dataset.index = i;
             Object.assign(slotEl.style, {
-                width: '70px',
-                height: '70px',
-                background: 'rgba(0, 0, 0, 0.8)',
-                border: '2px solid #333333',
-                borderRadius: '0px',
+                width: '64px',
+                height: '64px',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '8px',
                 boxSizing: 'border-box',
                 position: 'relative',
                 padding: '8px',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
             });
 
-            // Add hover effects
             slotEl.addEventListener('mouseenter', () => {
-                slotEl.style.transform = 'scale(1.05)';
-                slotEl.style.borderColor = '#00ffff';
+                slotEl.style.transform = 'translateY(-1px)';
+                slotEl.style.borderColor = `rgba(91, 157, 255, 0.55)`;
+                slotEl.style.background = 'linear-gradient(135deg, rgba(91, 157, 255, 0.12) 0%, rgba(91, 157, 255, 0.04) 100%)';
+                slotEl.style.boxShadow = `0 0 0 2px rgba(91, 157, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06)`;
             });
-
             slotEl.addEventListener('mouseleave', () => {
-                slotEl.style.transform = 'scale(1)';
-                slotEl.style.borderColor = '#333333';
+                slotEl.style.transform = 'translateY(0)';
+                slotEl.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                slotEl.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)';
+                slotEl.style.boxShadow = 'inset 0 1px 0 rgba(255, 255, 255, 0.04)';
             });
 
-            // Allow this slot to accept drops.
             slotEl.addEventListener('dragover', e => e.preventDefault());
             slotEl.addEventListener('drop', (e) => {
                 e.preventDefault();
@@ -141,25 +179,16 @@ export default class InventoryManager {
                 const sourceIndex = parseInt(e.dataTransfer.getData('sourceIndex'), 10);
                 const targetIndex = parseInt(slotEl.dataset.index, 10);
 
-                // If the item is dragged from the inventory...
                 if (source === 'inventory') {
-                    // No action if dropped in the same slot.
                     if (sourceIndex === targetIndex) return;
-                    // Swap items within the inventory.
                     this.swapItems(sourceIndex, targetIndex);
                 } else if (source === 'toolbar') {
-                    // Dragged from the toolbar.
-                    // Get a reference to the toolbar manager (assumed to be on the scene).
                     const toolbarManager = this.game.toolBarManager;
-                    // Get the dragged item from the toolbar.
                     const draggedItem = toolbarManager.getItemById(draggedItemId);
                     if (!draggedItem) return;
                     const targetItem = this.slots[targetIndex];
-                    // Place the dragged item into the target inventory slot.
                     this.slots[targetIndex] = draggedItem;
-                    // Remove the item from the toolbar (using its source slot).
                     toolbarManager.removeItemBySlot(sourceIndex);
-                    // If the target slot was already occupied, move that item to the toolbar slot.
                     if (targetItem) {
                         toolbarManager.addItemToSlot(sourceIndex, targetItem);
                     }
@@ -168,7 +197,6 @@ export default class InventoryManager {
                 }
             });
 
-            // Render the item image if this slot has an item.
             const item = this.slots[i];
             if (item) {
                 const img = document.createElement('img');
@@ -176,35 +204,56 @@ export default class InventoryManager {
                 img.alt = item.name;
                 img.title = item.name;
                 Object.assign(img.style, {
-                    width: '100%',
-                    height: '100%',
+                    width: '78%',
+                    height: '78%',
                     objectFit: 'contain',
-                    transform: `rotate(${item.rotate}deg)`
+                    transform: `rotate(${item.rotate}deg)`,
+                    filter: 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6))',
+                    pointerEvents: 'auto',
                 });
-                // Set up the drag event for items in the inventory.
+                img.draggable = true;
                 img.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('text/plain', item.id);
                     e.dataTransfer.setData('source', 'inventory');
                     e.dataTransfer.setData('sourceIndex', i.toString());
                 });
                 slotEl.appendChild(img);
+
+                if (item.metadata?.number != null) {
+                    const number = document.createElement('div');
+                    Object.assign(number.style, {
+                        color: '#fff',
+                        position: 'absolute',
+                        bottom: '4px',
+                        right: '5px',
+                        fontWeight: '700',
+                        fontSize: '11px',
+                        fontFamily: HUD.fontMono,
+                        background: 'rgba(0, 0, 0, 0.65)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '6px',
+                        padding: '1px 5px',
+                        minWidth: '18px',
+                        textAlign: 'center',
+                        backdropFilter: 'blur(6px)',
+                        pointerEvents: 'none',
+                        fontVariantNumeric: 'tabular-nums',
+                    });
+                    number.innerHTML = item.metadata.number;
+                    slotEl.appendChild(number);
+                }
             } else {
-                // Add empty slot indicator
-                const emptyIndicator = document.createElement('div');
-                emptyIndicator.innerHTML = '□';
-                Object.assign(emptyIndicator.style, {
-                    color: 'rgba(0, 255, 255, 0.2)',
-                    fontSize: '28px',
-                    fontWeight: 'bold',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    fontFamily: 'monospace'
+                const empty = document.createElement('div');
+                Object.assign(empty.style, {
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '4px',
+                    border: '1px dashed rgba(255, 255, 255, 0.10)',
+                    pointerEvents: 'none',
                 });
-                slotEl.appendChild(emptyIndicator);
+                slotEl.appendChild(empty);
             }
-            this.container.appendChild(slotEl);
+            this.grid.appendChild(slotEl);
         }
     }
 }

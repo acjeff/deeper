@@ -303,21 +303,12 @@ export default class GameScene extends Phaser.Scene {
 
             if (this.electronAPI?.isElectron) {
                 await this.electronAPI.saveGame({grid: gridData, playerData: {x: this.player.x, y: this.player.y}});
-                this.saveButton.disabled = true;
-                this.saveButton.innerHTML = "Saved";
-                window.setTimeout(async () => {
-                    this.saveButton.disabled = false;
-                    this.saveButton.innerHTML = "Save Game";
-                }, 150)
             } else {
                 await this.saveGameToCloud(user, compressedData);
             }
         } catch (error) {
             console.error("Error saving game:", error);
         }
-
-        this.saveButton.innerHTML = "Save Game";
-        this.saveButton.disabled = false;
     }
 
     async saveGameToCloud(user, gridData) {
