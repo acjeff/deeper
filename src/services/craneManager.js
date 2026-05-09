@@ -75,7 +75,12 @@ export default class CraneManager {
                 else if (direction === 'down') this.controlPanel.setFrame(2);
                 else this.controlPanel.setFrame(0);
             },
-            // The hovered-block hooks expect these on every tileRef.
+            // The panel isn't a placed grid tile, so chunk-unload, hover, and
+            // the periodic checkState pass should all no-op here. Stubs keep
+            // the Tile-shaped interface so those callers don't have to
+            // special-case the platform panel.
+            destroy: () => {},
+            checkState: () => {},
             onMouseEnter: () => {},
             onMouseLeave: () => {},
             onClick: () => {}
