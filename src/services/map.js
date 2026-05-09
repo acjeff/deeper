@@ -1,6 +1,7 @@
 import * as ROT from "rot-js";
 import {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl} from "../classes/tiles";
 import TilePool from "../classes/TilePool";
+import TileTextureAtlas from "./tileTextureAtlas";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -11,6 +12,7 @@ export default class MapService {
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
+        this.game.tileAtlas = new TileTextureAtlas(this.game);
         this.game.dustEmitter = this.game.add.particles(0, 0, 'dust', {
             lifespan: {min: 200, max: 500},
             speed: {min: 20, max: 50},
