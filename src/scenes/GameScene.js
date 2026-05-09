@@ -21,7 +21,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async create() {
-        this.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
+        this.lightColors = ["163,255,93", "255,210,140", "163,93,255", "253,196,124", '255,247,230'];
         this.renderDistance = 3;
         this.railRotate = 45;
         this.fadeSpeed = 200;
@@ -373,6 +373,7 @@ export default class GameScene extends Phaser.Scene {
                 this.mineCartGroup.getChildren().forEach(mineCart => mineCart.cartRef.update());
             }
             this.controlsManager.handlePlayerMovement();
+            this.playerManager.updateVisuals(time, delta);
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();

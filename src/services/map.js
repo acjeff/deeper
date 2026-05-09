@@ -21,6 +21,20 @@ export default class MapService {
             blendMode: 'NORMAL'
         });
         this.game.dustEmitter.setDepth(9999);
+
+        // Cosier footstep puff — slower, smaller, drifts up gently like kicked-up dust.
+        this.game.footstepEmitter = this.game.add.particles(0, 0, 'dust', {
+            lifespan: {min: 350, max: 650},
+            speed: {min: 4, max: 14},
+            angle: {min: 230, max: 310},
+            scale: {start: 0.06, end: 0.12},
+            alpha: {start: 0.35, end: 0},
+            gravityY: -10,
+            quantity: 1,
+            emitting: false,
+            blendMode: 'NORMAL'
+        });
+        this.game.footstepEmitter.setDepth(2);
         this.layerCount = 7;
         this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);
         this.emptyPool = new TilePool((params) => new Empty(params));

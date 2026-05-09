@@ -33,7 +33,7 @@ export class Breakable extends Tile {
     }
 
     createSprite() {
-        let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x724c25, parseInt(this.tileDetails.strength) / 10));
+        let baseSprite = this.game.add.rectangle(this.worldX, this.worldY, this.game.tileSize, this.game.tileSize, darkenColor(0x6e4525, parseInt(this.tileDetails.strength) / 10));
         if (this.tileDetails.type) {
             this.image = this.game.soilTypes[this.tileDetails.type].image;
             this.overlaySprite = this.game.add.image(this.worldX, this.worldY, this.image);

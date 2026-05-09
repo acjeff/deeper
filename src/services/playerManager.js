@@ -25,6 +25,8 @@ export default class PlayerManager {
             repeat: -1
         });
 
+        this.game.playerShadow = this.game.add.ellipse(x, y + 4, 7, 2.2, 0x000000, 0.35);
+        this.game.playerShadow.setDepth(0.5);
         this.game.player = this.game.physics.add.sprite(x, y, 'player_stationary');
         this.game.playerHead = this.game.add.sprite(x, y, 'player_head');
         this.game.player.setDisplaySize(6, 8);
@@ -32,6 +34,9 @@ export default class PlayerManager {
         this.game.playerHead.setDepth(1);
         this.game.player.setDepth(2);
         this.game.player.setBounce(0.2);
+        this.headBaseY = 0;
+        this.bobPhase = 0;
+        this.wasGrounded = true;
 
         this.game.player.maxHealth = 100;
         this.game.player.maxEnergy = 100;
@@ -169,6 +174,71 @@ export default class PlayerManager {
                 this.dialogueLayer.parentNode.removeChild(this.dialogueLayer);
             }
         }, {once: true}); // Use { once: true } so the listener is removed automatically.
+    }
+
+    updateVisuals(time, delta) {
+        const player = this.game.player;
+        if (!player || !player.body) return;
+
+        const grounded = player.body.blocked.down;
+        const vy = player.body.velocity.y;
+        const vx = player.body.velocity.x;
+        const moving = Math.abs(vx) > 1;
+
+        // Squash on landing — only when transitioning from airborne to grounded
+        // and arriving with a noticeable downward velocity.
+        if (grounded && !this.wasGrounded && this.lastAirVy > 60) {
+            const intensity = Math.min(1, this.lastAirVy / 220);
+            this.game.tweens.killTweensOf([player, this.game.playerHead]);
+            this.game.tweens.add({
+                targets: [player, this.game.playerHead],
+                scaleX: 1 + 0.18 * intensity,
+                scaleY: 1 - 0.22 * intensity,
+                duration: 90,
+                ease: 'Quad.easeOut',
+                yoyo: true,
+                onYoyo: (tween, target) => {
+                    target.scaleX = 1;
+                    target.scaleY = 1;
+                },
+                onComplete: () => {
+                    player.scaleX = 1;
+                    player.scaleY = 1;
+                    this.game.playerHead.scaleX = 1;
+                    this.game.playerHead.scaleY = 1;
+                }
+            });
+        }
+
+        // Track peak downward velocity while airborne for landing intensity.
+        if (!grounded) {
+            this.lastAirVy = Math.max(this.lastAirVy || 0, vy);
+        } else {
+            this.lastAirVy = 0;
+        }
+        this.wasGrounded = grounded;
+
+        // Idle head bob — gentle 1px sine when stationary on the ground.
+        if (grounded && !moving) {
+            this.bobPhase += (delta || 16) * 0.0042;
+            const bob = Math.sin(this.bobPhase) * 0.5;
+            this.game.playerHead.y = player.body.y + 2.5 + bob;
+        } else {
+            this.bobPhase = 0;
+        }
+
+        // Soft drop shadow — sits at the player's feet, fades and shrinks
+        // when airborne to sell weight.
+        if (this.game.playerShadow) {
+            const shadow = this.game.playerShadow;
+            shadow.x = player.x;
+            shadow.y = player.body.y + 8.2;
+            const airHeight = grounded ? 0 : Math.min(40, Math.abs(vy) * 0.15);
+            const t = 1 - Math.min(1, airHeight / 30);
+            shadow.scaleX = 0.6 + 0.4 * t;
+            shadow.scaleY = 0.6 + 0.4 * t;
+            shadow.alpha = 0.12 + 0.23 * t;
+        }
     }
 
     teleportTo(x, y) {
