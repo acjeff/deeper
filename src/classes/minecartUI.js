@@ -65,7 +65,6 @@ export default class MineCartUI {
         );
 
         this.arrowRight.on('pointerdown', (e) => {
-            console.log('Change direction');
             this.arrowLeft.setAlpha(0.3);
             this.arrowRight.setAlpha(1);
             cart.changeDirections({right: true})
@@ -87,7 +86,6 @@ export default class MineCartUI {
         );
 
         this.arrowLeft.on('pointerdown', (e) => {
-            console.log('Change direction');
             this.arrowRight.setAlpha(0.3);
             this.arrowLeft.setAlpha(1);
             cart.changeDirections({left: true})
