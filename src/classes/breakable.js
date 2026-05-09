@@ -217,15 +217,21 @@ export class Breakable extends Tile {
         this.tileImage.setOrigin(0.5, 0.5);
         this.tileImage.setDepth(0);
 
-        // Per-tile tint jitter so neighbouring tiles of the same mask+variant
-        // still look subtly different. Tint multiplies the texture so we
-        // can only darken; range is a gentle ~88-100% brightness with a
-        // small warm/cool shift.
+        // Per-tile tint jitter (so neighbouring tiles still differ slightly)
+        // combined with a hardness-driven shift: softer tiles read brighter
+        // and warmer, harder tiles darker and cooler. Tint can only darken
+        // so per-tile brightness is multiplicative on top of jitter.
+        const strength = parseInt(this.tileDetails.strength) || 200;
+        const hardness = Math.max(-2, Math.min(2, Math.log2(Math.max(1, strength) / 200)));
+        const strengthScale = 1 - hardness * 0.06;
+        const strengthWarm = -hardness * 0.025;
+
         const baseT = 0.88 + this.posHash(500) * 0.12;
-        const warmShift = (this.posHash(501) - 0.5) * 0.05;
-        const tr = Math.max(0, Math.min(1, baseT + warmShift));
-        const tg = Math.max(0, Math.min(1, baseT));
-        const tb = Math.max(0, Math.min(1, baseT - warmShift));
+        const wobble = (this.posHash(501) - 0.5) * 0.05;
+        const fB = Math.max(0.4, Math.min(1, baseT * strengthScale));
+        const tr = Math.max(0, Math.min(1, fB + wobble + strengthWarm));
+        const tg = Math.max(0, Math.min(1, fB));
+        const tb = Math.max(0, Math.min(1, fB - wobble - strengthWarm));
         const tintInt = (Math.round(tr * 255) << 16) | (Math.round(tg * 255) << 8) | Math.round(tb * 255);
         this.tileImage.setTint(tintInt);
 
