@@ -1,19 +1,18 @@
-// Pre-renders dirt and grass tile variants as Phaser canvas textures.
-// Each combination of (edge mask × variant) is rendered once at scene start
-// so individual tiles can use cheap Image sprites instead of redrawing
-// procedural Graphics every time their state changes.
+// Pre-renders dirt and grass tile variants as Phaser canvas textures
+// at scene init. Each tile becomes a cheap Image sprite that just
+// references one of these atlas textures, swapping keys when its
+// neighbour state changes.
 //
-// Texture layout:
-//   width  = tileSize (e.g. 10)
-//   height = tileSize + grassOverhang (e.g. 14)
-//
-// The bottom tileSize rows are the tile body (collision-aligned).
-// The top grassOverhang rows are reserved for grass blades that protrude
-// above the tile. They're transparent on dirt textures.
+// Visual approach mirrors Terraria-style auto-tiles:
+// - sharp pixel-art square base
+// - corner cuts (1-2px L-shapes) where two adjacent sides face air
+// - dark outline traced around the resulting silhouette
+// - inner-corner darkening where two solid neighbours meet, giving
+//   the "tile seam" grain that makes a wall read as one mass
+// - 3 variants per edge mask for visual variety
 
 const VARIANT_COUNT = 3;
 
-// Deterministic pseudo-random for stable variant generation across runs.
 function makeRng(seed) {
     let s = seed | 0;
     return () => {
@@ -79,6 +78,81 @@ export default class TileTextureAtlas {
         return `tile_${kind}_${mask}_${variant}`;
     }
 
+    // Build a per-pixel filled mask for the body, applying corner cuts
+    // where two adjacent sides face air, plus optional edge erosion for
+    // variant-level silhouette variation.
+    buildFilled(mask, rng) {
+        const top = !!(mask & 1);
+        const right = !!(mask & 2);
+        const bottom = !!(mask & 4);
+        const left = !!(mask & 8);
+        const ts = this.tileSize;
+
+        const filled = [];
+        for (let py = 0; py < ts; py++) filled.push(new Array(ts).fill(true));
+
+        const cutCorner = (cornerX, cornerY, dirX, dirY, depth) => {
+            for (let i = 0; i <= depth; i++) {
+                for (let j = 0; j <= depth - i; j++) {
+                    const px = cornerX + dirX * i;
+                    const py = cornerY + dirY * j;
+                    if (filled[py] && filled[py][px] !== undefined) {
+                        filled[py][px] = false;
+                    }
+                }
+            }
+        };
+
+        // 1-2 deep L-shape cuts at each exposed corner
+        const cornerDepth = () => 1 + (rng() > 0.5 ? 1 : 0);
+        if (top && left)     cutCorner(0, 0, 1, 1, cornerDepth());
+        if (top && right)    cutCorner(ts - 1, 0, -1, 1, cornerDepth());
+        if (bottom && left)  cutCorner(0, ts - 1, 1, -1, cornerDepth());
+        if (bottom && right) cutCorner(ts - 1, ts - 1, -1, -1, cornerDepth());
+
+        // Tiny edge erosion — 0-1 chips per exposed side, away from corners
+        const erodeEdge = (axis, isOpen) => {
+            if (!isOpen) return;
+            if (rng() < 0.6) return;
+            const t = 3 + Math.floor(rng() * (ts - 6));
+            if (axis === 'top' && filled[0][t]) filled[0][t] = false;
+            else if (axis === 'bottom' && filled[ts - 1][t]) filled[ts - 1][t] = false;
+            else if (axis === 'left' && filled[t][0]) filled[t][0] = false;
+            else if (axis === 'right' && filled[t][ts - 1]) filled[t][ts - 1] = false;
+        };
+        erodeEdge('top', top);
+        erodeEdge('bottom', bottom);
+        erodeEdge('left', left);
+        erodeEdge('right', right);
+
+        return filled;
+    }
+
+    // A pixel is on the silhouette edge if any of its 4 neighbours is
+    // unfilled, or it's at the tile boundary on a side that faces air.
+    isSilhouetteEdge(filled, px, py, mask) {
+        if (!filled[py][px]) return false;
+        const top = !!(mask & 1);
+        const right = !!(mask & 2);
+        const bottom = !!(mask & 4);
+        const left = !!(mask & 8);
+        const ts = this.tileSize;
+
+        if (py === 0) { if (top) return true; }
+        else if (!filled[py - 1][px]) return true;
+
+        if (py === ts - 1) { if (bottom) return true; }
+        else if (!filled[py + 1][px]) return true;
+
+        if (px === 0) { if (left) return true; }
+        else if (!filled[py][px - 1]) return true;
+
+        if (px === ts - 1) { if (right) return true; }
+        else if (!filled[py][px + 1]) return true;
+
+        return false;
+    }
+
     drawBody(ctx, mask, variant, baseColor) {
         const top = !!(mask & 1);
         const right = !!(mask & 2);
@@ -89,96 +163,99 @@ export default class TileTextureAtlas {
         const yOff = this.grassOverhang;
         const rng = makeRng(mask * 17 + variant * 257 + 1);
 
-        const lightHex = lighten(baseColor, 22);
-        const dark1 = darken(baseColor, 22);
-        const dark2 = darken(baseColor, 40);
+        const mid = baseColor;
+        const hi = lighten(baseColor, 18);
+        const lo = darken(baseColor, 28);
+        const outline = darken(baseColor, 55);
 
-        // Body fill
-        ctx.fillStyle = toCss(baseColor);
-        ctx.fillRect(0, yOff, ts, ts);
+        const filled = this.buildFilled(mask, rng);
 
-        // Top edge — lighter row plus weathering pixels
-        if (top) {
-            ctx.fillStyle = toCss(lightHex);
-            ctx.fillRect(0, yOff, ts, 1);
-            const wear = 2 + Math.floor(rng() * 3);
-            ctx.fillStyle = toCss(dark1);
-            for (let i = 0; i < wear; i++) {
-                const px = Math.floor(rng() * ts);
-                ctx.fillRect(px, yOff, 1, 1);
+        // Pass 1: fill body pixels (mid colour where filled, dark outline
+        // where on the silhouette edge).
+        for (let py = 0; py < ts; py++) {
+            for (let px = 0; px < ts; px++) {
+                if (!filled[py][px]) continue;
+                const onEdge = this.isSilhouetteEdge(filled, px, py, mask);
+                ctx.fillStyle = toCss(onEdge ? outline : mid);
+                ctx.fillRect(px, yOff + py, 1, 1);
             }
         }
-        // Bottom edge — darker row
-        if (bottom) {
-            ctx.globalAlpha = 0.85;
-            ctx.fillStyle = toCss(dark2);
-            ctx.fillRect(0, yOff + ts - 1, ts, 1);
-            ctx.globalAlpha = 1;
-        }
-        // Side edges
-        if (left) {
-            ctx.globalAlpha = 0.55;
-            ctx.fillStyle = toCss(dark1);
-            ctx.fillRect(0, yOff, 1, ts);
-            ctx.globalAlpha = 1;
-        }
-        if (right) {
-            ctx.globalAlpha = 0.55;
-            ctx.fillStyle = toCss(dark1);
-            ctx.fillRect(ts - 1, yOff, 1, ts);
-            ctx.globalAlpha = 1;
-        }
-        // Chipped corners
-        ctx.fillStyle = toCss(dark2);
-        if (top && left) ctx.fillRect(0, yOff, 1, 1);
-        if (top && right) ctx.fillRect(ts - 1, yOff, 1, 1);
-        if (bottom && left) ctx.fillRect(0, yOff + ts - 1, 1, 1);
-        if (bottom && right) ctx.fillRect(ts - 1, yOff + ts - 1, 1, 1);
 
-        // Body speckles for soil grain
-        const speckleCount = 4 + Math.floor(rng() * 3);
+        // Pass 2: inner corner seam — where two adjacent sides are NOT
+        // exposed, the corner is interior. A single darker pixel there
+        // produces the Terraria-style "tile seam" grain when adjacent
+        // tiles tile next to one another.
+        const seam = (cornerX, cornerY, conds) => {
+            if (!conds) return;
+            if (filled[cornerY][cornerX]) {
+                ctx.fillStyle = toCss(lo);
+                ctx.fillRect(cornerX, yOff + cornerY, 1, 1);
+            }
+        };
+        seam(0, 0,             !top && !left);
+        seam(ts - 1, 0,        !top && !right);
+        seam(0, ts - 1,        !bottom && !left);
+        seam(ts - 1, ts - 1,   !bottom && !right);
+
+        // Pass 3: body speckles — small interior pixels (not on edge) of
+        // mixed darker/lighter shades for soil grain.
+        const speckleCount = 3 + Math.floor(rng() * 3);
         for (let i = 0; i < speckleCount; i++) {
             const sx = 1 + Math.floor(rng() * (ts - 2));
-            const sy = yOff + 1 + Math.floor(rng() * (ts - 2));
+            const sy = 1 + Math.floor(rng() * (ts - 2));
+            if (!filled[sy][sx]) continue;
+            if (this.isSilhouetteEdge(filled, sx, sy, mask)) continue;
             const useLight = rng() > 0.78;
-            ctx.globalAlpha = useLight ? 0.7 : 0.85;
-            ctx.fillStyle = toCss(useLight ? lightHex : dark1);
-            ctx.fillRect(sx, sy, 1, 1);
+            ctx.fillStyle = toCss(useLight ? hi : lo);
+            ctx.fillRect(sx, yOff + sy, 1, 1);
         }
-        ctx.globalAlpha = 1;
+
+        return filled;
     }
 
-    drawGrass(ctx, mask, variant) {
+    drawGrass(ctx, mask, variant, filled) {
         const ts = this.tileSize;
         const yOff = this.grassOverhang;
         const rng = makeRng(mask * 31 + variant * 911 + 7);
 
-        // Solid green band on the very top row of the body
-        ctx.fillStyle = toCss(this.grassA);
-        ctx.fillRect(0, yOff, ts, 1);
+        const top = !!(mask & 1);
+        if (!top) return;
 
-        // Darker mottle pixels along the top row
-        ctx.fillStyle = toCss(this.grassDark);
+        // Find the topmost filled pixel in each column — that's where
+        // the grass band sits, conforming to the silhouette.
+        const grassY = new Array(ts).fill(-1);
+        for (let px = 0; px < ts; px++) {
+            for (let py = 0; py < ts; py++) {
+                if (filled[py][px]) { grassY[px] = py; break; }
+            }
+        }
+
+        // Solid grass row along the top of the body
+        for (let px = 0; px < ts; px++) {
+            const py = grassY[px];
+            if (py < 0) continue;
+            ctx.fillStyle = toCss(this.grassA);
+            ctx.fillRect(px, yOff + py, 1, 1);
+        }
+        // Mottle with darker greens
         const mottle = 2 + Math.floor(rng() * 3);
         for (let i = 0; i < mottle; i++) {
             const px = Math.floor(rng() * ts);
-            ctx.fillRect(px, yOff, 1, 1);
+            const py = grassY[px];
+            if (py < 0) continue;
+            ctx.fillStyle = toCss(this.grassDark);
+            ctx.fillRect(px, yOff + py, 1, 1);
         }
-
-        // Softer second row beneath the band
-        ctx.globalAlpha = 0.45;
-        ctx.fillStyle = toCss(this.grassA);
-        ctx.fillRect(0, yOff + 1, ts, 1);
-        ctx.globalAlpha = 1;
-
         // Standing blades pushing up into the overhang region
         const blades = 2 + Math.floor(rng() * 3);
         for (let i = 0; i < blades; i++) {
             const px = 1 + Math.floor(rng() * (ts - 2));
+            const py = grassY[px];
+            if (py < 0) continue;
             const blen = 1 + Math.floor(rng() * 3);
             const useLight = rng() > 0.5;
             ctx.fillStyle = toCss(useLight ? this.grassB : this.grassA);
-            ctx.fillRect(px, yOff - blen, 1, blen);
+            ctx.fillRect(px, yOff + py - blen, 1, blen);
         }
     }
 
@@ -200,8 +277,8 @@ export default class TileTextureAtlas {
         const ctx = tex.context;
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, this.tileSize, this.textureHeight);
-        this.drawBody(ctx, mask, variant, this.dirtBaseColor);
-        this.drawGrass(ctx, mask, variant);
+        const filled = this.drawBody(ctx, mask, variant, this.dirtBaseColor);
+        this.drawGrass(ctx, mask, variant, filled);
         tex.refresh();
     }
 }
