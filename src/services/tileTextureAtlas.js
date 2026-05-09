@@ -11,7 +11,7 @@
 //   the "tile seam" grain that makes a wall read as one mass
 // - 3 variants per edge mask for visual variety
 
-const VARIANT_COUNT = 6;
+const VARIANT_COUNT = 8;
 
 function makeRng(seed) {
     let s = seed | 0;
@@ -206,20 +206,23 @@ export default class TileTextureAtlas {
         }
 
         // Pass 2: inner corner seam — where two adjacent sides are NOT
-        // exposed, the corner is interior. A single darker pixel there
-        // produces the Terraria-style "tile seam" grain when adjacent
-        // tiles tile next to one another.
-        const seam = (cornerX, cornerY, conds) => {
-            if (!conds) return;
+        // exposed the corner is interior. We add a faint darker pixel at
+        // SOME of these corners (chosen per-variant) so adjacent tiles'
+        // meeting corners don't always form a uniform 2x2 dark square at
+        // every 4-tile junction. Use a softer darken than lo.
+        const seamShade = darken(baseColor, 16);
+        const seamBits = Math.floor(rng() * 16);
+        const seam = (cornerX, cornerY, conds, bit) => {
+            if (!conds || !(seamBits & bit)) return;
             if (filled[cornerY][cornerX]) {
-                ctx.fillStyle = toCss(lo);
+                ctx.fillStyle = toCss(seamShade);
                 ctx.fillRect(cornerX, yOff + cornerY, 1, 1);
             }
         };
-        seam(0, 0,             !top && !left);
-        seam(ts - 1, 0,        !top && !right);
-        seam(0, ts - 1,        !bottom && !left);
-        seam(ts - 1, ts - 1,   !bottom && !right);
+        seam(0, 0,             !top && !left,    1);
+        seam(ts - 1, 0,        !top && !right,   2);
+        seam(0, ts - 1,        !bottom && !left, 4);
+        seam(ts - 1, ts - 1,   !bottom && !right, 8);
 
         // Pass 3: body speckles — small interior pixels (not on edge) in
         // a few different shades for richer soil grain. More variation per
