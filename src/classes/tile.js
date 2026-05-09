@@ -30,7 +30,7 @@ export class Tile {
         this.sprite.cellY = this.cellY;
         this.sprite.chunkKey = this.chunkKey;
         this.borderGraphics = this.game.add.graphics();
-        this.borderGraphics.lineStyle(0.5, 0xFFA500, 1); // 2px white border
+        this.borderGraphics.lineStyle(1, 0xfff1c4, 1);
         this.borderGraphics.strokeRect(
             this.sprite.x - this.sprite.displayWidth / 2,
             this.sprite.y - this.sprite.displayHeight / 2,
@@ -139,6 +139,10 @@ export class Tile {
     }
 
     onMouseLeave() {
+        if (this.borderPulseTween) {
+            this.borderPulseTween.stop();
+            this.borderPulseTween = null;
+        }
         this.borderGraphics.setAlpha(0);
     }
 
@@ -171,6 +175,15 @@ export class Tile {
             const adj = this.checkAdjacentBlocks(metadata);
             if (adj) {
                 this.borderGraphics.setAlpha(1);
+                if (this.borderPulseTween) this.borderPulseTween.stop();
+                this.borderPulseTween = this.game.tweens.add({
+                    targets: this.borderGraphics,
+                    alpha: 0.55,
+                    duration: 700,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
             }
         }
     }

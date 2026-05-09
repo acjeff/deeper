@@ -8,7 +8,7 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        this.cameras.main.setBackgroundColor(0x05070b);
+        this.cameras.main.setBackgroundColor(0x0c0805);
 
         this.layout = this.computeLayout();
 
@@ -63,9 +63,9 @@ export default class MenuScene extends Phaser.Scene {
         const steps = 24;
         for (let i = 0; i < steps; i++) {
             const t = i / (steps - 1);
-            const top = Phaser.Display.Color.ValueToColor(0x0a0d14);
-            const mid = Phaser.Display.Color.ValueToColor(0x110a14);
-            const bot = Phaser.Display.Color.ValueToColor(0x1a0a08);
+            const top = Phaser.Display.Color.ValueToColor(0x14100c);
+            const mid = Phaser.Display.Color.ValueToColor(0x1a120c);
+            const bot = Phaser.Display.Color.ValueToColor(0x241308);
             const c1 = Phaser.Display.Color.Interpolate.ColorWithColor(top, mid, 1, Math.min(1, t * 2));
             const c2 = Phaser.Display.Color.Interpolate.ColorWithColor(mid, bot, 1, Math.max(0, t * 2 - 1));
             const color = (t < 0.5 ? c1 : c2);
@@ -76,7 +76,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Faint geological strata lines
         const strata = this.add.graphics();
-        strata.lineStyle(1, 0xff7a3a, 0.05);
+        strata.lineStyle(1, 0xffb274, 0.07);
         for (let y = 60; y < h; y += Phaser.Math.Between(40, 90)) {
             strata.beginPath();
             const segs = Math.ceil(w / 40);
@@ -88,11 +88,11 @@ export default class MenuScene extends Phaser.Scene {
         }
 
         // Distant cave silhouette layer (back)
-        this.drawCaveLayer(0x0a0810, 0.55, h * 0.55, 38);
+        this.drawCaveLayer(0x140d08, 0.55, h * 0.55, 38);
         // Mid silhouette
-        this.drawCaveLayer(0x080509, 0.85, h * 0.7, 60);
+        this.drawCaveLayer(0x0e0805, 0.85, h * 0.7, 60);
         // Foreground floor
-        this.drawCaveLayer(0x000000, 1, h * 0.88, 90);
+        this.drawCaveLayer(0x080402, 1, h * 0.88, 90);
 
         // Hanging stalactites at top
         const stalGfx = this.add.graphics();

@@ -25,6 +25,8 @@ export default class PlayerManager {
             repeat: -1
         });
 
+        this.game.playerShadow = this.game.add.ellipse(x, y + 4, 7, 2.2, 0x000000, 0.35);
+        this.game.playerShadow.setDepth(0.5);
         this.game.player = this.game.physics.add.sprite(x, y, 'player_stationary');
         this.game.playerHead = this.game.add.sprite(x, y, 'player_head');
         this.game.player.setDisplaySize(6, 8);
@@ -32,6 +34,16 @@ export default class PlayerManager {
         this.game.playerHead.setDepth(1);
         this.game.player.setDepth(2);
         this.game.player.setBounce(0.2);
+        this.headBaseY = 0;
+        this.bobPhase = 0;
+        this.wasGrounded = true;
+        // Capture the scale that setDisplaySize produced — tweens must work
+        // relative to this, not absolute 1.0 which would blow the sprite up
+        // to its raw texture size.
+        this.playerBaseScaleX = this.game.player.scaleX;
+        this.playerBaseScaleY = this.game.player.scaleY;
+        this.headBaseScaleX = this.game.playerHead.scaleX;
+        this.headBaseScaleY = this.game.playerHead.scaleY;
 
         this.game.player.maxHealth = 100;
         this.game.player.maxEnergy = 100;
@@ -169,6 +181,88 @@ export default class PlayerManager {
                 this.dialogueLayer.parentNode.removeChild(this.dialogueLayer);
             }
         }, {once: true}); // Use { once: true } so the listener is removed automatically.
+    }
+
+    updateVisuals(time, delta) {
+        const player = this.game.player;
+        if (!player || !player.body) return;
+
+        const grounded = player.body.blocked.down;
+        const vy = player.body.velocity.y;
+        const vx = player.body.velocity.x;
+        const moving = Math.abs(vx) > 1;
+
+        // Squash on landing — only when transitioning from airborne to grounded
+        // and arriving with a noticeable downward velocity.
+        if (grounded && !this.wasGrounded && this.lastAirVy > 60) {
+            const intensity = Math.min(1, this.lastAirVy / 220);
+            const head = this.game.playerHead;
+            // Stop only our own scale tweens — using killTweensOf on the
+            // sprite would also kill the spawn-in alpha fade from teleportTo.
+            if (this.squashTween) this.squashTween.stop();
+            if (this.headSquashTween) this.headSquashTween.stop();
+            const stretch = 1 + 0.18 * intensity;
+            const squash = 1 - 0.22 * intensity;
+            this.squashTween = this.game.tweens.add({
+                targets: player,
+                scaleX: this.playerBaseScaleX * stretch,
+                scaleY: this.playerBaseScaleY * squash,
+                duration: 90,
+                ease: 'Quad.easeOut',
+                yoyo: true,
+                onComplete: () => {
+                    player.scaleX = this.playerBaseScaleX;
+                    player.scaleY = this.playerBaseScaleY;
+                }
+            });
+            this.headSquashTween = this.game.tweens.add({
+                targets: head,
+                scaleX: this.headBaseScaleX * stretch,
+                scaleY: this.headBaseScaleY * squash,
+                duration: 90,
+                ease: 'Quad.easeOut',
+                yoyo: true,
+                onComplete: () => {
+                    head.scaleX = this.headBaseScaleX;
+                    head.scaleY = this.headBaseScaleY;
+                }
+            });
+        }
+
+        // Track peak downward velocity while airborne for landing intensity.
+        if (!grounded) {
+            this.lastAirVy = Math.max(this.lastAirVy || 0, vy);
+        } else {
+            this.lastAirVy = 0;
+        }
+        this.wasGrounded = grounded;
+
+        // Idle head bob — gentle 1px sine when stationary on the ground.
+        if (grounded && !moving) {
+            this.bobPhase += (delta || 16) * 0.0042;
+            const bob = Math.sin(this.bobPhase) * 0.5;
+            this.game.playerHead.y = player.body.y + 2.5 + bob;
+        } else {
+            this.bobPhase = 0;
+        }
+
+        // Soft drop shadow — anchored to the last ground position so it
+        // stays on the floor while the player jumps, then shrinks and
+        // fades as they rise.
+        if (this.game.playerShadow) {
+            const shadow = this.game.playerShadow;
+            if (grounded) {
+                this.lastGroundY = player.body.bottom;
+            }
+            const groundY = this.lastGroundY ?? player.body.bottom;
+            shadow.x = player.x;
+            shadow.y = groundY + 0.2;
+            const airHeight = Math.max(0, groundY - player.body.bottom);
+            const t = 1 - Math.min(1, airHeight / 24);
+            shadow.scaleX = 0.55 + 0.45 * t;
+            shadow.scaleY = 0.55 + 0.45 * t;
+            shadow.alpha = 0.08 + 0.27 * t;
+        }
     }
 
     teleportTo(x, y) {

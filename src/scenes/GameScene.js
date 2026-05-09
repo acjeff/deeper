@@ -21,7 +21,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async create() {
-        this.lightColors = ["163,255,93", "228,163,32", "163,93,255", "253,196,124", '255,255,255'];
+        this.lightColors = ["163,255,93", "255,210,140", "163,93,255", "253,196,124", '255,247,230'];
         this.renderDistance = 3;
         this.railRotate = 45;
         this.fadeSpeed = 200;
@@ -269,8 +269,10 @@ export default class GameScene extends Phaser.Scene {
                     const lightChildren = this.lightGroup.getChildren();
                     const liquidChildren = this.liquidGroup.getChildren();
                     const railChildren = this.railGroup.getChildren();
+                    const soilChildren = this.soilGroup.getChildren();
+                    const buttressChildren = this.buttressGroup.getChildren();
                     // Combine arrays using spread syntax (more readable and possibly more optimized)
-                    const softSoil = [...emptyChildren, ...lightChildren, ...liquidChildren, ...railChildren];
+                    const softSoil = [...emptyChildren, ...lightChildren, ...liquidChildren, ...railChildren, ...soilChildren, ...buttressChildren];
                     const total = softSoil.length;
 
                     // Process a batch of blocks using a for loop.
@@ -373,6 +375,10 @@ export default class GameScene extends Phaser.Scene {
                 this.mineCartGroup.getChildren().forEach(mineCart => mineCart.cartRef.update());
             }
             this.controlsManager.handlePlayerMovement();
+            this.playerManager.updateVisuals(time, delta);
+            if (this.ambientMoteEmitter) {
+                this.ambientMoteEmitter.setPosition(this.player.x, this.player.y - 8);
+            }
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();

@@ -119,6 +119,24 @@ export default class ControlsManager {
 
     }
 
+    emitFootstepPuff() {
+        const player = this.game.player;
+        const emitter = this.game.footstepEmitter;
+        if (!emitter || !player?.body) return;
+
+        const grounded = player.body.blocked.down;
+        const moving = Math.abs(player.body.velocity.x) > 5;
+        if (!grounded || !moving || this.game.isFloating) return;
+
+        const now = this.game.time.now;
+        if (!this.lastFootstep) this.lastFootstep = 0;
+        if (now - this.lastFootstep < 280) return;
+        this.lastFootstep = now;
+
+        emitter.setPosition(player.x, player.body.y + 8.4);
+        emitter.explode(2);
+    }
+
     playerLooking() {
         const pointer = this.game.input.activePointer;
         if (!this.game.cameras.main) return;
@@ -147,6 +165,7 @@ export default class ControlsManager {
 
     handlePlayerMovement() {
         if (!this.game.player || !this.game.player.body) return;
+        this.emitFootstepPuff();
         this.game.isFloating = false;
         this.game.playerHead.x = this.game.player.body.x + 3;
         this.game.playerHead.y = this.game.player.body.y + 2.5;

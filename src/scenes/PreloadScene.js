@@ -38,6 +38,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('glowstick', 'images/glow-stick.png');
         this.load.image('rail', 'images/rail.png');
         this.load.image('minecart', 'images/mine-cart.png');
+        this.load.image('clouds', 'images/clouds-transparent.png');
     }
     // flat
     // diagonal_left

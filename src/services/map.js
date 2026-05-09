@@ -1,6 +1,7 @@
 import * as ROT from "rot-js";
 import {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl} from "../classes/tiles";
 import TilePool from "../classes/TilePool";
+import TileTextureAtlas from "./tileTextureAtlas";
 
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
@@ -11,6 +12,7 @@ export default class MapService {
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
         this.game.openSpaces = [];
+        this.game.tileAtlas = new TileTextureAtlas(this.game);
         this.game.dustEmitter = this.game.add.particles(0, 0, 'dust', {
             lifespan: {min: 200, max: 500},
             speed: {min: 20, max: 50},
@@ -21,6 +23,39 @@ export default class MapService {
             blendMode: 'NORMAL'
         });
         this.game.dustEmitter.setDepth(9999);
+
+        // Cosier footstep puff — slower, smaller, drifts up gently like kicked-up dust.
+        this.game.footstepEmitter = this.game.add.particles(0, 0, 'dust', {
+            lifespan: {min: 350, max: 650},
+            speed: {min: 4, max: 14},
+            angle: {min: 230, max: 310},
+            scale: {start: 0.06, end: 0.12},
+            alpha: {start: 0.35, end: 0},
+            gravityY: -10,
+            quantity: 1,
+            emitting: false,
+            blendMode: 'NORMAL'
+        });
+        this.game.footstepEmitter.setDepth(2);
+
+        // Ambient dust motes — slow drifty motes near the player to give the
+        // air some life. Additive so they catch warm light. Position is
+        // updated each frame so they always emit around the player.
+        this.game.ambientMoteEmitter = this.game.add.particles(0, 0, 'dust', {
+            lifespan: {min: 4000, max: 8000},
+            speedX: {min: -6, max: 6},
+            speedY: {min: -8, max: -2},
+            scale: {start: 0.04, end: 0.08},
+            alpha: {start: 0.3, end: 0},
+            frequency: 600,
+            quantity: 1,
+            blendMode: 'ADD',
+            emitZone: {
+                type: 'random',
+                source: new Phaser.Geom.Rectangle(-60, -40, 120, 80)
+            }
+        });
+        this.game.ambientMoteEmitter.setDepth(2.5);
         this.layerCount = 7;
         this.layerHeight = Math.floor(this.game.mapHeight / this.layerCount);
         this.emptyPool = new TilePool((params) => new Empty(params));
@@ -428,7 +463,34 @@ export default class MapService {
         this.game.grid[chunkKey][cellY][cellX] = {...tileType};
         if (cellItem?.tileRef) cellItem.tileRef.destroy(prefs);
         if (this.game.loadedChunks.has(chunkKey)) {
-            return this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX}, prefs);
+            const result = this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX}, prefs);
+            this.refreshNeighborEdges(worldX, worldY);
+            return result;
+        }
+    }
+
+    refreshNeighborEdges(worldX, worldY) {
+        // Refresh all 8 surrounding solid tiles so silhouette edges and
+        // inner-corner curves update on dig/place.
+        const ts = this.game.tileSize;
+        const groups = [this.game.soilGroup, this.game.buttressGroup];
+        for (const group of groups) {
+            if (!group?.children) continue;
+            group.children.each(entity => {
+                const dx = entity.x - worldX;
+                const dy = entity.y - worldY;
+                if ((dx === 0 && dy === 0) || Math.abs(dx) > ts || Math.abs(dy) > ts) return;
+                const ref = entity.tileRef;
+                if (!ref) return;
+                if (ref.redrawTile) {
+                    ref.lastEdgeMask = -1;
+                    ref.redrawTile();
+                }
+                if (ref.refreshCurveOverlay) {
+                    ref.lastCurveMask = -1;
+                    ref.refreshCurveOverlay();
+                }
+            });
         }
     }
 
@@ -487,6 +549,10 @@ export default class MapService {
                 this.placeObject(tileType, worldX, worldY, {chunkKey: chunkKey, cellX: x, cellY: y});
             }
         }
+        // Each new tile already self-evaluates its edges shortly after
+        // creation via its own delayed callback. We deliberately skip a
+        // bulk neighbour refresh here — it caused a frame hitch on chunk
+        // load, and any far-side artefact is outside the lit view radius.
     }
 
     unloadChunk(chunkKey) {

@@ -17,9 +17,36 @@ export default class LightingManager {
     }
 
     initSky() {
-        let skyCol = '#a6f5ff';
-        this.game.skyBox = this.game.add.rectangle(0, 0, 9999, 410, '0xa6f5ff');
+        this.game.skyBox = this.game.add.rectangle(0, 0, 9999, 410, 0xf9e4c8);
         this.game.skyBox.setDepth(-999);
+        this.spawnClouds();
+    }
+
+    spawnClouds() {
+        if (!this.game.textures.exists('clouds')) return;
+        // Slow drifting clouds across the sky band. Spread out so they drift
+        // independently in front of the warm sky.
+        const skyTop = -80;
+        const skyBottom = (this.game.aboveGround * this.game.tileSize) - 40;
+        const range = 4000;
+        for (let i = 0; i < 6; i++) {
+            const x = Phaser.Math.Between(-range / 2, range / 2);
+            const y = Phaser.Math.Between(skyTop, skyBottom);
+            const cloud = this.game.add.image(x, y, 'clouds');
+            const scale = Phaser.Math.FloatBetween(0.18, 0.32);
+            cloud.setScale(scale);
+            cloud.setAlpha(Phaser.Math.FloatBetween(0.45, 0.75));
+            cloud.setDepth(-998);
+            const speed = Phaser.Math.FloatBetween(60000, 120000);
+            this.game.tweens.add({
+                targets: cloud,
+                x: x + range,
+                duration: speed,
+                ease: 'Linear',
+                repeat: -1,
+                onRepeat: () => { cloud.x = x; }
+            });
+        }
     }
 
     initLighting() {
@@ -227,16 +254,16 @@ export default class LightingManager {
         if (this.game.skyBox) {
             // Helper linear interpolation function.
             function lerp(a, b, t) { return a + (b - a) * t; }
-            // Define the day tint based on your rectangle's initial color (0xa6f5ff).
-            // 0xa6f5ff in RGB is: r=166, g=245, b=255.
-            const dayTint = { r: 166, g: 245, b: 255 };
-            // Define a cosy warm night tint.
-            const nightTint = { r: 255, g: 209, b: 164 };
+            // Warm cream daytime sky (0xf9e4c8 = 249,228,200).
+            const dayTint = { r: 249, g: 228, b: 200 };
+            // Soft dusty-rose dusk for night.
+            const nightTint = { r: 232, g: 158, b: 130 };
 
-            // Interpolate between the night and day tints based on dayFactor.
-            const tintR = Math.round(lerp(nightTint.r, dayTint.r, dayFactor));
-            const tintG = Math.round(lerp(nightTint.g, dayTint.g, dayFactor));
-            const tintB = Math.round(lerp(nightTint.b, dayTint.b, dayFactor));
+            // Smoothstep the interpolation so dawn/dusk feels gentler than a linear lerp.
+            const t = dayFactor * dayFactor * (3 - 2 * dayFactor);
+            const tintR = Math.round(lerp(nightTint.r, dayTint.r, t));
+            const tintG = Math.round(lerp(nightTint.g, dayTint.g, t));
+            const tintB = Math.round(lerp(nightTint.b, dayTint.b, t));
             const tintColor = (tintR << 16) | (tintG << 8) | tintB;
 
             // For Phaser rectangles, use setFillStyle instead of setTint.
@@ -264,19 +291,32 @@ export default class LightingManager {
 
         const ctx = this.game.lightCtx;
 
-        const cachedCanvas = this.cachedCanvases[light.color] || this.cachedCanvases['255,255,255'];
+        let cachedCanvas = this.cachedCanvases[light.color];
+        if (!cachedCanvas) {
+            cachedCanvas = this.createCachedLightTexture(light.color, 256, 10);
+        }
 
+        // Soft outer bloom: gently lifts the dark in a wider area than the core light.
+        // This makes lamps feel like they breathe warmth into the cave instead of
+        // appearing as hard-edged cutouts.
+        const bloomRadius = radius * 1.9;
         ctx.globalCompositeOperation = "destination-out";
-        ctx.globalAlpha = light.intensity;
+        ctx.globalAlpha = light.intensity * 0.28;
+        ctx.drawImage(
+            cachedCanvas,
+            0, 0, cachedCanvas.width, cachedCanvas.height,
+            screenX - bloomRadius, screenY - bloomRadius, bloomRadius * 2, bloomRadius * 2
+        );
 
+        // Core light cutout.
+        ctx.globalAlpha = light.intensity;
         ctx.drawImage(
             cachedCanvas,
             0, 0, cachedCanvas.width, cachedCanvas.height,
             screenX - radius, screenY - radius, radius * 2, radius * 2
         );
 
-
-
+        // Warm color tint over the whole lit area.
         ctx.globalCompositeOperation = "normal";
         ctx.globalAlpha = light.neon ? 0.6 : 0.1;
 
@@ -286,7 +326,17 @@ export default class LightingManager {
             screenX - radius, screenY - radius, radius * 2, radius * 2
         );
 
+        // Wider, very soft warm halo for additional cosiness.
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = light.neon ? 0.18 : 0.05;
+        ctx.drawImage(
+            cachedCanvas,
+            0, 0, cachedCanvas.width, cachedCanvas.height,
+            screenX - bloomRadius, screenY - bloomRadius, bloomRadius * 2, bloomRadius * 2
+        );
+
         ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "normal";
     }
 
     getRays(worldX, worldY, radius) {
