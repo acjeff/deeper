@@ -3,9 +3,6 @@ name: Deploy Vite App
 on:
   push:
     branches:
-      - master  # Change to your default branch if different
-  pull_request:
-    branches:
       - master
   workflow_dispatch:
 
