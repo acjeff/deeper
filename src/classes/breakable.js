@@ -24,6 +24,10 @@ export class Breakable extends Tile {
 
     checkState() {
         this.checkStateWrapper();
+        // Cheap self-healing: re-evaluate edges so any tile whose neighbour
+        // changed without a direct refresh (e.g. cross-chunk boundary loads)
+        // still picks up the new state. Early-outs if the mask is unchanged.
+        this.redrawTile();
     }
 
     addToGroup() {
@@ -39,22 +43,32 @@ export class Breakable extends Tile {
         return s - Math.floor(s);
     }
 
-    isOpenNeighbor(block) {
-        if (!block) return true;
-        if (block.tileRef?.disabled) return true;
-        if (block.tileRef && !block.tileRef.active) return true;
-        const id = block.tileRef?.tileDetails?.id;
-        return id === 0 || id === 2;
+    // Direct grid lookup is O(1) and works regardless of which Phaser group
+    // a neighbour lives in. Avoids the expensive getAdjacentBlocks scan.
+    isOpenAt(worldX, worldY) {
+        const ts = this.game.tileSize;
+        const cs = this.game.chunkSize;
+        const gcx = Math.floor(worldX / ts);
+        const gcy = Math.floor(worldY / ts);
+        const chunkX = Math.floor(gcx / cs) * cs;
+        const chunkY = Math.floor(gcy / cs) * cs;
+        const chunk = this.game.grid[`${chunkX}_${chunkY}`];
+        if (!chunk) return true; // unloaded chunk -> treat as open
+        const lx = ((gcx % cs) + cs) % cs;
+        const ly = ((gcy % cs) + cs) % cs;
+        const tile = chunk[ly]?.[lx];
+        if (!tile) return true;
+        return tile.id === 0 || tile.id === 2;
     }
 
     getEdgeMask() {
-        const adj = this.game.mapService.getAdjacentBlocks(this.worldX, this.worldY);
-        const aboveGroundY = this.game.aboveGround * this.game.tileSize;
-        const isSurfaceTop = this.worldY <= aboveGroundY + this.game.tileSize;
-        const top = this.isOpenNeighbor(adj.above) || isSurfaceTop;
-        const right = this.isOpenNeighbor(adj.right);
-        const bottom = this.isOpenNeighbor(adj.below);
-        const left = this.isOpenNeighbor(adj.left);
+        const ts = this.game.tileSize;
+        const aboveGroundY = this.game.aboveGround * ts;
+        const isSurfaceTop = this.worldY <= aboveGroundY + ts;
+        const top = this.isOpenAt(this.worldX, this.worldY - ts) || isSurfaceTop;
+        const right = this.isOpenAt(this.worldX + ts, this.worldY);
+        const bottom = this.isOpenAt(this.worldX, this.worldY + ts);
+        const left = this.isOpenAt(this.worldX - ts, this.worldY);
         return (top ? 1 : 0) | (right ? 2 : 0) | (bottom ? 4 : 0) | (left ? 8 : 0);
     }
 
