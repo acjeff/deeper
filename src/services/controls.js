@@ -217,7 +217,17 @@ export default class ControlsManager {
             this.game.player.body.setGravityY(0);
             return;
         }
-        if (this.game.isFloating) {
+
+        // Riding the lift is a "soft freeze": vertical position is owned
+        // by the crane, but horizontal input, chunk streaming, and HUD
+        // updates need to keep running so the world renders around the
+        // player as the platform travels.
+        const onLift = !!this.game.playerOnLift;
+
+        if (onLift) {
+            this.game.player.body.setDrag(0);
+            this.game.player.body.setGravityY(0);
+        } else if (this.game.isFloating) {
             this.game.player.body.setGravityY(-100);
             this.game.player.body.setDrag(500);
             this.game.player.breath -= 0.1;
@@ -260,24 +270,28 @@ export default class ControlsManager {
             this.game.toolSprite.rotation = Phaser.Math.DegToRad(this.game.toolSprite.flipX ? this.swingRadius : -this.swingRadius);
         }
 
-        // Vertical movement
-        if (this.game.keys.up.isDown) {
-            if (this.game.isFloating) {
-                this.game.player.anims.play('jump', true);
-                this.game.player.setVelocityY(-30);
-            } else if (this.game.player.body.blocked.down) {
-                this.game.player.setVelocityY(-100);
+        // Vertical movement — skipped on the lift since the crane is
+        // pinning Y every frame. Letting jump/swim impulses through here
+        // would just be overwritten on the next crane.update() tick.
+        if (!onLift) {
+            if (this.game.keys.up.isDown) {
+                if (this.game.isFloating) {
+                    this.game.player.anims.play('jump', true);
+                    this.game.player.setVelocityY(-30);
+                } else if (this.game.player.body.blocked.down) {
+                    this.game.player.setVelocityY(-100);
+                }
             }
-        }
-        if (this.game.keys.down.isDown) {
-            if (this.game.isFloating) {
-                this.game.player.anims.play('jump', true);
-                this.game.player.setVelocityY(30);
+            if (this.game.keys.down.isDown) {
+                if (this.game.isFloating) {
+                    this.game.player.anims.play('jump', true);
+                    this.game.player.setVelocityY(30);
+                }
             }
-        }
-        if (this.game.isFloating && !this.game.keys.down.isDown && !this.game.keys.up.isDown) {
-            this.game.player.anims.play('jump', true);
-            this.game.player.setVelocityY(20);
+            if (this.game.isFloating && !this.game.keys.down.isDown && !this.game.keys.up.isDown) {
+                this.game.player.anims.play('jump', true);
+                this.game.player.setVelocityY(20);
+            }
         }
 
         const playerOffset = 3;
@@ -289,7 +303,11 @@ export default class ControlsManager {
             this.game.controlsManager.getInteractableBlock(15);
         }
 
-        const isFalling = !this.game.player.body.blocked.down;
+        // On the lift the player isn't actually colliding with the
+        // platform body (the crane pins Y directly), so blocked.down would
+        // read false and trigger the falling anim every frame. Treat the
+        // pin as grounded for animation purposes.
+        const isFalling = !onLift && !this.game.player.body.blocked.down;
         if (isFalling) {
             this.game.player.anims.play('jump', true);
         }
