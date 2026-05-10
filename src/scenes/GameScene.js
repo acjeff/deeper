@@ -14,6 +14,7 @@ import MinimapManager from "../services/minimapManager";
 import MapViewManager from "../services/mapViewManager";
 import FogOfWar from "../services/fogOfWar";
 import TreeTextureFactory from "../services/treeTextureFactory";
+import BackgroundManager from "../services/backgroundManager";
 
 const batchSize = 100;
 let currentIndex = 0;
@@ -238,6 +239,10 @@ export default class GameScene extends Phaser.Scene {
         this.mapService.ensureSurfaceLiftControls();
 
         window.setTimeout(async () => {
+            // Parallax backdrop sits underneath the world, behind every
+            // gameplay tile and decoration. Created before the player so
+            // its layers exist at scene scope when chunks first render.
+            this.backgroundManager = new BackgroundManager(this);
             this.playerManager = new PlayerManager(this);
             this.cameraManager = new CameraManager(this);
             this.physics.add.collider(this.glowStickGroup, this.soilGroup);
@@ -444,6 +449,7 @@ export default class GameScene extends Phaser.Scene {
                 this.ambientMoteEmitter.setPosition(this.player.x, this.player.y - 8);
             }
             this.lightingManager.updateLighting(delta);
+            this.backgroundManager?.update();
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
             this.revealFogAroundPlayer(time);
