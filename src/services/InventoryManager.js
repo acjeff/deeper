@@ -1,4 +1,5 @@
 import { HUD } from './uiManager.js';
+import InventoryItem from '../classes/InventoryItem.js';
 
 export default class InventoryManager {
     /**
@@ -114,6 +115,34 @@ export default class InventoryManager {
         } else {
             console.warn("No empty slot available in inventory");
         }
+    }
+
+    // Adds to the existing wood stack if present in either the inventory or
+    // the toolbar, otherwise creates a new stack in the inventory.
+    addWood(amount = 1) {
+        const bump = (existing) => {
+            const current = existing.metadata?.number || 0;
+            existing.updateMetaData({...(existing.metadata || {}), number: current + amount});
+        };
+        const inSlot = this.slots.find(s => s && s.id === 'wood');
+        if (inSlot) {
+            bump(inSlot);
+            this.render();
+            this.game.toolBarManager?.render?.();
+            return;
+        }
+        const tb = this.game.toolBarManager;
+        if (tb) {
+            const inToolbar = tb.slots.find(s => s && s.id === 'wood');
+            if (inToolbar) {
+                bump(inToolbar);
+                tb.render();
+                tb.setSelected(this.game.selectedIndex);
+                return;
+            }
+        }
+        const wood = new InventoryItem('wood', null, 'Wood', 'material', 'images/wood.png', {number: amount});
+        this.addItem(wood);
     }
 
     addItemToSlot(index, item) {

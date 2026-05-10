@@ -1,5 +1,5 @@
 import * as ROT from "rot-js";
-import {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl} from "../classes/tiles";
+import {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl, Tree} from "../classes/tiles";
 import TilePool from "../classes/TilePool";
 import TileTextureAtlas from "./tileTextureAtlas";
 
@@ -65,6 +65,7 @@ export default class MapService {
         this.lightPool = new TilePool((params) => new Light(params));
         this.buttressPool = new TilePool((params) => new Buttress(params));
         this.railPool = new TilePool((params) => new Rail(params));
+        this.treePool = new TilePool((params) => new Tree(params));
     }
 
     getLayer(y) {
@@ -141,6 +142,11 @@ export default class MapService {
             this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights, element.columnWeights);
         })
 
+        // Trees on the surface row — the cell just above the topmost soil
+        // band. We seed a clustered scatter so groves form rather than a
+        // uniform line of trees.
+        this.placeSurfaceTrees();
+
         // worldX, worldY, tileType, cellItem
         // Update region: every cell in columns 40 through 48 gets updated to a new tile type.
         // this.updateRegion(156, 164, this.game.tileTypes.empty);
@@ -154,6 +160,63 @@ export default class MapService {
      * loaded saves — tiles are only swapped in when the cell isn't
      * already a lift control, so existing wiring is preserved.
      */
+    placeSurfaceTrees() {
+        const tileTypes = this.game.tileTypes;
+        if (!tileTypes?.tree) return;
+        const treeRow = this.game.aboveGround;
+        const cs = this.game.chunkSize;
+        const grid = this.game.grid;
+        const chasm = this.game.chasmRange;
+
+        const cellAt = (x, y) => {
+            const chunkX = Math.floor(x / cs) * cs;
+            const chunkY = Math.floor(y / cs) * cs;
+            const chunk = grid[`${chunkX}_${chunkY}`];
+            if (!chunk) return null;
+            const lx = ((x % cs) + cs) % cs;
+            const ly = ((y % cs) + cs) % cs;
+            return chunk[ly]?.[lx] || null;
+        };
+        const setCell = (x, y, value) => {
+            const chunkX = Math.floor(x / cs) * cs;
+            const chunkY = Math.floor(y / cs) * cs;
+            const chunk = grid[`${chunkX}_${chunkY}`];
+            if (!chunk) return;
+            const lx = ((x % cs) + cs) % cs;
+            const ly = ((y % cs) + cs) % cs;
+            if (!chunk[ly]) return;
+            chunk[ly][lx] = value;
+        };
+
+        // 1D noise-ish density along the surface so trees clump into groves.
+        let density = 0.35;
+        let lastTreeX = -10;
+        for (let x = 2; x < this.game.mapWidth - 2; x++) {
+            if (x >= chasm[0] - 6 && x <= chasm[1] + 6) {
+                density = 0.35;
+                continue;
+            }
+            // Random walk on density to create clumps.
+            density += (Math.random() - 0.5) * 0.25;
+            density = Math.max(0.05, Math.min(0.85, density));
+
+            const cellHere = cellAt(x, treeRow);
+            const cellBelow = cellAt(x, treeRow + 1);
+            // The tree cell must be empty/sky and the cell directly below
+            // must be soil with grass — i.e. the natural surface tile.
+            if (!cellHere || cellHere.id !== tileTypes.empty.id) continue;
+            if (!cellBelow || cellBelow.id !== tileTypes.soil.id) continue;
+
+            // No two trees directly adjacent (saplings need air).
+            if (x - lastTreeX < 2) continue;
+
+            if (Math.random() < density) {
+                setCell(x, treeRow, {...tileTypes.tree});
+                lastTreeX = x;
+            }
+        }
+    }
+
     ensureSurfaceLiftControls() {
         const liftId = this.game.tileTypes?.liftControl?.id;
         const grid = this.game.grid;
@@ -558,6 +621,9 @@ export default class MapService {
         }
         if (tileType.id === this.game.tileTypes.liftControl.id) {
             newTile = this.liftControlPool.acquire(params);
+        }
+        if (tileType.id === this.game.tileTypes.tree.id) {
+            newTile = this.treePool.acquire(params);
         }
         return newTile;
     }

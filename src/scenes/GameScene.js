@@ -89,6 +89,9 @@ export default class GameScene extends Phaser.Scene {
             },
             liftControl: {
                 id: 7
+            },
+            tree: {
+                id: 8
             }
         }
 
@@ -134,6 +137,8 @@ export default class GameScene extends Phaser.Scene {
         this.glowSticks = [];
         this.emptyGroup = this.add.group();
         this.lightGroup = this.add.group();
+        this.treeGroup = this.add.group();
+        this.treeVariantCount = this.registry?.get?.('treeVariantCount') || 4;
         this.liftControlGroup = this.physics.add.staticGroup();
         this.liquidGroup = this.physics.add.staticGroup();
         this.lightingManager = new LightingManager(this);
@@ -143,6 +148,7 @@ export default class GameScene extends Phaser.Scene {
         this.inventoryManager = new InventoryManager(this);
 
         const pickaxe = new InventoryItem('pickaxe', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil]});
+        const axe = new InventoryItem('axe', null, 'Iron Axe', 'tool', this.textures.exists('axe') ? this.textures.get('axe').getSourceImage().toDataURL() : 'images/pickaxe.png', {interactsWith: [this.tileTypes.tree]});
         const glowStick = new InventoryItem('glowstick', null, 'Glow-stick', 'tool', 'images/glow-stick.png', {
             throwable: true,
             number: 100,
@@ -220,7 +226,7 @@ export default class GameScene extends Phaser.Scene {
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         }, {rotate: -this.railRotate});
 
-        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup, this.liftControlGroup];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup, this.liftControlGroup, this.treeGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();
@@ -260,14 +266,14 @@ export default class GameScene extends Phaser.Scene {
             this.minimapManager = new MinimapManager(this);
             this.mapViewManager = new MapViewManager(this);
             this.toolBarManager.addItemToSlot(0, pickaxe);
-            // this.toolBarManager.addItemToSlot(1, glowStick);
+            this.toolBarManager.addItemToSlot(1, axe);
             this.toolBarManager.addItemToSlot(2, lamp);
             this.toolBarManager.addItemToSlot(3, buttress);
             this.toolBarManager.addItemToSlot(4, rail);
             this.toolBarManager.addItemToSlot(5, railDiagonalLeft);
-            this.toolBarManager.addItemToSlot(1, railDiagonalRight);
             // this.toolBarManager.addItemToSlot(6, liftControl);
             this.toolBarManager.addItemToSlot(6, mineCart);
+            this.inventoryManager.addItem(railDiagonalRight);
 
             this.toolBarManager.setSelected(0);
 
