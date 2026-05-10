@@ -34,6 +34,10 @@ export default class PlayerManager {
         this.game.playerHead.setDepth(1);
         this.game.player.setDepth(2);
         this.game.player.setBounce(0.2);
+        // Cap downward velocity so the player falls at a consistent speed
+        // instead of accelerating without limit. Gravity still pulls them
+        // toward this terminal velocity, then holds it steady.
+        this.game.player.body.maxVelocity.y = 100;
         this.headBaseY = 0;
         this.bobPhase = 0;
         this.wasGrounded = true;
