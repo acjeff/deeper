@@ -1,5 +1,52 @@
 import LightSource from "./lightsource";
 
+// 24-hour sky palette indexed by timeFraction (0..1). timeFraction 0
+// is noon in the existing day-cycle formula (cos peaks at 0), so the
+// stops climb away from blue through orange/purple into navy and back.
+// Smoothstep between adjacent stops is applied at lookup time.
+const SKY_PALETTE = [
+    { t: 0.00, c: [104, 178, 226] }, // noon — sky blue
+    { t: 0.18, c: [144, 168, 198] }, // late afternoon — softer blue-grey
+    { t: 0.22, c: [216, 132, 96]  }, // dusk — warm orange
+    { t: 0.27, c: [120, 64, 132]  }, // post-dusk — deep purple
+    { t: 0.40, c: [18, 22, 50]    }, // night — dark navy
+    { t: 0.60, c: [18, 22, 50]    }, // night — dark navy
+    { t: 0.73, c: [120, 64, 132]  }, // pre-dawn — deep purple
+    { t: 0.78, c: [232, 152, 112] }, // dawn — warm pink-orange
+    { t: 0.82, c: [144, 168, 198] }, // morning — soft blue-grey
+    { t: 1.00, c: [104, 178, 226] }, // noon — sky blue
+];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+function paletteColor(t) {
+    const stops = SKY_PALETTE;
+    for (let i = 0; i < stops.length - 1; i++) {
+        const a = stops[i];
+        const b = stops[i + 1];
+        if (t < a.t || t > b.t) continue;
+        const localT = (t - a.t) / (b.t - a.t || 1);
+        const s = smoothstep(localT);
+        return [
+            Math.round(lerp(a.c[0], b.c[0], s)),
+            Math.round(lerp(a.c[1], b.c[1], s)),
+            Math.round(lerp(a.c[2], b.c[2], s)),
+        ];
+    }
+    return stops[stops.length - 1].c.slice();
+}
+
+// "Visibility" curve used for the dark-overlay cutout. Stays at 1 through
+// most of the cycle and falls to 0 only inside the deep-night window, so
+// the vivid dusk/dawn colours read clearly instead of being half-buried
+// under the dark overlay.
+function skyVisibility(timeFraction) {
+    // Phase shift so the dip is centred on timeFraction = 0.5 (midnight).
+    const nightCos = Math.cos(2 * Math.PI * (timeFraction - 0.5));
+    return Math.max(0, Math.min(1, 1 - 1.55 * Math.max(0, nightCos)));
+}
+
 export default class LightingManager {
     constructor(scene) {
         this.game = scene;
@@ -35,6 +82,7 @@ export default class LightingManager {
 
     spawnClouds() {
         if (!this.game.textures.exists('clouds')) return;
+        this.clouds = [];
         // Slow drifting clouds across the sky band. Spread out so they drift
         // independently in front of the warm sky.
         const skyTop = -80;
@@ -46,8 +94,12 @@ export default class LightingManager {
             const cloud = this.game.add.image(x, y, 'clouds');
             const scale = Phaser.Math.FloatBetween(0.18, 0.32);
             cloud.setScale(scale);
-            cloud.setAlpha(Phaser.Math.FloatBetween(0.45, 0.75));
+            // Store the base alpha so updateSky can fade clouds with the
+            // diurnal visibility curve without losing the per-cloud value.
+            cloud.baseAlpha = Phaser.Math.FloatBetween(0.45, 0.75);
+            cloud.setAlpha(cloud.baseAlpha);
             cloud.setDepth(-998);
+            this.clouds.push(cloud);
             const speed = Phaser.Math.FloatBetween(60000, 120000);
             this.game.tweens.add({
                 targets: cloud,
@@ -259,38 +311,31 @@ export default class LightingManager {
         const dayCycleDuration = this.game.dayCycleDuration || 60000; // default 60 seconds per cycle
         const timeFraction = (now % dayCycleDuration) / dayCycleDuration;
 
-        // Compute a dayFactor that is 1 at full day and 0 at full night.
-        // Using cosine: at timeFraction=0.5 (noon) dayFactor=1, and at timeFraction=0 or 1 (midnight) dayFactor=0.
-        const dayFactor = (1 + Math.cos(2 * Math.PI * timeFraction)) / 2;
-
-        // Multiply the full-day gradient stops by dayFactor.
-        const alphaVal = dayFactor;
+        // Sky visibility — stays high through dawn/dusk and only collapses
+        // in the deep-night window, so the warm dusk colours read clearly.
+        const alphaVal = skyVisibility(timeFraction);
 
         const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + scaledSkyHeight);
         _gradient.addColorStop(0, `rgba(0, 0, 0, ${alphaVal})`);
         _gradient.addColorStop(fadeStartFrac, `rgba(0, 0, 0, ${alphaVal})`);
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-        // Update the skyBox's fill style with a smooth tint transition.
+        // Paint the sky background by interpolating through the diurnal
+        // palette: bright blue at noon, navy at midnight, with orange and
+        // purple bands swept through at dusk and dawn.
         if (this.game.skyBox) {
-            // Helper linear interpolation function.
-            function lerp(a, b, t) { return a + (b - a) * t; }
-            // Warm cream daytime sky (0xf9e4c8 = 249,228,200).
-            const dayTint = { r: 249, g: 228, b: 200 };
-            // Soft dusty-rose dusk for night.
-            const nightTint = { r: 232, g: 158, b: 130 };
-
-            // Smoothstep the interpolation so dawn/dusk feels gentler than a linear lerp.
-            const t = dayFactor * dayFactor * (3 - 2 * dayFactor);
-            const tintR = Math.round(lerp(nightTint.r, dayTint.r, t));
-            const tintG = Math.round(lerp(nightTint.g, dayTint.g, t));
-            const tintB = Math.round(lerp(nightTint.b, dayTint.b, t));
-            const tintColor = (tintR << 16) | (tintG << 8) | tintB;
-
-            // For Phaser rectangles, use setFillStyle instead of setTint.
+            const [r, g, b] = paletteColor(timeFraction);
+            const tintColor = (r << 16) | (g << 8) | b;
             this.game.skyBox.setFillStyle(tintColor, 1);
-            // Alternatively, you could update the fillColor property directly:
-            // this.game.skyBox.fillColor = tintColor;
+        }
+
+        // Fade clouds with sky visibility so they don't glow against a
+        // navy midnight sky. Their per-cloud baseAlpha is preserved.
+        if (this.clouds && this.clouds.length) {
+            for (const cloud of this.clouds) {
+                if (!cloud.active) continue;
+                cloud.setAlpha((cloud.baseAlpha ?? 0.6) * alphaVal);
+            }
         }
 
         ctx.fillStyle = _gradient;
