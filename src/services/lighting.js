@@ -17,7 +17,16 @@ export default class LightingManager {
     }
 
     initSky() {
-        this.game.skyBox = this.game.add.rectangle(0, 0, 9999, 410, 0xf9e4c8);
+        // Sky extends from above the world all the way down to 100m below
+        // the soil line; below that the cave parallax takes over. Origin
+        // is set to top-centre so the rectangle hangs from a known anchor
+        // (y=skyTop) rather than the default centred origin, which would
+        // shift the band as we change its height.
+        this.skyDepthTiles = 100;
+        const skyTop = -200;
+        const skyBottom = (this.game.aboveGround + this.skyDepthTiles) * this.game.tileSize;
+        this.game.skyBox = this.game.add.rectangle(0, skyTop, 9999, skyBottom - skyTop, 0xf9e4c8);
+        this.game.skyBox.setOrigin(0.5, 0);
         this.game.skyBox.setDepth(-999);
         this.spawnClouds();
     }
@@ -226,8 +235,12 @@ export default class LightingManager {
         const scale = camera.zoom;
         const skyX = (0 - camera.worldView.x) * scale;
         const skyY = (0 - camera.worldView.y) * scale;
-        const skyHeight = this.game.aboveGround * 10 + 50;
-        const scaledSkyHeight = skyHeight * scale; // Adjust height by zoom
+        // Cutout spans from world Y=0 down to (aboveGround + skyDepthTiles)
+        // tiles, then fades into the dark overlay across the bottom 10% so
+        // the sky-to-cave transition isn't a hard line.
+        const skyDepth = this.skyDepthTiles ?? 100;
+        const skyHeight = (this.game.aboveGround + skyDepth) * this.game.tileSize;
+        const scaledSkyHeight = skyHeight * scale;
 
         const ctx = this.game.lightCtx;
         ctx.globalCompositeOperation = "destination-out";
@@ -247,7 +260,7 @@ export default class LightingManager {
 
         const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + scaledSkyHeight);
         _gradient.addColorStop(0, `rgba(0, 0, 0, ${alphaVal})`);
-        _gradient.addColorStop(0.8, `rgba(0, 0, 0, ${alphaVal})`);
+        _gradient.addColorStop(0.9, `rgba(0, 0, 0, ${alphaVal})`);
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
         // Update the skyBox's fill style with a smooth tint transition.

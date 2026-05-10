@@ -1,16 +1,12 @@
-// Two-zone parallax backdrop sitting behind the gameplay tiles. The
-// surface zone (default 100m below the soil line) renders as a hand-laid
-// stone-brick wall — the kind of masonry you'd see behind an old mine
-// entrance — and the deep zone renders as natural cave rock studded with
-// stalactites, stalagmites, and glowing crystals. A slower-scrolling
-// distant cave layer sits behind the near cave for parallax depth.
-//
-// Sky + clouds (handled in LightingManager) keep their existing pixel
-// drift on top of the brick backing in the surface zone.
+// Two-zone backdrop sitting behind the gameplay tiles. Down to ~100m
+// below the surface the empty cells reveal the sky band (LightingManager
+// stretches the daylight cutout to match), so a player digging shallow
+// tunnels still sees daylight + drifting clouds behind them. Past 100m
+// the camera-locked cave layer kicks in: natural rock studded with
+// stalactites, stalagmites, and glowing crystals, scrolling at a
+// fraction of camera speed for parallax depth.
 
-const SURFACE_DEPTH_TILES = 100; // ~100m of brick wall before going deep
-const BRICK_TILE_W = 60;
-const BRICK_TILE_H = 40;
+const SURFACE_DEPTH_TILES = 100;
 const CAVE_TILE_W = 96;
 const CAVE_TILE_H = 96;
 const PARALLAX_CAVE_FACTOR = 0.45;
@@ -58,82 +54,7 @@ export default class BackgroundManager {
     // ----- Texture generation ---------------------------------------------
 
     generateTextures() {
-        this.makeBrickTexture();
         this.makeCaveTexture();
-    }
-
-    makeBrickTexture() {
-        const key = 'bg_brick';
-        if (this.game.textures.exists(key)) return;
-        const w = BRICK_TILE_W, h = BRICK_TILE_H;
-        const tex = this.game.textures.createCanvas(key, w, h);
-        const ctx = tex.context;
-        ctx.imageSmoothingEnabled = false;
-        const rand = makeRng(0x42117);
-
-        // Deep dirt-grout backdrop the stones sit on top of.
-        ctx.fillStyle = '#1a120c';
-        ctx.fillRect(0, 0, w, h);
-        // Faint vertical streaks to break up the flatness.
-        for (let i = 0; i < 18; i++) {
-            const x = Math.floor(rand() * w);
-            ctx.fillStyle = rgba('#000000', 0.18);
-            ctx.fillRect(x, 0, 1, h);
-        }
-
-        // Tile bricks in alternating-offset rows like real masonry, with
-        // per-brick warm/cool jitter so the wall doesn't read as a single
-        // flat colour. Brick interiors get a 1-pixel top highlight and a
-        // 1-pixel bottom shadow for chiselled depth.
-        const brickW = 20;
-        const brickH = 8;
-        for (let row = -1; row <= Math.ceil(h / brickH); row++) {
-            const offset = (row & 1) ? brickW / 2 : 0;
-            for (let col = -1; col <= Math.ceil(w / brickW); col++) {
-                const bx = Math.round(col * brickW + offset);
-                const by = row * brickH;
-                if (by + brickH < 0 || by > h) continue;
-
-                // Warm grey-brown stone with per-brick variation.
-                const warm = rand();
-                const baseR = 64 + Math.floor(warm * 22);
-                const baseG = 52 + Math.floor(warm * 18);
-                const baseB = 42 + Math.floor(warm * 14);
-                ctx.fillStyle = `rgb(${baseR},${baseG},${baseB})`;
-                ctx.fillRect(bx + 1, by + 1, brickW - 2, brickH - 2);
-
-                // Speckle: 3-6 darker pebble pixels inside each brick.
-                const specks = 3 + Math.floor(rand() * 4);
-                for (let s = 0; s < specks; s++) {
-                    const sx = bx + 1 + Math.floor(rand() * (brickW - 2));
-                    const sy = by + 1 + Math.floor(rand() * (brickH - 2));
-                    ctx.fillStyle = rgba('#000000', 0.18);
-                    ctx.fillRect(sx, sy, 1, 1);
-                }
-
-                // Top highlight + bottom shadow gives the cobble its shape.
-                ctx.fillStyle = rgba('#f4d7b0', 0.08);
-                ctx.fillRect(bx + 1, by + 1, brickW - 2, 1);
-                ctx.fillStyle = rgba('#000000', 0.42);
-                ctx.fillRect(bx + 1, by + brickH - 2, brickW - 2, 1);
-            }
-        }
-
-        // Occasional moss along the bottom edge of bricks — gives the wall
-        // some life and breaks up the regularity.
-        const mossCount = 8;
-        for (let i = 0; i < mossCount; i++) {
-            const mx = Math.floor(rand() * w);
-            const my = Math.floor(rand() * h);
-            const len = 2 + Math.floor(rand() * 4);
-            const colorPick = rand();
-            const mossColor = colorPick > 0.5 ? '#4f7330' : '#6b8c3c';
-            ctx.fillStyle = rgba(mossColor, 0.55);
-            ctx.fillRect(mx, my, len, 1);
-            if (rand() > 0.5) ctx.fillRect(mx + 1, my + 1, len - 1, 1);
-        }
-
-        tex.refresh();
     }
 
     makeCaveTexture() {
@@ -248,38 +169,12 @@ export default class BackgroundManager {
     // ----- Layer placement ------------------------------------------------
 
     createLayers() {
-        const brickTopY = this.surfaceY();
-        const brickBottomY = this.deepY();
-        const brickHeight = brickBottomY - brickTopY;
-
-        // Stone brick wall — sits behind every tile in the top SURFACE_DEPTH
-        // tiles, visible wherever a tile is empty and the lightmap reveals
-        // it. ScrollFactor 1 keeps it pinned to world coordinates so dug
-        // tunnels reveal coherent masonry rather than swimming texture.
-        this.brickLayer = this.game.add.tileSprite(
-            this.worldW / 2,
-            brickTopY + brickHeight / 2,
-            this.worldW + 400,
-            brickHeight,
-            'bg_brick'
-        );
-        this.brickLayer.setDepth(-996);
-
-        // Soft 2-tile gradient seam where brick meets cave so the transition
-        // from masonry to natural rock doesn't read as a hard horizontal
-        // line across the world.
-        const seamH = this.ts * 4;
-        this.seam = this.game.add.graphics();
-        this.seam.setDepth(-995.5);
-        this.seam.fillGradientStyle(0x1a120c, 0x1a120c, 0x0f0a07, 0x0f0a07, 1, 1, 1, 1);
-        this.seam.fillRect(0, brickBottomY - seamH / 2, this.worldW, seamH);
-
         // Deep cave parallax layer — camera-locked at screen origin, with
         // its tile position shifted at a fraction of the camera scroll
         // each frame so the cave appears to scroll past slower than the
         // foreground. Stalactites, stalagmites, and glow rocks are baked
-        // into the texture. Hidden while the player is up at the surface
-        // so the brick backing reads cleanly.
+        // into the texture. Hidden while the player's view is still up in
+        // the sky band so daylight + clouds read cleanly.
         this.caveParallax = this.game.add.tileSprite(
             -100, -100,
             this.game.cameras.main.width + 200,
@@ -308,25 +203,30 @@ export default class BackgroundManager {
         const cam = this.game.cameras.main;
         if (!cam || !this.caveParallax) return;
 
-        // The cave parallax sprite is camera-locked (scrollFactor 0), so
-        // its x/y are screen-space and stay at the screen origin. Resize
-        // it to the viewport every frame so it fills the screen at any
-        // window size, then shift its tile position at a fraction of the
-        // camera scroll. The result: the cave drifts past slower than the
-        // foreground tiles, reading as distance behind the player.
+        // The cave parallax sprite is camera-locked (scrollFactor 0); we
+        // reposition it each frame so its top edge sits exactly at the
+        // screen Y corresponding to the deep boundary. Above that line the
+        // sky band keeps showing through; below, the cave wall + features
+        // take over. Texture tile position shifts at a fraction of the
+        // camera scroll so the wall reads as distance behind the player.
+        const deepScreenY = this.deepY() - cam.scrollY;
+
+        if (deepScreenY >= cam.height) {
+            // Camera entirely inside the sky band — no cave needed.
+            if (this.caveParallax.visible) this.caveParallax.setVisible(false);
+            return;
+        }
+
+        if (!this.caveParallax.visible) this.caveParallax.setVisible(true);
+
+        const top = Math.max(-100, deepScreenY);
         const w = cam.width + 200;
-        const h = cam.height + 200;
+        const h = cam.height - top + 200;
+        this.caveParallax.x = -100;
+        this.caveParallax.y = top;
         if (this.caveParallax.width !== w) this.caveParallax.width = w;
         if (this.caveParallax.height !== h) this.caveParallax.height = h;
         this.caveParallax.tilePositionX = cam.scrollX * PARALLAX_CAVE_FACTOR;
         this.caveParallax.tilePositionY = cam.scrollY * PARALLAX_CAVE_FACTOR;
-
-        // Only render the cave once the player's view reaches the deep
-        // zone; in the brick zone we want the masonry to show, not stone.
-        const viewBottom = cam.worldView.y + cam.height;
-        const shouldShow = viewBottom > this.deepY() - this.ts * 8;
-        if (this.caveParallax.visible !== shouldShow) {
-            this.caveParallax.setVisible(shouldShow);
-        }
     }
 }
