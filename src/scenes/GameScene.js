@@ -422,6 +422,11 @@ export default class GameScene extends Phaser.Scene {
             if (this.mineCartGroup.getChildren().length) {
                 this.mineCartGroup.getChildren().forEach(mineCart => mineCart.cartRef.update());
             }
+            // Crane runs first so the player's sprite + body Y are pinned
+            // to the lift before handlePlayerMovement reads body.y to
+            // place the head and tool sprites — otherwise the head lags
+            // the player by one frame and produces visible stutter.
+            this.craneManager?.update();
             this.controlsManager.handlePlayerMovement();
             this.playerManager.updateVisuals(time, delta);
             if (this.ambientMoteEmitter) {
@@ -433,7 +438,6 @@ export default class GameScene extends Phaser.Scene {
             this.revealFogAroundPlayer(time);
             this.minimapManager?.update(time);
             this.mapViewManager?.draw();
-            this.craneManager?.update();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
             }
