@@ -151,6 +151,7 @@ export default class UiManager {
                 this.game.lightCanvas.remove();
                 this.statusPanel?.remove();
                 this.game.minimapManager?.destroy();
+                this.game.mapViewManager?.destroy();
                 this.game.scene.stop("GameScene");
                 this.game.scene.start("MenuScene");
             }, 100);
@@ -194,27 +195,8 @@ export default class UiManager {
     // -------------------- Status Panel --------------------
 
     addStatusPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'statusPanel';
-        panel.className = 'hud-panel';
-        Object.assign(panel.style, {
-            position: 'absolute',
-            left: '18px',
-            bottom: '218px',
-            padding: '12px 14px',
-            width: '210px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            zIndex: '1000',
-        });
-        document.body.appendChild(panel);
-        this.statusPanel = panel;
-
-        this.healthRow = this.addStatRow(panel, 'health', HUD.health, this.iconSvg('heart'));
-        this.energyRow = this.addStatRow(panel, 'energy', HUD.energy, this.iconSvg('bolt'));
-        this.breathRow = this.addStatRow(panel, 'breath', HUD.breath, this.iconSvg('droplet'));
-        this.breathRow.row.style.display = 'none';
+        // Stats are visualized as arcs around the minimap; this method is
+        // intentionally a no-op so the rest of the HUD wiring stays intact.
     }
 
     addStatRow(parent, key, color, iconSvg) {
@@ -265,17 +247,6 @@ export default class UiManager {
 
     updateUI() {
         const p = this.game.player;
-        const healthMax = p.maxHealth || 100;
-        const energyMax = p.maxEnergy || 100;
-        const breathMax = p.maxBreath || 100;
-
-        this.setRow(this.healthRow, p.health, healthMax);
-        this.setRow(this.energyRow, p.energy, energyMax);
-        this.setRow(this.breathRow, p.breath, breathMax);
-
-        const breathPct = (p.breath / breathMax) * 100;
-        this.breathRow.row.style.display = breathPct < 95 ? 'grid' : 'none';
-
         if (p.energy <= 0) this.game.playerManager.die('sleep');
         if (p.health <= 0) this.game.playerManager.die();
     }
