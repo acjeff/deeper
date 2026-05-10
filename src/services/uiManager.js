@@ -150,6 +150,7 @@ export default class UiManager {
                 this.saveButton.remove();
                 this.game.lightCanvas.remove();
                 this.statusPanel?.remove();
+                this.game.minimapManager?.destroy();
                 this.game.scene.stop("GameScene");
                 this.game.scene.start("MenuScene");
             }, 100);
@@ -159,8 +160,8 @@ export default class UiManager {
 
     addSaveButton() {
         return this.createButton('saveButton', {
-            top: '18px',
-            right: '18px',
+            top: '62px',
+            left: '18px',
         }, this.iconSvg('save') + '<span>Save</span>', 'accent', async () => {
             this.game.saveButton.disabled = true;
             this.game.saveButton.innerHTML = this.iconSvg('spinner') + '<span>Saving…</span>';
@@ -199,12 +200,12 @@ export default class UiManager {
         Object.assign(panel.style, {
             position: 'absolute',
             left: '18px',
-            bottom: '18px',
-            padding: '14px 16px',
-            width: '260px',
+            bottom: '218px',
+            padding: '12px 14px',
+            width: '210px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px',
+            gap: '8px',
             zIndex: '1000',
         });
         document.body.appendChild(panel);

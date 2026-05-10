@@ -25,21 +25,19 @@ export default class ToolbarManager {
 
         this.game.selectedIndex = 0;
         this.slots = new Array(numSlots).fill(null);
+        // The visible bottom-center toolbar has been replaced by the radial
+        // selector — keep an off-screen container so render() / drag-drop
+        // targets still exist without taking screen real estate.
         this.container = document.getElementById(containerId);
         if (!this.container) {
             this.container = document.createElement('div');
             this.container.id = containerId;
-            this.container.className = 'hud-panel';
             Object.assign(this.container.style, {
                 position: 'absolute',
-                left: '50%',
-                bottom: '24px',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                gap: '8px',
-                padding: '10px',
-                zIndex: '1000',
-                fontFamily: HUD.font,
+                left: '-9999px',
+                top: '-9999px',
+                display: 'none',
+                pointerEvents: 'none',
             });
             document.body.appendChild(this.container);
         }

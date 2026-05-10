@@ -10,6 +10,7 @@ import ToolbarManager from "../services/toolBarManager";
 import InventoryManager from "../services/InventoryManager";
 import InventoryItem from "../classes/InventoryItem";
 import CraneManager from "../services/craneManager";
+import MinimapManager from "../services/minimapManager";
 
 const batchSize = 100;
 let currentIndex = 0;
@@ -241,6 +242,7 @@ export default class GameScene extends Phaser.Scene {
             this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;
             this.uiManager = new UiManager(this);
+            this.minimapManager = new MinimapManager(this);
             this.toolBarManager.addItemToSlot(0, pickaxe);
             // this.toolBarManager.addItemToSlot(1, glowStick);
             this.toolBarManager.addItemToSlot(2, lamp);
@@ -382,6 +384,7 @@ export default class GameScene extends Phaser.Scene {
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
+            this.minimapManager?.update(time);
             this.craneManager?.update();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
