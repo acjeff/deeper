@@ -13,6 +13,7 @@ import CraneManager from "../services/craneManager";
 import MinimapManager from "../services/minimapManager";
 import MapViewManager from "../services/mapViewManager";
 import FogOfWar from "../services/fogOfWar";
+import TreeTextureFactory from "../services/treeTextureFactory";
 
 const batchSize = 100;
 let currentIndex = 0;
@@ -138,7 +139,7 @@ export default class GameScene extends Phaser.Scene {
         this.emptyGroup = this.add.group();
         this.lightGroup = this.add.group();
         this.treeGroup = this.add.group();
-        this.treeVariantCount = this.registry?.get?.('treeVariantCount') || 4;
+        this.treeTextures = new TreeTextureFactory(this);
         this.liftControlGroup = this.physics.add.staticGroup();
         this.liquidGroup = this.physics.add.staticGroup();
         this.lightingManager = new LightingManager(this);

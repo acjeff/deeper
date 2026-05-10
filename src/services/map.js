@@ -3,6 +3,36 @@ import {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl, Tree} from
 import TilePool from "../classes/TilePool";
 import TileTextureAtlas from "./tileTextureAtlas";
 
+// Biomes spread across the map width — each is a soft-weighted breed
+// preference, not a hard boundary, so neighbouring zones blend into each
+// other. The pools are picked with replacement to give the dominant breed
+// roughly half the trees in the band.
+const TREE_BIOMES = [
+    {label: 'temperate-east',  weights: [['oak', 5], ['maple', 3], ['birch', 2]]},
+    {label: 'conifer',         weights: [['pine', 6], ['birch', 3], ['oak', 1]]},
+    {label: 'birch-grove',     weights: [['birch', 5], ['oak', 3], ['willow', 1]]},
+    {label: 'mixed-warm',      weights: [['oak', 4], ['willow', 3], ['maple', 3]]},
+    {label: 'highland-pine',   weights: [['pine', 5], ['birch', 4], ['maple', 1]]},
+];
+
+const MATURITY_WEIGHTS = [
+    ['sapling', 0.13],
+    ['young',   0.24],
+    ['mature',  0.50],
+    ['ancient', 0.13],
+];
+
+function pickWeighted(weighted) {
+    let total = 0;
+    for (const [, w] of weighted) total += w;
+    let roll = Math.random() * total;
+    for (const [value, w] of weighted) {
+        roll -= w;
+        if (roll <= 0) return value;
+    }
+    return weighted[weighted.length - 1][0];
+}
+
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
         this.game = game;
@@ -191,6 +221,7 @@ export default class MapService {
         // 1D noise-ish density along the surface so trees clump into groves.
         let density = 0.35;
         let lastTreeX = -10;
+        const biomeWidth = this.game.mapWidth / TREE_BIOMES.length;
         for (let x = 2; x < this.game.mapWidth - 2; x++) {
             if (x >= chasm[0] - 6 && x <= chasm[1] + 6) {
                 density = 0.35;
@@ -211,7 +242,11 @@ export default class MapService {
             if (x - lastTreeX < 2) continue;
 
             if (Math.random() < density) {
-                setCell(x, treeRow, {...tileTypes.tree});
+                const biome = TREE_BIOMES[Math.min(TREE_BIOMES.length - 1, Math.floor(x / biomeWidth))];
+                const breed = pickWeighted(biome.weights);
+                const maturity = pickWeighted(MATURITY_WEIGHTS);
+                const seed = (Math.random() * 0xffffffff) >>> 0;
+                setCell(x, treeRow, {...tileTypes.tree, breed, maturity, seed});
                 lastTreeX = x;
             }
         }

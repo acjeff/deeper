@@ -46,7 +46,6 @@ export default class PreloadScene extends Phaser.Scene {
 
     create() {
         this.generateAxeTexture();
-        this.generateTreeTextures();
         this.scene.start("MenuScene");
     }
 
@@ -96,111 +95,4 @@ export default class PreloadScene extends Phaser.Scene {
         tex.refresh();
     }
 
-    generateTreeTextures() {
-        const variants = 4;
-        this.game.registry?.set?.('treeVariantCount', variants);
-        for (let i = 0; i < variants; i++) {
-            this.generateTreeTexture(`tree_${i}`, i);
-        }
-        // Generic alias used by the toolbar/inventory previews if needed.
-        if (!this.textures.exists('tree')) this.generateTreeTexture('tree', 0);
-    }
-
-    generateTreeTexture(key, variantSeed) {
-        if (this.textures.exists(key)) return;
-        const w = 18, h = 32;
-        const tex = this.textures.createCanvas(key, w, h);
-        const ctx = tex.context;
-        ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, w, h);
-
-        // Tiny seeded RNG so each variant looks distinct but deterministic.
-        let s = (variantSeed * 73856093) ^ 0x9E3779B9;
-        const rand = () => {
-            s = (s * 1664525 + 1013904223) | 0;
-            return ((s >>> 0) % 100000) / 100000;
-        };
-
-        const trunkBaseColors = ['#5e3a1c', '#523218', '#6a4423'];
-        const trunkShade = '#2f1c0b';
-        const trunkHi = '#7d5530';
-        const trunkColor = trunkBaseColors[variantSeed % trunkBaseColors.length];
-
-        // Trunk: 2px wide for most of its height, base at the bottom row.
-        const trunkX = Math.floor(w / 2) - 1;
-        const trunkTop = 18;
-        const trunkBottom = h;
-        ctx.fillStyle = trunkColor;
-        ctx.fillRect(trunkX, trunkTop, 2, trunkBottom - trunkTop);
-        ctx.fillStyle = trunkShade;
-        ctx.fillRect(trunkX + 1, trunkTop, 1, trunkBottom - trunkTop);
-        ctx.fillStyle = trunkHi;
-        ctx.fillRect(trunkX, trunkTop, 1, 2);
-
-        // Bark grain marks
-        const grainCount = 2 + Math.floor(rand() * 2);
-        for (let i = 0; i < grainCount; i++) {
-            const gy = trunkTop + 2 + Math.floor(rand() * (trunkBottom - trunkTop - 4));
-            ctx.fillStyle = trunkShade;
-            ctx.fillRect(trunkX, gy, 1, 1);
-        }
-
-        // Canopy — overlapping ellipse "blobs" of green at decreasing radii
-        // climbing the trunk. A darker outline ring, a mid fill, and lighter
-        // highlights catching the upper-left edge.
-        const canopyDark = '#28522a';
-        const canopyMid = '#3e7a3a';
-        const canopyHi = '#69a44d';
-        const canopyTop = '#86c560';
-
-        const fillCircle = (cx, cy, r, color) => {
-            ctx.fillStyle = color;
-            for (let dy = -r; dy <= r; dy++) {
-                for (let dx = -r; dx <= r; dx++) {
-                    const d2 = dx * dx + dy * dy;
-                    if (d2 <= r * r) {
-                        const px = cx + dx;
-                        const py = cy + dy;
-                        if (px >= 0 && px < w && py >= 0 && py < h) {
-                            ctx.fillRect(px, py, 1, 1);
-                        }
-                    }
-                }
-            }
-        };
-
-        // Per-variant geometry tweaks: lean, height of the lowest blob.
-        const baseY = 18 - Math.floor(rand() * 2);
-        const lean = Math.floor((rand() - 0.5) * 3);
-
-        // Outline pass — slightly larger dark blobs to give a darker ring.
-        const blobs = [
-            {cx: w / 2 + lean,     cy: baseY,       r: 6},
-            {cx: w / 2 - 3 + lean, cy: baseY - 4,   r: 5},
-            {cx: w / 2 + 3 + lean, cy: baseY - 4,   r: 5},
-            {cx: w / 2 - 1 + lean, cy: baseY - 8,   r: 4},
-            {cx: w / 2 + 2 + lean, cy: baseY - 11,  r: 3},
-        ];
-
-        for (const b of blobs) fillCircle(Math.round(b.cx), Math.round(b.cy), b.r + 1, canopyDark);
-        for (const b of blobs) fillCircle(Math.round(b.cx), Math.round(b.cy), b.r, canopyMid);
-
-        // Speckle highlights — random light pixels in the top-left portion
-        // of each blob, simulating directional light.
-        for (const b of blobs) {
-            const count = 2 + Math.floor(rand() * 3);
-            for (let i = 0; i < count; i++) {
-                const angle = Math.PI + rand() * Math.PI / 1.6;
-                const rr = rand() * (b.r - 1);
-                const px = Math.round(b.cx + Math.cos(angle) * rr);
-                const py = Math.round(b.cy + Math.sin(angle) * rr);
-                if (px >= 0 && px < w && py >= 0 && py < h) {
-                    ctx.fillStyle = rand() > 0.6 ? canopyTop : canopyHi;
-                    ctx.fillRect(px, py, 1, 1);
-                }
-            }
-        }
-
-        tex.refresh();
-    }
 }

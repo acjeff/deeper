@@ -1,12 +1,35 @@
 import {Tile} from "./tile";
+import {TREE_BREEDS, TREE_MATURITY} from "../services/treeTextureFactory";
 
-const TREE_MAX_HEALTH = 1;
-const TREE_HIT_POWER = 0.34;
+const FALLBACK_BREED = 'oak';
+const FALLBACK_MATURITY = 'mature';
+
+function pickFromHash(hash, options) {
+    return options[Math.floor(hash * options.length) % options.length];
+}
 
 export class Tree extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
-        if (this.tileDetails.health == null) this.tileDetails.health = TREE_MAX_HEALTH;
+
+        // Hydrate breed / maturity / seed for legacy saves that pre-date the
+        // variety pass. Derive the missing fields deterministically from the
+        // cell position so the same tree always re-rolls the same identity.
+        if (!this.tileDetails.breed || !TREE_BREEDS[this.tileDetails.breed]) {
+            this.tileDetails.breed = pickFromHash(this.posHash(13), Object.keys(TREE_BREEDS));
+        }
+        if (!this.tileDetails.maturity || !TREE_MATURITY[this.tileDetails.maturity]) {
+            this.tileDetails.maturity = FALLBACK_MATURITY;
+        }
+        if (this.tileDetails.seed == null) {
+            this.tileDetails.seed = Math.floor(this.posHash(0) * 1e9) >>> 0;
+        }
+
+        const mat = this.maturityDef();
+        if (this.tileDetails.health == null) {
+            this.tileDetails.health = mat.hitsToFell;
+        }
+
         this.init();
     }
 
@@ -29,38 +52,62 @@ export class Tree extends Tile {
         return s - Math.floor(s);
     }
 
+    breedDef() {
+        return TREE_BREEDS[this.tileDetails.breed] || TREE_BREEDS[FALLBACK_BREED];
+    }
+
+    maturityDef() {
+        return TREE_MATURITY[this.tileDetails.maturity] || TREE_MATURITY[FALLBACK_MATURITY];
+    }
+
     createSprite() {
         const ts = this.game.tileSize;
+        const factory = this.game.treeTextures;
+        const breed = this.tileDetails.breed;
+        const maturity = this.tileDetails.maturity;
+        const seed = this.tileDetails.seed >>> 0;
+        const variantCount = factory?.variantsPerCombination || 1;
+        const variantIdx = seed % variantCount;
+        const textureKey = factory
+            ? factory.ensure(breed, maturity, variantIdx)
+            : 'tree';
 
-        // Invisible hit body — sized to cover the canopy too so the player
-        // can click the visible tree, not just the cell footprint. Center
-        // is kept inside the cell's chunk row so unloadChunk still picks
-        // the tree up by its world position.
-        const hitW = ts * 1.6;
-        const hitH = ts * 2.4;
-        const hitCenterY = this.worldY + ts / 2 - hitH / 2 + ts * 0.4;
+        const breedDef = this.breedDef();
+        const matDef = this.maturityDef();
+
+        // Texture native dimensions are baked at "1 px = 1 game unit" so a
+        // sapling oak (~6x12 px) reads as a quarter-tile-wide seedling and a
+        // mature oak (~18x32 px) reads as ~1.8 x 3.2 tiles. We just match
+        // displaySize to the texture and let pixelArt rendering take over.
+        const targetW = breedDef.baseW * matDef.scale;
+        const targetH = breedDef.baseH * matDef.scale;
+
+        // Hit body — sized to cover the visible foliage so clicks on the
+        // canopy register. Center stays inside the tile's chunk row so
+        // chunk loading/unloading still picks the tree up by world Y.
+        const hitW = Math.max(ts * 0.8, targetW * 0.9);
+        const hitH = Math.max(ts, targetH * 0.85);
+        const hitCenterY = this.worldY + ts / 2 - hitH / 2 + ts * 0.35;
         const baseSprite = this.game.add.rectangle(this.worldX, hitCenterY, hitW, hitH, 0xffffff);
         baseSprite.setAlpha(0);
 
-        // Trees pick from a couple of pre-rendered variants so a row of
-        // them doesn't look identical. Variant is deterministic per cell.
-        const variantCount = this.game.treeVariantCount || 1;
-        const variantIdx = Math.floor(this.posHash(7) * variantCount);
-        const textureKey = `tree_${variantIdx}`;
-        const useKey = this.game.textures.exists(textureKey) ? textureKey : 'tree';
-
-        // Anchor the trunk base at the bottom of the cell so the canopy
-        // rises into the sky above the surface line.
-        this.treeSprite = this.game.add.image(this.worldX, this.worldY + ts / 2, useKey);
+        // Trunk anchored at the bottom of the cell so the canopy rises into
+        // the sky and the trunk sits on the soil-grass line.
+        this.treeSprite = this.game.add.image(this.worldX, this.worldY + ts / 2, textureKey);
         this.treeSprite.setOrigin(0.5, 1);
-        this.treeSprite.setDisplaySize(ts * 1.8, ts * 3.2);
+        this.treeSprite.setDisplaySize(targetW, targetH);
         this.treeSprite.setDepth(1);
 
-        // Slight per-tile horizontal flip so the canopy reads as varied.
-        if (this.posHash(11) > 0.5) this.treeSprite.setFlipX(true);
-
-        const lean = (1 - (this.tileDetails.health ?? TREE_MAX_HEALTH)) * 0.18;
-        if (lean > 0) this.treeSprite.setRotation(lean);
+        // Per-tree aesthetic touches driven by the persistent seed so they
+        // survive a save / reload: horizontal flip, slight lean, slight
+        // sway-from-vertical that gets exaggerated as the tree loses health.
+        if ((seed >> 3) & 1) this.treeSprite.setFlipX(true);
+        const swayDir = ((seed >> 7) & 1) ? -1 : 1;
+        const swayMag = ((seed >> 11) & 0xff) / 255 * (matDef.maxLean || 0.04);
+        const baseLean = swayDir * swayMag;
+        const damageProgress = 1 - (this.tileDetails.health ?? matDef.hitsToFell) / matDef.hitsToFell;
+        const damageLean = damageProgress * (swayDir * 0.22);
+        this.treeSprite.setRotation(baseLean + damageLean);
 
         this.fadeElements = [this.treeSprite];
         return baseSprite;
@@ -89,10 +136,11 @@ export class Tree extends Tile {
             this.clicking = true;
             if (this.game.player) this.game.player.energy -= 1;
 
-            const hitPower = TREE_HIT_POWER;
-            const health = (this.tileDetails.health ?? TREE_MAX_HEALTH) - hitPower;
+            const matDef = this.maturityDef();
+            const maxHealth = matDef.hitsToFell;
+            const newHealth = (this.tileDetails.health ?? maxHealth) - 1;
 
-            // Wobble feedback — quick rotation lean toward the swing side.
+            // Wobble feedback toward the swing side.
             if (this.treeSprite) {
                 const dir = (this.game.player && this.game.player.x < this.worldX) ? 1 : -1;
                 const base = this.treeSprite.rotation;
@@ -105,20 +153,22 @@ export class Tree extends Tile {
                 });
             }
 
-            // Small leafy puff using the dust particle texture for free.
             if (this.game.dustEmitter) {
                 this.game.dustEmitter.setPosition(this.worldX, this.worldY - this.game.tileSize);
-                this.game.dustEmitter.explode(6);
+                this.game.dustEmitter.explode(4 + Math.floor(matDef.scale * 4));
             }
 
-            if (health <= 0) {
-                // Award wood and convert the tile back to sky.
-                this.game.inventoryManager?.addWood?.(1);
+            if (newHealth <= 0) {
+                // Award wood scaled by maturity — saplings drop nothing,
+                // ancients drop a handful.
+                if (matDef.woodYield > 0) {
+                    this.game.inventoryManager?.addWood?.(matDef.woodYield);
+                }
                 this.clicking = false;
                 const baseCell = {...this.game.tileTypes.empty};
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
             } else {
-                const baseCell = {...this.tileDetails, health};
+                const baseCell = {...this.tileDetails, health: newHealth};
                 this.clicking = false;
                 this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
             }
