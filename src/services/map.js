@@ -33,6 +33,34 @@ function pickWeighted(weighted) {
     return weighted[weighted.length - 1][0];
 }
 
+// Cheap 1D smooth value noise. Seeded so the same map regenerates an
+// identical skyline when needed; multiple octaves give rolling hills with
+// finer-grained variation layered on top.
+function hash1D(i, seed) {
+    const s = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+    return s - Math.floor(s);
+}
+
+function valueNoise1D(x, seed) {
+    const i = Math.floor(x);
+    const t = x - i;
+    const a = hash1D(i, seed);
+    const b = hash1D(i + 1, seed);
+    const ts = t * t * (3 - 2 * t);
+    return a + (b - a) * ts;
+}
+
+function fbm1D(x, seed, octaves = 4) {
+    let total = 0, amp = 1, freq = 1, maxAmp = 0;
+    for (let i = 0; i < octaves; i++) {
+        total += valueNoise1D(x * freq, seed + i * 17.31) * amp;
+        maxAmp += amp;
+        amp *= 0.5;
+        freq *= 2;
+    }
+    return total / maxAmp;
+}
+
 export default class MapService {
     constructor(tileSize = 32, chunkSize = 16, game) {
         this.game = game;
@@ -172,9 +200,14 @@ export default class MapService {
             this.setRandomElement(element.tile, element.count, element.widthRange, element.heightRange, element.edgeNoiseChance, element.layerWeights, element.columnWeights);
         })
 
-        // Trees on the surface row — the cell just above the topmost soil
-        // band. We seed a clustered scatter so groves form rather than a
-        // uniform line of trees.
+        // Lift and dip the surface into rolling terrain BEFORE trees and
+        // surface tagging so the soil column heights are final by the time
+        // trees pick their row.
+        this.applySurfaceVariation();
+        this.tagSurfaceCells();
+
+        // Trees follow the post-variation surface row per column and cluster
+        // into single-breed groves with occasional mixed neighbours.
         this.placeSurfaceTrees();
 
         // worldX, worldY, tileType, cellItem
@@ -182,6 +215,109 @@ export default class MapService {
         // this.updateRegion(156, 164, this.game.tileTypes.empty);
 
         // this.setRandomElement(this.game.tileTypes.stone, 100000);
+    }
+
+    /**
+     * Grid accessors used by the surface-variation, tagging, and tree
+     * placement passes. Centralised here so they all share the same
+     * chunk/grid lookup conventions instead of being re-defined inline.
+     */
+    _cellAt(x, y) {
+        const cs = this.game.chunkSize;
+        const chunkX = Math.floor(x / cs) * cs;
+        const chunkY = Math.floor(y / cs) * cs;
+        const chunk = this.game.grid[`${chunkX}_${chunkY}`];
+        if (!chunk) return null;
+        const lx = ((x % cs) + cs) % cs;
+        const ly = ((y % cs) + cs) % cs;
+        return chunk[ly]?.[lx] || null;
+    }
+
+    _setCell(x, y, value) {
+        const cs = this.game.chunkSize;
+        const chunkX = Math.floor(x / cs) * cs;
+        const chunkY = Math.floor(y / cs) * cs;
+        const chunk = this.game.grid[`${chunkX}_${chunkY}`];
+        if (!chunk) return;
+        const lx = ((x % cs) + cs) % cs;
+        const ly = ((y % cs) + cs) % cs;
+        if (!chunk[ly]) return;
+        chunk[ly][lx] = value;
+    }
+
+    /**
+     * Sculpt the soil/sky boundary into rolling terrain. Each column gets
+     * a deterministic-per-seed offset from fbm noise: negative values lift
+     * a hill of fresh soil into the sky band, positive values carve a
+     * shallow dip into the top of the soil. Chasm walls, the chasm interior
+     * and the map edges keep their original flat tops so the lift shaft and
+     * world borders stay intact.
+     */
+    applySurfaceVariation() {
+        const tileTypes = this.game.tileTypes;
+        if (!tileTypes?.soil) return;
+        const chasm = this.game.chasmRange;
+        const aboveGround = this.game.aboveGround;
+        this.game.maxSurfaceLift = 5;
+        this.game.maxSurfaceDrop = 4;
+
+        const seed = Math.random() * 10000;
+        // Track the lifted height per column so adjacent passes (trees,
+        // tagging) can reason about it without re-running the noise.
+        this.game.surfaceOffsets = new Array(this.game.mapWidth).fill(0);
+
+        for (let x = 1; x < this.game.mapWidth - 1; x++) {
+            if (x === chasm[0] || x === chasm[1]) continue;
+            if (x > chasm[0] && x < chasm[1]) continue;
+
+            // Two octave bands: broad rolling hills + finer ripples on top.
+            const broad = fbm1D(x * 0.04, seed, 4);
+            const fine  = fbm1D(x * 0.13, seed + 91.7, 3);
+            const norm = ((broad * 0.78 + fine * 0.22) - 0.5) * 2; // -1..1
+            // Smooth-bias toward 0 so most columns stay near the default
+            // line and only occasional peaks/troughs reach the extremes.
+            const biased = Math.sign(norm) * Math.pow(Math.abs(norm), 1.45);
+            const range = biased < 0 ? this.game.maxSurfaceLift : this.game.maxSurfaceDrop;
+            const offset = Math.round(biased * range);
+            this.game.surfaceOffsets[x] = offset;
+
+            if (offset < 0) {
+                for (let y = aboveGround + offset + 1; y <= aboveGround; y++) {
+                    if (y < 1) continue;
+                    this._setCell(x, y, {...tileTypes.soil, strength: 100});
+                }
+            } else if (offset > 0) {
+                for (let y = aboveGround + 1; y <= aboveGround + offset; y++) {
+                    this._setCell(x, y, {...tileTypes.empty});
+                }
+            }
+        }
+    }
+
+    /**
+     * Walk down each column from the sky and mark the first soil cell with
+     * `surface: true` so the breakable tile renderer knows where to draw
+     * grass + a darker silhouette top regardless of how high or low the
+     * column ended up after the variation pass.
+     */
+    tagSurfaceCells() {
+        const tileTypes = this.game.tileTypes;
+        if (!tileTypes?.soil) return;
+        const chasm = this.game.chasmRange;
+        const maxScan = this.game.aboveGround + (this.game.maxSurfaceDrop || 0) + 6;
+
+        for (let x = 0; x < this.game.mapWidth; x++) {
+            if (x > chasm[0] && x < chasm[1]) continue; // chasm interior has no surface row
+
+            for (let y = 0; y <= maxScan; y++) {
+                const cell = this._cellAt(x, y);
+                if (!cell) continue;
+                if (cell.id !== tileTypes.soil.id) continue;
+                if (cell.surface === true) break;
+                this._setCell(x, y, {...cell, surface: true});
+                break;
+            }
+        }
     }
 
     /**
@@ -193,61 +329,69 @@ export default class MapService {
     placeSurfaceTrees() {
         const tileTypes = this.game.tileTypes;
         if (!tileTypes?.tree) return;
-        const treeRow = this.game.aboveGround;
-        const cs = this.game.chunkSize;
-        const grid = this.game.grid;
         const chasm = this.game.chasmRange;
+        const maxScan = this.game.aboveGround + (this.game.maxSurfaceDrop || 0) + 6;
 
-        const cellAt = (x, y) => {
-            const chunkX = Math.floor(x / cs) * cs;
-            const chunkY = Math.floor(y / cs) * cs;
-            const chunk = grid[`${chunkX}_${chunkY}`];
-            if (!chunk) return null;
-            const lx = ((x % cs) + cs) % cs;
-            const ly = ((y % cs) + cs) % cs;
-            return chunk[ly]?.[lx] || null;
-        };
-        const setCell = (x, y, value) => {
-            const chunkX = Math.floor(x / cs) * cs;
-            const chunkY = Math.floor(y / cs) * cs;
-            const chunk = grid[`${chunkX}_${chunkY}`];
-            if (!chunk) return;
-            const lx = ((x % cs) + cs) % cs;
-            const ly = ((y % cs) + cs) % cs;
-            if (!chunk[ly]) return;
-            chunk[ly][lx] = value;
+        const findTreeRow = (x) => {
+            for (let y = 1; y <= maxScan; y++) {
+                const cell = this._cellAt(x, y);
+                if (!cell) continue;
+                if (cell.id !== tileTypes.soil.id) continue;
+                return y - 1; // tree sits in the cell just above the topmost soil
+            }
+            return null;
         };
 
-        // 1D noise-ish density along the surface so trees clump into groves.
+        // Two parallel signals layered to drive clustering:
+        //   - density (random walk):     creates uneven spacing between groves
+        //   - groveBreed/groveLength:    keeps adjacent trees the same species
+        //                                with occasional cross-species infill
         let density = 0.35;
         let lastTreeX = -10;
+        let groveBreed = null;
+        let groveLength = 0;
         const biomeWidth = this.game.mapWidth / TREE_BIOMES.length;
+
         for (let x = 2; x < this.game.mapWidth - 2; x++) {
             if (x >= chasm[0] - 6 && x <= chasm[1] + 6) {
                 density = 0.35;
+                groveBreed = null;
+                groveLength = 0;
                 continue;
             }
-            // Random walk on density to create clumps.
-            density += (Math.random() - 0.5) * 0.25;
-            density = Math.max(0.05, Math.min(0.85, density));
+            density += (Math.random() - 0.5) * 0.28;
+            density = Math.max(0.05, Math.min(0.9, density));
 
-            const cellHere = cellAt(x, treeRow);
-            const cellBelow = cellAt(x, treeRow + 1);
-            // The tree cell must be empty/sky and the cell directly below
-            // must be soil with grass — i.e. the natural surface tile.
+            const treeRow = findTreeRow(x);
+            if (treeRow == null || treeRow < 1) continue;
+            const cellHere = this._cellAt(x, treeRow);
+            // Tree row must be open sky and the cell below must be soil
+            // (otherwise the trunk has nothing to root into).
             if (!cellHere || cellHere.id !== tileTypes.empty.id) continue;
+            const cellBelow = this._cellAt(x, treeRow + 1);
             if (!cellBelow || cellBelow.id !== tileTypes.soil.id) continue;
 
-            // No two trees directly adjacent (saplings need air).
             if (x - lastTreeX < 2) continue;
 
             if (Math.random() < density) {
-                const biome = TREE_BIOMES[Math.min(TREE_BIOMES.length - 1, Math.floor(x / biomeWidth))];
-                const breed = pickWeighted(biome.weights);
+                const biomeIdx = Math.min(TREE_BIOMES.length - 1, Math.floor(x / biomeWidth));
+                const biome = TREE_BIOMES[biomeIdx];
+
+                if (groveLength <= 0) {
+                    groveBreed = pickWeighted(biome.weights);
+                    groveLength = 3 + Math.floor(Math.random() * 10);
+                }
+                // 82% same-breed, 18% biome resample — keeps groves coherent
+                // without becoming pure monoculture.
+                const breed = Math.random() < 0.82 ? groveBreed : pickWeighted(biome.weights);
+                groveLength--;
                 const maturity = pickWeighted(MATURITY_WEIGHTS);
                 const seed = (Math.random() * 0xffffffff) >>> 0;
-                setCell(x, treeRow, {...tileTypes.tree, breed, maturity, seed});
+                this._setCell(x, treeRow, {...tileTypes.tree, breed, maturity, seed});
                 lastTreeX = x;
+            } else if (groveLength > 0 && (x - lastTreeX) > 5) {
+                // Big enough gap to reset — next grove can pick a new breed.
+                groveLength = 0;
             }
         }
     }
