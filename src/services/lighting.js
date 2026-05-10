@@ -2,18 +2,18 @@ import LightSource from "./lightsource";
 
 // 24-hour sky palette indexed by timeFraction (0..1). timeFraction 0
 // is noon in the existing day-cycle formula (cos peaks at 0), so the
-// stops climb away from blue through orange/purple into navy and back.
+// stops climb away from blue through warm orange into navy and back.
 // Smoothstep between adjacent stops is applied at lookup time.
 const SKY_PALETTE = [
     { t: 0.00, c: [104, 178, 226] }, // noon — sky blue
-    { t: 0.18, c: [144, 168, 198] }, // late afternoon — softer blue-grey
-    { t: 0.22, c: [216, 132, 96]  }, // dusk — warm orange
-    { t: 0.27, c: [120, 64, 132]  }, // post-dusk — deep purple
-    { t: 0.40, c: [18, 22, 50]    }, // night — dark navy
-    { t: 0.60, c: [18, 22, 50]    }, // night — dark navy
-    { t: 0.73, c: [120, 64, 132]  }, // pre-dawn — deep purple
-    { t: 0.78, c: [232, 152, 112] }, // dawn — warm pink-orange
-    { t: 0.82, c: [144, 168, 198] }, // morning — soft blue-grey
+    { t: 0.18, c: [148, 184, 214] }, // late afternoon — softer blue
+    { t: 0.22, c: [232, 152, 96]  }, // dusk — warm orange
+    { t: 0.28, c: [120, 78, 70]   }, // post-dusk — dim warm dusk
+    { t: 0.40, c: [18, 28, 56]    }, // night — dark navy blue
+    { t: 0.60, c: [18, 28, 56]    }, // night — dark navy blue
+    { t: 0.72, c: [120, 78, 70]   }, // pre-dawn — dim warm
+    { t: 0.78, c: [236, 162, 116] }, // dawn — warm pink-orange
+    { t: 0.82, c: [148, 184, 214] }, // morning — soft blue
     { t: 1.00, c: [104, 178, 226] }, // noon — sky blue
 ];
 
@@ -83,24 +83,28 @@ export default class LightingManager {
     spawnClouds() {
         if (!this.game.textures.exists('clouds')) return;
         this.clouds = [];
-        // Slow drifting clouds across the sky band. Spread out so they drift
-        // independently in front of the warm sky.
-        const skyTop = -80;
-        const skyBottom = (this.game.aboveGround * this.game.tileSize) - 40;
-        const range = 4000;
-        for (let i = 0; i < 6; i++) {
+        // Always-on cloud drift across the sky band. Plenty of clouds at
+        // a healthy alpha so the player always sees a few drifting through
+        // the visible viewport regardless of where they walked to. The
+        // dark overlay naturally hides them at night where the sky cutout
+        // is collapsed, so no per-cloud alpha curve is needed.
+        const cloudCount = 14;
+        const skyTop = -120;
+        const skyBottom = (this.game.aboveGround * this.game.tileSize) - 30;
+        // Clouds get a horizontal scroll factor in BackgroundManager for
+        // parallax, but the spawn x range is still in world coords. Cover
+        // a wide band so the player never wanders into a cloudless gap.
+        const range = 6000;
+        for (let i = 0; i < cloudCount; i++) {
             const x = Phaser.Math.Between(-range / 2, range / 2);
             const y = Phaser.Math.Between(skyTop, skyBottom);
             const cloud = this.game.add.image(x, y, 'clouds');
-            const scale = Phaser.Math.FloatBetween(0.18, 0.32);
+            const scale = Phaser.Math.FloatBetween(0.22, 0.42);
             cloud.setScale(scale);
-            // Store the base alpha so updateSky can fade clouds with the
-            // diurnal visibility curve without losing the per-cloud value.
-            cloud.baseAlpha = Phaser.Math.FloatBetween(0.45, 0.75);
-            cloud.setAlpha(cloud.baseAlpha);
+            cloud.setAlpha(Phaser.Math.FloatBetween(0.7, 0.95));
             cloud.setDepth(-998);
             this.clouds.push(cloud);
-            const speed = Phaser.Math.FloatBetween(60000, 120000);
+            const speed = Phaser.Math.FloatBetween(80000, 160000);
             this.game.tweens.add({
                 targets: cloud,
                 x: x + range,
@@ -321,21 +325,12 @@ export default class LightingManager {
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
         // Paint the sky background by interpolating through the diurnal
-        // palette: bright blue at noon, navy at midnight, with orange and
-        // purple bands swept through at dusk and dawn.
+        // palette: bright blue at noon, navy at midnight, with warm
+        // orange swept through at dusk and dawn.
         if (this.game.skyBox) {
             const [r, g, b] = paletteColor(timeFraction);
             const tintColor = (r << 16) | (g << 8) | b;
             this.game.skyBox.setFillStyle(tintColor, 1);
-        }
-
-        // Fade clouds with sky visibility so they don't glow against a
-        // navy midnight sky. Their per-cloud baseAlpha is preserved.
-        if (this.clouds && this.clouds.length) {
-            for (const cloud of this.clouds) {
-                if (!cloud.active) continue;
-                cloud.setAlpha((cloud.baseAlpha ?? 0.6) * alphaVal);
-            }
         }
 
         ctx.fillStyle = _gradient;
