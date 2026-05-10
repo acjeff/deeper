@@ -225,6 +225,10 @@ export default class GameScene extends Phaser.Scene {
         if (this.newGame) {
             this.mapService.generateMap();
         }
+        // Patch top-of-shaft wall switches into the grid for both new and
+        // pre-existing saves so the player always has a "call lift to
+        // surface" point at the very top.
+        this.mapService.ensureSurfaceLiftControls();
 
         window.setTimeout(async () => {
             this.playerManager = new PlayerManager(this);

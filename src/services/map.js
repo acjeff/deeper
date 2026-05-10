@@ -148,6 +148,34 @@ export default class MapService {
         // this.setRandomElement(this.game.tileTypes.stone, 100000);
     }
 
+    /**
+     * Ensure both chasm walls have a lift-control switch at the surface
+     * row (the platform's home depth). Idempotent and safe to call on
+     * loaded saves — tiles are only swapped in when the cell isn't
+     * already a lift control, so existing wiring is preserved.
+     */
+    ensureSurfaceLiftControls() {
+        const liftId = this.game.tileTypes?.liftControl?.id;
+        const grid = this.game.grid;
+        if (liftId == null || !grid) return;
+        const ty = this.game.aboveGround + 1;
+        const cs = this.game.chunkSize;
+        const walls = [this.game.chasmRange[0], this.game.chasmRange[1]];
+        for (const tx of walls) {
+            const chunkX = Math.floor(tx / cs) * cs;
+            const chunkY = Math.floor(ty / cs) * cs;
+            const chunk = grid[`${chunkX}_${chunkY}`];
+            if (!chunk) continue;
+            const localX = tx % cs;
+            const localY = ty % cs;
+            const row = chunk[localY];
+            if (!row) continue;
+            const cell = row[localX];
+            if (!cell || cell.id === liftId) continue;
+            row[localX] = { ...this.game.tileTypes.liftControl };
+        }
+    }
+
     updateRegion(xStart, xEnd, tileType) {
         // Loop over every cell column from xStart to xEnd.
         for (let cellX = xStart; cellX <= xEnd; cellX++) {
