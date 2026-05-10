@@ -1,12 +1,16 @@
-// Two-zone backdrop sitting behind the gameplay tiles. Down to ~100m
-// below the surface the empty cells reveal the sky band (LightingManager
-// stretches the daylight cutout to match), so a player digging shallow
-// tunnels still sees daylight + drifting clouds behind them. Past 100m
-// the camera-locked cave layer kicks in: natural rock studded with
+// Two-zone backdrop sitting behind the gameplay tiles. Down to the
+// second wall lift-control row (~40m below the surface, ie the second
+// underground elevator stop) the empty cells reveal the sky band, which
+// fades gradually into darkness over the descent. Past that boundary
+// the camera-locked cave layer takes over: natural rock studded with
 // stalactites, stalagmites, and glowing crystals, scrolling at a
 // fraction of camera speed for parallax depth.
 
-const SURFACE_DEPTH_TILES = 100;
+// Tiles below `aboveGround` where the sky band gives way to the cave.
+// 40 lines up with the second underground wall-mounted lift control
+// (the first is at row aboveGround+10, the second at aboveGround+40 in
+// the default 30-row entryEvery cadence).
+const SURFACE_DEPTH_TILES = 40;
 const CAVE_TILE_W = 96;
 const CAVE_TILE_H = 96;
 const PARALLAX_CAVE_FACTOR = 0.45;

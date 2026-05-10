@@ -17,12 +17,14 @@ export default class LightingManager {
     }
 
     initSky() {
-        // Sky extends from above the world all the way down to 100m below
-        // the soil line; below that the cave parallax takes over. Origin
-        // is set to top-centre so the rectangle hangs from a known anchor
-        // (y=skyTop) rather than the default centred origin, which would
-        // shift the band as we change its height.
-        this.skyDepthTiles = 100;
+        // Sky extends from above the world down to the second wall lift
+        // control (~40 tiles below the soil line). The visible daylight
+        // cutout fades into dark over most of that band so the descent
+        // feels like a gradual twilight rather than a hard transition.
+        // Origin is top-centre so the rectangle hangs from a known anchor
+        // and changes to height don't shift the band.
+        this.skyDepthTiles = 40;
+        this.skyFadeTiles = 28;  // length of the bright→dark gradient
         const skyTop = -200;
         const skyBottom = (this.game.aboveGround + this.skyDepthTiles) * this.game.tileSize;
         this.game.skyBox = this.game.add.rectangle(0, skyTop, 9999, skyBottom - skyTop, 0xf9e4c8);
@@ -238,9 +240,15 @@ export default class LightingManager {
         // Cutout spans from world Y=0 down to (aboveGround + skyDepthTiles)
         // tiles, then fades into the dark overlay across the bottom 10% so
         // the sky-to-cave transition isn't a hard line.
-        const skyDepth = this.skyDepthTiles ?? 100;
+        const skyDepth = this.skyDepthTiles ?? 40;
+        const fadeTiles = this.skyFadeTiles ?? Math.floor(skyDepth * 0.7);
         const skyHeight = (this.game.aboveGround + skyDepth) * this.game.tileSize;
         const scaledSkyHeight = skyHeight * scale;
+        // Fraction of the cutout that stays fully transparent before the
+        // gradient begins easing in the dark overlay. Anything below this
+        // fraction is in the twilight band.
+        const fadeStartFrac = Math.max(0, Math.min(0.95,
+            (skyHeight - fadeTiles * this.game.tileSize) / skyHeight));
 
         const ctx = this.game.lightCtx;
         ctx.globalCompositeOperation = "destination-out";
@@ -260,7 +268,7 @@ export default class LightingManager {
 
         const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + scaledSkyHeight);
         _gradient.addColorStop(0, `rgba(0, 0, 0, ${alphaVal})`);
-        _gradient.addColorStop(0.9, `rgba(0, 0, 0, ${alphaVal})`);
+        _gradient.addColorStop(fadeStartFrac, `rgba(0, 0, 0, ${alphaVal})`);
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
         // Update the skyBox's fill style with a smooth tint transition.
