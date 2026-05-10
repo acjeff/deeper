@@ -5,5 +5,6 @@ import {Liquid} from "./liquid";
 import {Buttress} from "./buttress";
 import {Rail} from "./rail";
 import {LiftControl} from "./liftControl";
+import {Tree} from "./tree";
 
-export {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl};
+export {Breakable, Light, Empty, Liquid, Buttress, Rail, LiftControl, Tree};

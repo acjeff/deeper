@@ -8,6 +8,7 @@ const TILE_COLORS = {
     5: '#a07a4f',
     6: '#9aa3aa',
     7: '#5b9dff',
+    8: '#3e7a3a',
 };
 const SKY_COLOR = 'rgba(58, 78, 110, 0.6)';
 const VOID_COLOR = 'rgba(8, 10, 15, 1)';

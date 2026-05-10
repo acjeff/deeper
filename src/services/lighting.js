@@ -1,5 +1,52 @@
 import LightSource from "./lightsource";
 
+// 24-hour sky palette indexed by timeFraction (0..1). timeFraction 0
+// is noon in the existing day-cycle formula (cos peaks at 0), so the
+// stops climb away from blue through warm orange into navy and back.
+// Smoothstep between adjacent stops is applied at lookup time.
+const SKY_PALETTE = [
+    { t: 0.00, c: [104, 178, 226] }, // noon — sky blue
+    { t: 0.18, c: [148, 184, 214] }, // late afternoon — softer blue
+    { t: 0.22, c: [232, 152, 96]  }, // dusk — warm orange
+    { t: 0.28, c: [120, 78, 70]   }, // post-dusk — dim warm dusk
+    { t: 0.40, c: [18, 28, 56]    }, // night — dark navy blue
+    { t: 0.60, c: [18, 28, 56]    }, // night — dark navy blue
+    { t: 0.72, c: [120, 78, 70]   }, // pre-dawn — dim warm
+    { t: 0.78, c: [236, 162, 116] }, // dawn — warm pink-orange
+    { t: 0.82, c: [148, 184, 214] }, // morning — soft blue
+    { t: 1.00, c: [104, 178, 226] }, // noon — sky blue
+];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+function paletteColor(t) {
+    const stops = SKY_PALETTE;
+    for (let i = 0; i < stops.length - 1; i++) {
+        const a = stops[i];
+        const b = stops[i + 1];
+        if (t < a.t || t > b.t) continue;
+        const localT = (t - a.t) / (b.t - a.t || 1);
+        const s = smoothstep(localT);
+        return [
+            Math.round(lerp(a.c[0], b.c[0], s)),
+            Math.round(lerp(a.c[1], b.c[1], s)),
+            Math.round(lerp(a.c[2], b.c[2], s)),
+        ];
+    }
+    return stops[stops.length - 1].c.slice();
+}
+
+// "Visibility" curve used for the dark-overlay cutout. Stays at 1 through
+// most of the cycle and falls to 0 only inside the deep-night window, so
+// the vivid dusk/dawn colours read clearly instead of being half-buried
+// under the dark overlay.
+function skyVisibility(timeFraction) {
+    // Phase shift so the dip is centred on timeFraction = 0.5 (midnight).
+    const nightCos = Math.cos(2 * Math.PI * (timeFraction - 0.5));
+    return Math.max(0, Math.min(1, 1 - 1.55 * Math.max(0, nightCos)));
+}
+
 export default class LightingManager {
     constructor(scene) {
         this.game = scene;
@@ -17,27 +64,47 @@ export default class LightingManager {
     }
 
     initSky() {
-        this.game.skyBox = this.game.add.rectangle(0, 0, 9999, 410, 0xf9e4c8);
+        // Sky extends from above the world down to the second wall lift
+        // control (~40 tiles below the soil line). The visible daylight
+        // cutout fades into dark over most of that band so the descent
+        // feels like a gradual twilight rather than a hard transition.
+        // Origin is top-centre so the rectangle hangs from a known anchor
+        // and changes to height don't shift the band.
+        this.skyDepthTiles = 40;
+        this.skyFadeTiles = 28;  // length of the bright→dark gradient
+        const skyTop = -200;
+        const skyBottom = (this.game.aboveGround + this.skyDepthTiles) * this.game.tileSize;
+        this.game.skyBox = this.game.add.rectangle(0, skyTop, 9999, skyBottom - skyTop, 0xf9e4c8);
+        this.game.skyBox.setOrigin(0.5, 0);
         this.game.skyBox.setDepth(-999);
         this.spawnClouds();
     }
 
     spawnClouds() {
         if (!this.game.textures.exists('clouds')) return;
-        // Slow drifting clouds across the sky band. Spread out so they drift
-        // independently in front of the warm sky.
-        const skyTop = -80;
-        const skyBottom = (this.game.aboveGround * this.game.tileSize) - 40;
-        const range = 4000;
-        for (let i = 0; i < 6; i++) {
+        this.clouds = [];
+        // Always-on cloud drift across the sky band. Plenty of clouds at
+        // a healthy alpha so the player always sees a few drifting through
+        // the visible viewport regardless of where they walked to. The
+        // dark overlay naturally hides them at night where the sky cutout
+        // is collapsed, so no per-cloud alpha curve is needed.
+        const cloudCount = 14;
+        const skyTop = -120;
+        const skyBottom = (this.game.aboveGround * this.game.tileSize) - 30;
+        // Clouds get a horizontal scroll factor in BackgroundManager for
+        // parallax, but the spawn x range is still in world coords. Cover
+        // a wide band so the player never wanders into a cloudless gap.
+        const range = 6000;
+        for (let i = 0; i < cloudCount; i++) {
             const x = Phaser.Math.Between(-range / 2, range / 2);
             const y = Phaser.Math.Between(skyTop, skyBottom);
             const cloud = this.game.add.image(x, y, 'clouds');
-            const scale = Phaser.Math.FloatBetween(0.18, 0.32);
+            const scale = Phaser.Math.FloatBetween(0.22, 0.42);
             cloud.setScale(scale);
-            cloud.setAlpha(Phaser.Math.FloatBetween(0.45, 0.75));
+            cloud.setAlpha(Phaser.Math.FloatBetween(0.7, 0.95));
             cloud.setDepth(-998);
-            const speed = Phaser.Math.FloatBetween(60000, 120000);
+            this.clouds.push(cloud);
+            const speed = Phaser.Math.FloatBetween(80000, 160000);
             this.game.tweens.add({
                 targets: cloud,
                 x: x + range,
@@ -226,8 +293,18 @@ export default class LightingManager {
         const scale = camera.zoom;
         const skyX = (0 - camera.worldView.x) * scale;
         const skyY = (0 - camera.worldView.y) * scale;
-        const skyHeight = this.game.aboveGround * 10 + 50;
-        const scaledSkyHeight = skyHeight * scale; // Adjust height by zoom
+        // Cutout spans from world Y=0 down to (aboveGround + skyDepthTiles)
+        // tiles, then fades into the dark overlay across the bottom 10% so
+        // the sky-to-cave transition isn't a hard line.
+        const skyDepth = this.skyDepthTiles ?? 40;
+        const fadeTiles = this.skyFadeTiles ?? Math.floor(skyDepth * 0.7);
+        const skyHeight = (this.game.aboveGround + skyDepth) * this.game.tileSize;
+        const scaledSkyHeight = skyHeight * scale;
+        // Fraction of the cutout that stays fully transparent before the
+        // gradient begins easing in the dark overlay. Anything below this
+        // fraction is in the twilight band.
+        const fadeStartFrac = Math.max(0, Math.min(0.95,
+            (skyHeight - fadeTiles * this.game.tileSize) / skyHeight));
 
         const ctx = this.game.lightCtx;
         ctx.globalCompositeOperation = "destination-out";
@@ -238,38 +315,22 @@ export default class LightingManager {
         const dayCycleDuration = this.game.dayCycleDuration || 60000; // default 60 seconds per cycle
         const timeFraction = (now % dayCycleDuration) / dayCycleDuration;
 
-        // Compute a dayFactor that is 1 at full day and 0 at full night.
-        // Using cosine: at timeFraction=0.5 (noon) dayFactor=1, and at timeFraction=0 or 1 (midnight) dayFactor=0.
-        const dayFactor = (1 + Math.cos(2 * Math.PI * timeFraction)) / 2;
-
-        // Multiply the full-day gradient stops by dayFactor.
-        const alphaVal = dayFactor;
+        // Sky visibility — stays high through dawn/dusk and only collapses
+        // in the deep-night window, so the warm dusk colours read clearly.
+        const alphaVal = skyVisibility(timeFraction);
 
         const _gradient = ctx.createLinearGradient(skyX, skyY, skyX, skyY + scaledSkyHeight);
         _gradient.addColorStop(0, `rgba(0, 0, 0, ${alphaVal})`);
-        _gradient.addColorStop(0.8, `rgba(0, 0, 0, ${alphaVal})`);
+        _gradient.addColorStop(fadeStartFrac, `rgba(0, 0, 0, ${alphaVal})`);
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-        // Update the skyBox's fill style with a smooth tint transition.
+        // Paint the sky background by interpolating through the diurnal
+        // palette: bright blue at noon, navy at midnight, with warm
+        // orange swept through at dusk and dawn.
         if (this.game.skyBox) {
-            // Helper linear interpolation function.
-            function lerp(a, b, t) { return a + (b - a) * t; }
-            // Warm cream daytime sky (0xf9e4c8 = 249,228,200).
-            const dayTint = { r: 249, g: 228, b: 200 };
-            // Soft dusty-rose dusk for night.
-            const nightTint = { r: 232, g: 158, b: 130 };
-
-            // Smoothstep the interpolation so dawn/dusk feels gentler than a linear lerp.
-            const t = dayFactor * dayFactor * (3 - 2 * dayFactor);
-            const tintR = Math.round(lerp(nightTint.r, dayTint.r, t));
-            const tintG = Math.round(lerp(nightTint.g, dayTint.g, t));
-            const tintB = Math.round(lerp(nightTint.b, dayTint.b, t));
-            const tintColor = (tintR << 16) | (tintG << 8) | tintB;
-
-            // For Phaser rectangles, use setFillStyle instead of setTint.
+            const [r, g, b] = paletteColor(timeFraction);
+            const tintColor = (r << 16) | (g << 8) | b;
             this.game.skyBox.setFillStyle(tintColor, 1);
-            // Alternatively, you could update the fillColor property directly:
-            // this.game.skyBox.fillColor = tintColor;
         }
 
         ctx.fillStyle = _gradient;

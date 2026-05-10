@@ -106,29 +106,32 @@ export default class CraneManager {
     }
 
     /**
-     * While the platform is moving and the player is on it, lock them to
-     * the lift's top each frame. The player is captured as a "rider" the
-     * first frame they're detected on the platform (here or in
-     * `_moveCrane`), which flips `freezePlayer` so input/gravity/Arcade
-     * collision are all suspended for the trip — much more reliable than
-     * asking Arcade to keep resolving collisions against a 5px static body
-     * that moves several pixels per frame. Both `player.y` (used for
-     * render) and `player.body.y` (read by `handlePlayerMovement` for
-     * head/tool placement in the same frame) are written so everything
-     * stays in sync.
+     * While the platform is moving and the player is on it, pin their Y to
+     * the lift's top each frame so the platform doesn't drag them through
+     * its own collider. The player is captured as a "rider" the first
+     * frame they're detected on the platform; capture flips the lighter
+     * `playerOnLift` flag (NOT `freezePlayer`) so horizontal input and
+     * chunk loading keep working during the trip — only vertical input,
+     * gravity, and water-overlap checks are suspended. If the rider walks
+     * off the side of the platform mid-trip we release them so they fall
+     * naturally instead of skating in mid-air.
      */
     update() {
         const lift = this.craneFlat;
         if (!lift?.body) return;
-        if (!this.moving) return;
+        if (!this.moving) {
+            if (this.playerRiding) this._releaseRider();
+            return;
+        }
 
         const player = this.game.player;
         if (!player?.body) return;
 
+        const halfLiftW = lift.body.width / 2;
+        const halfPlayerW = player.body.width / 2;
+        const horizOverlap = Math.abs(player.x - lift.x) <= halfLiftW + halfPlayerW;
+
         if (!this.playerRiding) {
-            const halfLiftW = lift.body.width / 2;
-            const halfPlayerW = player.body.width / 2;
-            const horizOverlap = Math.abs(player.x - lift.x) <= halfLiftW + halfPlayerW;
             const playerBottom = player.body.y + player.body.height;
             // Only attach when the player is actually standing on the
             // platform — within a few px of its top and not moving upward.
@@ -137,28 +140,33 @@ export default class CraneManager {
                 && player.body.velocity.y >= 0;
             if (!onTop) return;
             this._captureRider();
+        } else if (!horizOverlap) {
+            // Player walked off the edge — let gravity take over.
+            this._releaseRider();
+            return;
         }
 
         const liftTop = lift.body.y;
         player.y = liftTop - player.body.height / 2;
         player.body.y = liftTop - player.body.height;
-        player.body.velocity.x = 0;
+        // Only zero vertical velocity — horizontal velocity stays under
+        // the input handler so the rider can walk across the platform.
         player.body.velocity.y = 0;
     }
 
     _captureRider() {
         if (this.playerRiding) return;
         this.playerRiding = true;
-        this._priorFreezePlayer = !!this.game.freezePlayer;
-        this.game.freezePlayer = true;
-        this.game.player.anims?.play('stationary', true);
+        this.game.playerOnLift = true;
+        // Cancel any pending vertical motion so the pin doesn't fight a
+        // residual jump impulse on the first frame.
+        if (this.game.player?.body) this.game.player.body.velocity.y = 0;
     }
 
     _releaseRider() {
         if (!this.playerRiding) return;
         this.playerRiding = false;
-        this.game.freezePlayer = this._priorFreezePlayer;
-        this._priorFreezePlayer = false;
+        this.game.playerOnLift = false;
     }
 
     _tryCaptureRiderAtStart() {

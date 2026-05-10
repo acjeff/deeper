@@ -83,7 +83,12 @@ export class Breakable extends Tile {
         const ts = this.game.tileSize;
         const aboveGroundY = this.game.aboveGround * ts;
         const isSurfaceTop = this.worldY <= aboveGroundY + ts;
-        const top = this.isOpenAt(this.worldX, this.worldY - ts) || isSurfaceTop;
+        // Cells tagged at gen time as the topmost soil of their column
+        // always render with an exposed top edge, even if a tree or other
+        // tile is occupying the cell above. That makes hill peaks and dip
+        // floors silhouette correctly against the sky.
+        const isTaggedSurface = this.tileDetails?.surface === true;
+        const top = this.isOpenAt(this.worldX, this.worldY - ts) || isSurfaceTop || isTaggedSurface;
         const right = this.isOpenAt(this.worldX + ts, this.worldY);
         const bottom = this.isOpenAt(this.worldX, this.worldY + ts);
         const left = this.isOpenAt(this.worldX - ts, this.worldY);
@@ -96,9 +101,16 @@ export class Breakable extends Tile {
     }
 
     isNearSurface() {
+        if (this.tileDetails?.surface === true) return true;
+        // Legacy fallback for tiles that pre-date the surface tag (older
+        // saves): a cell is "surface" if it's roughly at the default
+        // ground row AND the cell directly above is open. That avoids
+        // grassing dirt cells deep inside hill peaks.
         const ts = this.game.tileSize;
         const aboveGroundY = this.game.aboveGround * ts;
-        return this.worldY >= aboveGroundY && this.worldY <= aboveGroundY + ts * 3;
+        const inRange = this.worldY >= aboveGroundY && this.worldY <= aboveGroundY + ts * 3;
+        if (!inRange) return false;
+        return this.isOpenAt(this.worldX, this.worldY - ts);
     }
 
     redrawTile() {
