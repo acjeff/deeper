@@ -382,10 +382,6 @@ export default class GameScene extends Phaser.Scene {
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
-            const playerOffset = 0;
-            const playerX = this.player.x + playerOffset;
-            const playerY = this.player.y + playerOffset;
-            this.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
             this.craneManager?.update();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
