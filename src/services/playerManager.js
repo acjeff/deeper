@@ -57,9 +57,6 @@ export default class PlayerManager {
         this.game.player.energy = this.game.player.maxEnergy;
         this.game.player.breath = this.game.player.maxBreath;
         this.game.player.hitPower = this.game.player.maxHitPower;
-        this.game.playerLight = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, 30, 1, this.game.lightColors[1], false);
-        // this.game.playerLight.off = true;
-        this.game.playerLightFaux = this.game.lightingManager.addLight(this.game.player.x, this.game.player.y, 0, 1, this.game.lightColors[1], false);
         this.game.physics.add.collider(this.game.player, this.game.soilGroup, () => {
             const fallSpeed = this.game.lastFallSpeed || 0;
             const safeSpeed = 180;
@@ -275,8 +272,6 @@ export default class PlayerManager {
         const relativePos = {x: x || this.game.startPoint.x, y: y || this.game.startPoint.y};
         this.game.player.x = relativePos.x;
         this.game.player.y = relativePos.y;
-        this.game.playerLight.setPosition(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2);
-        this.game.playerLightFaux.setPosition(this.game.player.x + this.game.playerSize / 2, this.game.player.y + this.game.playerSize / 2);
         this.game.freezePlayer = true;
         this.game.cameras.main.stopFollow();
         this.game.cameras.main.setScroll(relativePos.x, relativePos.y);

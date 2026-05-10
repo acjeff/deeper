@@ -110,9 +110,6 @@ export default class ControlsManager {
             if (e.key === "c") {
                 this.game.glowStickCol = (this.game.glowStickCol + 1) % this.game.glowStickCols.length;
             }
-            if (e.key === "t") {
-                this.game.playerLight.off = !this.game.playerLight.off;
-            }
             if (e.key === "p") {
                 this.game.playerManager.teleportTo()
             }

@@ -10,6 +10,9 @@ import ToolbarManager from "../services/toolBarManager";
 import InventoryManager from "../services/InventoryManager";
 import InventoryItem from "../classes/InventoryItem";
 import CraneManager from "../services/craneManager";
+import MinimapManager from "../services/minimapManager";
+import MapViewManager from "../services/mapViewManager";
+import FogOfWar from "../services/fogOfWar";
 
 const batchSize = 100;
 let currentIndex = 0;
@@ -222,6 +225,10 @@ export default class GameScene extends Phaser.Scene {
         if (this.newGame) {
             this.mapService.generateMap();
         }
+        // Patch top-of-shaft wall switches into the grid for both new and
+        // pre-existing saves so the player always has a "call lift to
+        // surface" point at the very top.
+        this.mapService.ensureSurfaceLiftControls();
 
         window.setTimeout(async () => {
             this.playerManager = new PlayerManager(this);
@@ -240,7 +247,18 @@ export default class GameScene extends Phaser.Scene {
             // this.physics.add.collider(this.player, this.glowStickGroup);
             this.toolBarManager = new ToolbarManager(this);
             this.defaultGravityY = this.player.body.gravity.y;
+            this.fogOfWar = new FogOfWar(this.mapWidth, this.mapHeight);
+            if (this.savedFog) {
+                this.fogOfWar.deserialize(this.savedFog);
+                this.savedFog = null;
+            }
+            this.fogRevealRadius = 12;
+            this._lastFogRevealMs = 0;
+            this.mapMarkers = this.savedMarkers || [];
+            this.savedMarkers = null;
             this.uiManager = new UiManager(this);
+            this.minimapManager = new MinimapManager(this);
+            this.mapViewManager = new MapViewManager(this);
             this.toolBarManager.addItemToSlot(0, pickaxe);
             // this.toolBarManager.addItemToSlot(1, glowStick);
             this.toolBarManager.addItemToSlot(2, lamp);
@@ -302,18 +320,25 @@ export default class GameScene extends Phaser.Scene {
     async saveGame(user, gridData) {
         try {
             const compressedData = LZString.compressToUTF16(JSON.stringify(gridData));
+            const fog = this.fogOfWar?.serialize() || null;
+            const markers = this.mapMarkers || [];
 
             if (this.electronAPI?.isElectron) {
-                await this.electronAPI.saveGame({grid: gridData, playerData: {x: this.player.x, y: this.player.y}});
+                await this.electronAPI.saveGame({
+                    grid: gridData,
+                    playerData: {x: this.player.x, y: this.player.y},
+                    fog,
+                    markers,
+                });
             } else {
-                await this.saveGameToCloud(user, compressedData);
+                await this.saveGameToCloud(user, compressedData, fog, markers);
             }
         } catch (error) {
             console.error("Error saving game:", error);
         }
     }
 
-    async saveGameToCloud(user, gridData) {
+    async saveGameToCloud(user, gridData, fog, markers) {
         if (!user) {
             console.error("User not authenticated");
             return;
@@ -325,13 +350,28 @@ export default class GameScene extends Phaser.Scene {
         const playerSaveRef = doc(db, "game_saves", user.uid, "player_data", "position");
 
         batch.set(gameSaveRef, {data: gridData});
-        batch.set(playerSaveRef, {x: this.player.x, y: this.player.y});
+        batch.set(playerSaveRef, {
+            x: this.player.x,
+            y: this.player.y,
+            fog: fog || null,
+            markers: markers || [],
+        });
 
         try {
-            await batch.commit(); // Execute the batch write
+            await batch.commit();
         } catch (error) {
             console.error("Error saving data: ", error);
         }
+    }
+
+    revealFogAroundPlayer(time) {
+        if (!this.fogOfWar || !this.player) return;
+        if (time - this._lastFogRevealMs < 90) return;
+        this._lastFogRevealMs = time;
+        const tileSize = this.tileSize || 10;
+        const tx = Math.floor(this.player.x / tileSize);
+        const ty = Math.floor(this.player.y / tileSize);
+        this.fogOfWar.revealCircle(tx, ty, this.fogRevealRadius);
     }
 
     convertValuesToStrings(obj) {
@@ -355,10 +395,22 @@ export default class GameScene extends Phaser.Scene {
             }
 
             this.newGame = data.newGame;
-            if (data.playerData?.length > 0 && !data.newGame) {
-                this.playerX = Math.round(data.playerData[0].x);
-                this.playerY = Math.round(data.playerData[0].y);
+            if (data.playerData && !data.newGame) {
+                let positionDoc = null;
+                if (Array.isArray(data.playerData) && data.playerData.length > 0) {
+                    positionDoc = data.playerData.find(d => d.id === 'position') || data.playerData[0];
+                } else if (typeof data.playerData === 'object') {
+                    positionDoc = data.playerData;
+                }
+                if (positionDoc) {
+                    if (positionDoc.x != null) this.playerX = Math.round(positionDoc.x);
+                    if (positionDoc.y != null) this.playerY = Math.round(positionDoc.y);
+                    if (positionDoc.fog) this.savedFog = positionDoc.fog;
+                    if (Array.isArray(positionDoc.markers)) this.savedMarkers = positionDoc.markers;
+                }
             }
+            if (!data.newGame && data.fog) this.savedFog = data.fog;
+            if (!data.newGame && Array.isArray(data.markers)) this.savedMarkers = data.markers;
 
             this.user = data.user;
         }
@@ -374,6 +426,11 @@ export default class GameScene extends Phaser.Scene {
             if (this.mineCartGroup.getChildren().length) {
                 this.mineCartGroup.getChildren().forEach(mineCart => mineCart.cartRef.update());
             }
+            // Crane runs first so the player's sprite + body Y are pinned
+            // to the lift before handlePlayerMovement reads body.y to
+            // place the head and tool sprites — otherwise the head lags
+            // the player by one frame and produces visible stutter.
+            this.craneManager?.update();
             this.controlsManager.handlePlayerMovement();
             this.playerManager.updateVisuals(time, delta);
             if (this.ambientMoteEmitter) {
@@ -382,11 +439,9 @@ export default class GameScene extends Phaser.Scene {
             this.lightingManager.updateLighting(delta);
             this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
-            const playerOffset = 0;
-            const playerX = this.player.x + playerOffset;
-            const playerY = this.player.y + playerOffset;
-            this.playerLight.setPosition(Math.round(playerX), Math.round(playerY));
-            this.craneManager?.update();
+            this.revealFogAroundPlayer(time);
+            this.minimapManager?.update(time);
+            this.mapViewManager?.draw();
             if (this.glowSticks.length) {
                 this.glowSticks.forEach(glowStick => glowStick.update());
             }

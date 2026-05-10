@@ -106,39 +106,73 @@ export default class CraneManager {
     }
 
     /**
-     * Per-frame upkeep. The platform's static body is tweened, but Phaser
-     * Arcade has no concept of "moving platforms" — when the lift descends
-     * faster than gravity, the player gets left in mid-air for a beat and
-     * then catches up. This sticks the player to the platform top whenever
-     * they're horizontally over it and not actively jumping, so descending
-     * trips look continuous.
+     * While the platform is moving and the player is on it, lock them to
+     * the lift's top each frame. The player is captured as a "rider" the
+     * first frame they're detected on the platform (here or in
+     * `_moveCrane`), which flips `freezePlayer` so input/gravity/Arcade
+     * collision are all suspended for the trip — much more reliable than
+     * asking Arcade to keep resolving collisions against a 5px static body
+     * that moves several pixels per frame. Both `player.y` (used for
+     * render) and `player.body.y` (read by `handlePlayerMovement` for
+     * head/tool placement in the same frame) are written so everything
+     * stays in sync.
      */
     update() {
+        const lift = this.craneFlat;
+        if (!lift?.body) return;
         if (!this.moving) return;
+
+        const player = this.game.player;
+        if (!player?.body) return;
+
+        if (!this.playerRiding) {
+            const halfLiftW = lift.body.width / 2;
+            const halfPlayerW = player.body.width / 2;
+            const horizOverlap = Math.abs(player.x - lift.x) <= halfLiftW + halfPlayerW;
+            const playerBottom = player.body.y + player.body.height;
+            // Only attach when the player is actually standing on the
+            // platform — within a few px of its top and not moving upward.
+            const onTop = horizOverlap
+                && Math.abs(playerBottom - lift.body.y) <= 8
+                && player.body.velocity.y >= 0;
+            if (!onTop) return;
+            this._captureRider();
+        }
+
+        const liftTop = lift.body.y;
+        player.y = liftTop - player.body.height / 2;
+        player.body.y = liftTop - player.body.height;
+        player.body.velocity.x = 0;
+        player.body.velocity.y = 0;
+    }
+
+    _captureRider() {
+        if (this.playerRiding) return;
+        this.playerRiding = true;
+        this._priorFreezePlayer = !!this.game.freezePlayer;
+        this.game.freezePlayer = true;
+        this.game.player.anims?.play('stationary', true);
+    }
+
+    _releaseRider() {
+        if (!this.playerRiding) return;
+        this.playerRiding = false;
+        this.game.freezePlayer = this._priorFreezePlayer;
+        this._priorFreezePlayer = false;
+    }
+
+    _tryCaptureRiderAtStart() {
         const player = this.game.player;
         const lift = this.craneFlat;
         if (!player?.body || !lift?.body) return;
-
         const halfLiftW = lift.body.width / 2;
         const halfPlayerW = player.body.width / 2;
         const horizOverlap = Math.abs(player.x - lift.x) <= halfLiftW + halfPlayerW;
-        if (!horizOverlap) return;
-
         const playerBottom = player.body.y + player.body.height;
-        const liftTop = lift.body.y;
-        const gap = liftTop - playerBottom;
-
-        // Only snap when the lift has dropped out from under the player
-        // and they aren't moving upward (jumping / being pushed). Negative
-        // gap means the collider is already resolving an overlap, so leave
-        // it alone.
-        if (gap > 0 && gap <= 16 && player.body.velocity.y >= 0) {
-            // Set the sprite, not the body — Arcade's preUpdate copies the
-            // sprite into the body each frame, so body.y assignments get
-            // clobbered and produce the visible stutter.
-            player.y = liftTop - player.body.height / 2;
-            player.body.velocity.y = 0;
-        }
+        // 16px to forgive small jitter and the player just-grounded after
+        // landing on the lift.
+        const onTop = horizOverlap && Math.abs(playerBottom - lift.body.y) <= 16;
+        if (onTop) this._captureRider();
     }
 
     /**
@@ -204,6 +238,10 @@ export default class CraneManager {
             return;
         }
         this.moving = true;
+        // Capture the player as a rider up-front if they're standing on
+        // the platform when the trip begins. Late joiners (walking onto a
+        // moving lift) are caught by the per-frame check in update().
+        this._tryCaptureRiderAtStart();
 
         const distance = Math.abs(target.craneFlatBodyY - currentBodyY);
         const duration = Math.max(this.liftMinDurationMs, distance * this.liftMsPerUnit);
@@ -233,6 +271,7 @@ export default class CraneManager {
                 syncCraneBody();
                 liftControl.moving();
                 this.moving = false;
+                this._releaseRider();
             }
         });
 

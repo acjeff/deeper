@@ -559,6 +559,8 @@ export default class MenuScene extends Phaser.Scene {
             this.scene.start("GameScene", {
                 grid: this.savedData.grid,
                 playerData: this.savedData.playerData,
+                fog: this.savedData.fog,
+                markers: this.savedData.markers,
             });
         } else {
             await this.loadGameFromCloud();
