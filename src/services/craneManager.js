@@ -107,37 +107,66 @@ export default class CraneManager {
 
     /**
      * Per-frame upkeep. The platform's static body is tweened, but Phaser
-     * Arcade has no concept of "moving platforms" — when the lift descends
-     * faster than gravity, the player gets left in mid-air for a beat and
-     * then catches up. This sticks the player to the platform top whenever
-     * they're horizontally over it and not actively jumping, so descending
-     * trips look continuous.
+     * Arcade has no concept of "moving platforms" — and the platform body is
+     * only 5px thick, so when it ascends faster than collision resolution
+     * can push the player, they tunnel through and fall below. To make
+     * trips feel solid, carry the player along with the platform manually
+     * on both up and down trips: zero their vertical velocity and pin their
+     * sprite to the lift top whenever they're horizontally over it and not
+     * actively jumping. Arcade's preUpdate copies the sprite into the body
+     * each frame, so writing to `player.y` (not `body.y`) is what sticks.
      */
     update() {
+        const lift = this.craneFlat;
+        if (!lift?.body) {
+            this._lastLiftBodyY = null;
+            return;
+        }
+
+        const liftBodyY = lift.body.y;
+        const prevLiftBodyY = this._lastLiftBodyY;
+        this._lastLiftBodyY = liftBodyY;
+
         if (!this.moving) return;
         const player = this.game.player;
-        const lift = this.craneFlat;
-        if (!player?.body || !lift?.body) return;
+        if (!player?.body) return;
 
         const halfLiftW = lift.body.width / 2;
         const halfPlayerW = player.body.width / 2;
         const horizOverlap = Math.abs(player.x - lift.x) <= halfLiftW + halfPlayerW;
         if (!horizOverlap) return;
 
-        const playerBottom = player.body.y + player.body.height;
-        const liftTop = lift.body.y;
-        const gap = liftTop - playerBottom;
+        // Player is jumping off — let Arcade physics take over.
+        if (player.body.velocity.y < -10) return;
 
-        // Only snap when the lift has dropped out from under the player
-        // and they aren't moving upward (jumping / being pushed). Negative
-        // gap means the collider is already resolving an overlap, so leave
-        // it alone.
-        if (gap > 0 && gap <= 16 && player.body.velocity.y >= 0) {
-            // Set the sprite, not the body — Arcade's preUpdate copies the
-            // sprite into the body each frame, so body.y assignments get
-            // clobbered and produce the visible stutter.
-            player.y = liftTop - player.body.height / 2;
+        const playerBottom = player.body.y + player.body.height;
+        // Generous tolerance so a frame hitch (which can move the platform
+        // many pixels in one tick) doesn't drop the player off the rig.
+        const tolerance = 16;
+
+        // Treat the player as "riding" if they were sitting on the platform
+        // either before or after the tween's last position update. Either
+        // bound catches the player whether the lift is rising into them or
+        // dropping away beneath them.
+        const wasOnTop = prevLiftBodyY != null && Math.abs(playerBottom - prevLiftBodyY) <= tolerance;
+        const isOnTop = Math.abs(playerBottom - liftBodyY) <= tolerance;
+
+        if (wasOnTop || isOnTop) {
+            player.y = liftBodyY - player.body.height / 2;
             player.body.velocity.y = 0;
+            return;
+        }
+
+        // Lift descended out from under a stationary player — close gaps up
+        // to ~16px so a brief lag still ends with them standing on the
+        // platform instead of in mid-air.
+        const dy = prevLiftBodyY != null ? liftBodyY - prevLiftBodyY : 0;
+        if (dy > 0) {
+            const gap = liftBodyY - playerBottom;
+            if (gap > 0 && gap <= 16 && player.body.velocity.y >= 0) {
+                player.y = liftBodyY - player.body.height / 2;
+                player.body.velocity.y = 0;
+            }
         }
     }
 
