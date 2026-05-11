@@ -35,21 +35,21 @@ export class Breakable extends Tile {
     }
 
     refreshCurveOverlay() {
-        const mask = this.game.tileAtlas.cornerCurveMaskFor(this.worldX, this.worldY);
+        const atlas = this.game.tileAtlas;
+        const mask = atlas.cornerCurveMaskFor(this.worldX, this.worldY);
         if (mask === this.lastCurveMask) return;
         this.lastCurveMask = mask;
         if (mask === 0) {
             if (this.curveOverlay) this.curveOverlay.setVisible(false);
             return;
         }
-        const atlas = this.game.tileAtlas;
-        const key = atlas.ensureCornerCurveTexture(mask);
+        const frame = atlas.ensureCornerCurveTexture(mask);
         if (!this.curveOverlay) {
-            this.curveOverlay = this.game.add.image(this.worldX, this.worldY, key);
+            this.curveOverlay = this.game.add.image(this.worldX, this.worldY, atlas.curveTextureKey, frame);
             this.curveOverlay.setOrigin(0.5, 0.5);
             this.curveOverlay.setDepth(0.5);
-        } else if (this.curveOverlay.texture.key !== key) {
-            this.curveOverlay.setTexture(key);
+        } else if (this.curveOverlay.frame.name !== frame) {
+            this.curveOverlay.setTexture(atlas.curveTextureKey, frame);
         }
         this.curveOverlay.setVisible(true);
     }
@@ -146,9 +146,9 @@ export class Breakable extends Tile {
         const variant = Math.floor(this.posHash(0) * atlas.variantCount);
         const useGrass = top && this.isNearSurface();
         const kind = useGrass ? 'grass' : 'dirt';
-        const key = atlas.ensureTexture(kind, mask, variant);
-        if (this.tileImage.texture.key !== key) {
-            this.tileImage.setTexture(key);
+        const frame = atlas.ensureTexture(kind, mask, variant);
+        if (this.tileImage.frame.name !== frame) {
+            this.tileImage.setTexture(atlas.tileTextureKey, frame);
         }
     }
 
@@ -249,8 +249,8 @@ export class Breakable extends Tile {
         // textureHeight-tall texture) aligns with the world tile bounds.
         // Center origin + Y offset = -overhang/2 means the texture's vertical
         // center sits overhang/2 above worldY.
-        const initialKey = atlas.keyFor('dirt', 0, 0);
-        this.tileImage = this.game.add.image(this.worldX, this.worldY - overhang / 2, initialKey);
+        const initialFrame = atlas.keyFor('dirt', 0, 0);
+        this.tileImage = this.game.add.image(this.worldX, this.worldY - overhang / 2, atlas.tileTextureKey, initialFrame);
         this.tileImage.setOrigin(0.5, 0.5);
         this.tileImage.setDepth(0);
 

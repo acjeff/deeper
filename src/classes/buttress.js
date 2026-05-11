@@ -20,21 +20,21 @@ export class Buttress extends Tile {
     }
 
     refreshCurveOverlay() {
-        const mask = this.game.tileAtlas.cornerCurveMaskFor(this.worldX, this.worldY);
+        const atlas = this.game.tileAtlas;
+        const mask = atlas.cornerCurveMaskFor(this.worldX, this.worldY);
         if (mask === this.lastCurveMask) return;
         this.lastCurveMask = mask;
         if (mask === 0) {
             if (this.curveOverlay) this.curveOverlay.setVisible(false);
             return;
         }
-        const atlas = this.game.tileAtlas;
-        const key = atlas.ensureCornerCurveTexture(mask);
+        const frame = atlas.ensureCornerCurveTexture(mask);
         if (!this.curveOverlay) {
-            this.curveOverlay = this.game.add.image(this.worldX, this.worldY, key);
+            this.curveOverlay = this.game.add.image(this.worldX, this.worldY, atlas.curveTextureKey, frame);
             this.curveOverlay.setOrigin(0.5, 0.5);
             this.curveOverlay.setDepth(0.5);
-        } else if (this.curveOverlay.texture.key !== key) {
-            this.curveOverlay.setTexture(key);
+        } else if (this.curveOverlay.frame.name !== frame) {
+            this.curveOverlay.setTexture(atlas.curveTextureKey, frame);
         }
         this.curveOverlay.setVisible(true);
     }
