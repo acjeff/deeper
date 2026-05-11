@@ -253,20 +253,43 @@ export default class MinimapManager {
         if (time - this._lastUpdate < this.updateInterval) return;
         this._lastUpdate = time;
 
-        const ctx = this.ctx;
         const tileSize = this.game.tileSize || 10;
-        const chunkSize = this.game.chunkSize || 6;
         const playerTileX = Math.floor(this.game.player.x / tileSize);
         const playerTileY = Math.floor(this.game.player.y / tileSize);
+        const gridVersion = this.game.gridVersion || 0;
+        const fog = this.game.fogOfWar;
+        const fogVersion = fog ? fog.version : 0;
+
+        // Skip the full 64×64 canvas repaint entirely when nothing visible
+        // has changed since the last paint. Player standing still + no
+        // dig/place + no fog reveal == no work.
+        if (this._lastPlayerTileX === playerTileX &&
+            this._lastPlayerTileY === playerTileY &&
+            this._lastGridVersion === gridVersion &&
+            this._lastFogVersion === fogVersion &&
+            this._painted) {
+            return;
+        }
+        this._lastPlayerTileX = playerTileX;
+        this._lastPlayerTileY = playerTileY;
+        this._lastGridVersion = gridVersion;
+        this._lastFogVersion = fogVersion;
+        this._painted = true;
+
+        const ctx = this.ctx;
+        const chunkSize = this.game.chunkSize || 6;
         const half = this.tilesPerSide / 2;
         const startX = playerTileX - half;
         const startY = playerTileY - half;
         const aboveGround = this.game.aboveGround || 20;
-        const fog = this.game.fogOfWar;
 
         ctx.fillStyle = VOID_COLOR;
         ctx.fillRect(0, 0, this.size, this.size);
 
+        // Cache the last chunk seen across cells in the same chunk to avoid
+        // re-doing the string concat + dict lookup for every tile.
+        let lastChunkX = NaN, lastChunkY = NaN, lastChunk = null;
+        let lastFill = null;
         for (let row = 0; row < this.tilesPerSide; row++) {
             const tileY = startY + row;
             if (tileY < 0 || tileY >= this.game.mapHeight) continue;
@@ -275,25 +298,34 @@ export default class MinimapManager {
                 const tileX = startX + col;
                 if (tileX < 0 || tileX >= this.game.mapWidth) continue;
                 if (fog && !fog.has(tileX, tileY)) continue;
-                const chunkX = Math.floor(tileX / chunkSize) * chunkSize;
-                const chunkY = Math.floor(tileY / chunkSize) * chunkSize;
-                const chunk = this.game.grid[`${chunkX}_${chunkY}`];
-                if (!chunk) continue;
-                const localX = tileX % chunkSize;
-                const localY = tileY % chunkSize;
-                const tile = chunk[localY] && chunk[localY][localX];
+                const chunkX = tileX - ((tileX % chunkSize) + chunkSize) % chunkSize;
+                const chunkY = tileY - ((tileY % chunkSize) + chunkSize) % chunkSize;
+                if (chunkX !== lastChunkX || chunkY !== lastChunkY) {
+                    lastChunkX = chunkX;
+                    lastChunkY = chunkY;
+                    lastChunk = this.game.grid[`${chunkX}_${chunkY}`] || null;
+                }
+                if (!lastChunk) continue;
+                const localX = tileX - chunkX;
+                const localY = tileY - chunkY;
+                const tileRow = lastChunk[localY];
+                if (!tileRow) continue;
+                const tile = tileRow[localX];
                 if (!tile) continue;
 
                 const id = tile.id;
                 const drawX = col * this.pxPerTile;
+                let fill;
                 if (id == null || id === 0) {
-                    if (tileY < aboveGround) {
-                        ctx.fillStyle = SKY_COLOR;
-                        ctx.fillRect(drawX, drawY, this.pxPerTile, this.pxPerTile);
-                    }
-                    continue;
+                    if (tileY >= aboveGround) continue;
+                    fill = SKY_COLOR;
+                } else {
+                    fill = TILE_COLORS[id] || '#444';
                 }
-                ctx.fillStyle = TILE_COLORS[id] || '#444';
+                if (fill !== lastFill) {
+                    ctx.fillStyle = fill;
+                    lastFill = fill;
+                }
                 ctx.fillRect(drawX, drawY, this.pxPerTile, this.pxPerTile);
             }
         }

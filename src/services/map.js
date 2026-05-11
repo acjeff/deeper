@@ -69,6 +69,14 @@ export default class MapService {
         this.game.mapWidth = 322;
         this.game.loadedChunks = new Map();
         this.game.grid = this.game.grid || {};
+        // Spatial index: spriteIndex[chunkKey][localY][localX] → Phaser sprite.
+        // Populated in placeObject, cleared in unloadChunk. Lets
+        // getAdjacentBlocks/refreshNeighborEdges do O(1) neighbour lookups
+        // instead of scanning every entity group's children.
+        this.spriteIndex = {};
+        // Bumped any time a grid cell changes so consumers (minimap, future
+        // delta-sync, etc.) can skip work when the world is static.
+        this.game.gridVersion = 0;
         this.game.openSpaces = [];
         this.game.tileAtlas = new TileTextureAtlas(this.game);
         this.game.dustEmitter = this.game.add.particles(0, 0, 'dust', {
@@ -609,53 +617,31 @@ export default class MapService {
         );
     }
 
+    spriteAtWorld(worldX, worldY) {
+        const ts = this.game.tileSize;
+        const cs = this.game.chunkSize;
+        const tx = Math.floor(worldX / ts);
+        const ty = Math.floor(worldY / ts);
+        const chunkX = Math.floor(tx / cs) * cs;
+        const chunkY = Math.floor(ty / cs) * cs;
+        const chunk = this.spriteIndex[`${chunkX}_${chunkY}`];
+        if (!chunk) return null;
+        const lx = ((tx % cs) + cs) % cs;
+        const ly = ((ty % cs) + cs) % cs;
+        const row = chunk[ly];
+        if (!row) return null;
+        const sprite = row[lx];
+        return sprite && sprite.active ? sprite : null;
+    }
+
     getAdjacentBlocks(x, y) {
-        const tileSize = this.game.tileSize;
-        // Prepare an object to hold the adjacent blocks.
-        const blocks = {
-            left: null,
-            above: null,
-            right: null,
-            below: null,
+        const ts = this.game.tileSize;
+        return {
+            left:  this.spriteAtWorld(x - ts, y),
+            right: this.spriteAtWorld(x + ts, y),
+            above: this.spriteAtWorld(x, y - ts),
+            below: this.spriteAtWorld(x, y + ts),
         };
-
-        // Define the target positions for each direction.
-        const targets = {
-            left: {x: x - tileSize, y: y},
-            above: {x: x, y: y - tileSize},
-            right: {x: x + tileSize, y: y},
-            below: {x: x, y: y + tileSize},
-        };
-
-        // Loop through each group in entityChildren.
-        this.game.entityChildren.forEach(group => {
-            // If the group has a 'children' property (like a Phaser Group)
-            if (group?.children) {
-                group.children.each(entity => {
-                    for (const direction in targets) {
-                        const target = targets[direction];
-                        // Check if the entity is within half a tile of the target.
-                        if (Math.abs(entity.x - target.x) < tileSize / 2 &&
-                            Math.abs(entity.y - target.y) < tileSize / 2) {
-                            blocks[direction] = entity;
-                        }
-                    }
-                });
-            } else if (Array.isArray(group)) {
-                // If the group is simply an array of entities.
-                group.forEach(entity => {
-                    for (const direction in targets) {
-                        const target = targets[direction];
-                        if (Math.abs(entity.x - target.x) < tileSize / 2 &&
-                            Math.abs(entity.y - target.y) < tileSize / 2) {
-                            blocks[direction] = entity;
-                        }
-                    }
-                });
-            }
-        });
-
-        return blocks;
     }
 
     getEntitiesAround(x, y, radius) {
@@ -731,7 +717,11 @@ export default class MapService {
         if (!this.game.grid[chunkKey] || !this.game.grid[chunkKey][cellY] || !this.game.grid[chunkKey][cellX]) return; // Ensure chunk exists
 
         this.game.grid[chunkKey][cellY][cellX] = {...tileType};
-        if (cellItem?.tileRef) cellItem.tileRef.destroy(prefs);
+        this.game.gridVersion++;
+        if (cellItem?.tileRef) {
+            this._unregisterSpriteAt(chunkKey, cellY, cellX);
+            cellItem.tileRef.destroy(prefs);
+        }
         if (this.game.loadedChunks.has(chunkKey)) {
             const result = this.placeObject(tileType, worldX, worldY, {chunkKey, cellY, cellX}, prefs);
             this.refreshNeighborEdges(worldX, worldY);
@@ -739,19 +729,36 @@ export default class MapService {
         }
     }
 
+    _registerSpriteAt(chunkKey, cellY, cellX, sprite) {
+        if (!sprite) return;
+        let chunk = this.spriteIndex[chunkKey];
+        if (!chunk) {
+            chunk = new Array(this.game.chunkSize);
+            for (let i = 0; i < this.game.chunkSize; i++) chunk[i] = new Array(this.game.chunkSize).fill(null);
+            this.spriteIndex[chunkKey] = chunk;
+        }
+        const row = chunk[cellY];
+        if (row) row[cellX] = sprite;
+    }
+
+    _unregisterSpriteAt(chunkKey, cellY, cellX) {
+        const chunk = this.spriteIndex[chunkKey];
+        if (!chunk) return;
+        const row = chunk[cellY];
+        if (row) row[cellX] = null;
+    }
+
     refreshNeighborEdges(worldX, worldY) {
-        // Refresh all 8 surrounding solid tiles so silhouette edges and
-        // inner-corner curves update on dig/place.
+        // Refresh the 8 surrounding solid tiles so silhouette edges and
+        // inner-corner curves update on dig/place. O(8) via the spatial
+        // index instead of scanning every soil + buttress sprite.
         const ts = this.game.tileSize;
-        const groups = [this.game.soilGroup, this.game.buttressGroup];
-        for (const group of groups) {
-            if (!group?.children) continue;
-            group.children.each(entity => {
-                const dx = entity.x - worldX;
-                const dy = entity.y - worldY;
-                if ((dx === 0 && dy === 0) || Math.abs(dx) > ts || Math.abs(dy) > ts) return;
-                const ref = entity.tileRef;
-                if (!ref) return;
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const sprite = this.spriteAtWorld(worldX + dx * ts, worldY + dy * ts);
+                const ref = sprite?.tileRef;
+                if (!ref) continue;
                 if (ref.redrawTile) {
                     ref.lastEdgeMask = -1;
                     ref.redrawTile();
@@ -760,7 +767,7 @@ export default class MapService {
                     ref.lastCurveMask = -1;
                     ref.refreshCurveOverlay();
                 }
-            });
+            }
         }
     }
 
@@ -803,6 +810,9 @@ export default class MapService {
         }
         if (tileType.id === this.game.tileTypes.tree.id) {
             newTile = this.treePool.acquire(params);
+        }
+        if (newTile?.sprite && cellDetails) {
+            this._registerSpriteAt(cellDetails.chunkKey, cellDetails.cellY, cellDetails.cellX, newTile.sprite);
         }
         return newTile;
     }
@@ -862,6 +872,7 @@ export default class MapService {
             }
         });
 
+        delete this.spriteIndex[chunkKey];
         this.game.loadedChunks.delete(chunkKey);
     }
 
