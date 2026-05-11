@@ -76,6 +76,45 @@ export class MineCart {
         }
     }
 
+    hasCargo() {
+        return Object.values(this.inventory).some(v => v > 0);
+    }
+
+    // True if the cart is sitting one cell away from a lift control on any
+    // side. Cart x/y are tweened between tile-aligned goals, so we snap to
+    // the nearest grid cell before asking the map service for neighbours.
+    liftControlAdjacent() {
+        const ts = this.game.tileSize;
+        const liftId = this.game.tileTypes?.liftControl?.id;
+        if (liftId == null) return false;
+        const snapX = Math.round(this.sprite.x / ts) * ts;
+        const snapY = Math.round(this.sprite.y / ts) * ts;
+        const adj = this.game.mapService.getAdjacentBlocks(snapX, snapY);
+        return Object.values(adj).some(b => b?.tileRef?.tileDetails?.id === liftId);
+    }
+
+    /**
+     * Hand the cart's contents off to the player's stockpile. Currently the
+     * cart only ever catches coal (the one material breakable debris is
+     * created from), but the dispatch table covers wood too so trees
+     * dropping debris in the future Just Works without touching this code.
+     * Anything unmapped is silently left behind so we don't drop arbitrary
+     * inventory items into wood/coal stacks.
+     */
+    dumpToStockpile() {
+        const im = this.game.inventoryManager;
+        if (!im) return;
+        const handlers = {
+            coal: (n) => im.addCoal(n),
+            wood: (n) => im.addWood(n),
+        };
+        Object.entries(this.inventory).forEach(([key, count]) => {
+            if (count > 0 && handlers[key]) handlers[key](count);
+        });
+        this.inventory = {};
+        this.UI?.clearInventoryDisplay?.();
+    }
+
     setRotation(rotation) {
         this.rotation = rotation;
 
