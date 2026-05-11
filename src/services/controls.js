@@ -205,10 +205,18 @@ export default class ControlsManager {
         })
 
         this.game.physics.overlap(this.game.player, this.game.mineCartGroup, (obj1, obj2) => {
-            obj2.cartRef.playerOver = true;
-            this.game.interactionText = obj2.cartRef.moving ? 'stop' : 'start';
-            this.game.showInteractionPrompt = () => {
-                obj2.cartRef.toggleMoving();
+            const cart = obj2.cartRef;
+            cart.playerOver = true;
+            this.game.interactionText = cart.moving ? 'stop' : 'start';
+            this.game.showInteractionPrompt = () => cart.toggleMoving();
+            // When the cart is parked next to a lift control, expose a
+            // secondary action that ships its contents to the stockpile.
+            // Replaces the lift control's own "teleport" prompt because
+            // the player overlap with the cart runs after the lift
+            // overlap, but only when there's actually something to dump.
+            if (cart.hasCargo() && cart.liftControlAdjacent()) {
+                this.game.secondaryInteractionText = 'Dump to Stockpile';
+                this.game.showSecondaryInteractionPrompt = () => cart.dumpToStockpile();
             }
         });
 
