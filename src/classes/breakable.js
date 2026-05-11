@@ -35,16 +35,22 @@ export class Breakable extends Tile {
     }
 
     refreshCurveOverlay() {
-        if (!this.curveOverlay) return;
-        const mask = this.game.tileAtlas.cornerCurveMaskFor(this.worldX, this.worldY);
+        const atlas = this.game.tileAtlas;
+        const mask = atlas.cornerCurveMaskFor(this.worldX, this.worldY);
         if (mask === this.lastCurveMask) return;
         this.lastCurveMask = mask;
         if (mask === 0) {
-            this.curveOverlay.setVisible(false);
+            if (this.curveOverlay) this.curveOverlay.setVisible(false);
             return;
         }
-        const key = this.game.tileAtlas.ensureCornerCurveTexture(mask);
-        if (this.curveOverlay.texture.key !== key) this.curveOverlay.setTexture(key);
+        const frame = atlas.ensureCornerCurveTexture(mask);
+        if (!this.curveOverlay) {
+            this.curveOverlay = this.game.add.image(this.worldX, this.worldY, atlas.curveTextureKey, frame);
+            this.curveOverlay.setOrigin(0.5, 0.5);
+            this.curveOverlay.setDepth(0.5);
+        } else if (this.curveOverlay.frame.name !== frame) {
+            this.curveOverlay.setTexture(atlas.curveTextureKey, frame);
+        }
         this.curveOverlay.setVisible(true);
     }
 
@@ -113,6 +119,18 @@ export class Breakable extends Tile {
         return this.isOpenAt(this.worldX, this.worldY - ts);
     }
 
+    _ensureCrackSprite() {
+        if (this.crackSprite) return this.crackSprite;
+        const ts = this.game.tileSize;
+        const s = this.game.add.image(this.worldX, this.worldY, 'crack');
+        s.setDisplaySize(ts - 1, ts - 1);
+        const health = this.tileDetails.health;
+        s.setAlpha(health == null ? 0.1 : 1 - health + 0.1);
+        s.setDepth(4);
+        this.crackSprite = s;
+        return s;
+    }
+
     redrawTile() {
         if (!this.tileImage || !this.active) return;
         const mask = this.getEdgeMask();
@@ -128,9 +146,9 @@ export class Breakable extends Tile {
         const variant = Math.floor(this.posHash(0) * atlas.variantCount);
         const useGrass = top && this.isNearSurface();
         const kind = useGrass ? 'grass' : 'dirt';
-        const key = atlas.ensureTexture(kind, mask, variant);
-        if (this.tileImage.texture.key !== key) {
-            this.tileImage.setTexture(key);
+        const frame = atlas.ensureTexture(kind, mask, variant);
+        if (this.tileImage.frame.name !== frame) {
+            this.tileImage.setTexture(atlas.tileTextureKey, frame);
         }
     }
 
@@ -231,8 +249,8 @@ export class Breakable extends Tile {
         // textureHeight-tall texture) aligns with the world tile bounds.
         // Center origin + Y offset = -overhang/2 means the texture's vertical
         // center sits overhang/2 above worldY.
-        const initialKey = atlas.keyFor('dirt', 0, 0);
-        this.tileImage = this.game.add.image(this.worldX, this.worldY - overhang / 2, initialKey);
+        const initialFrame = atlas.keyFor('dirt', 0, 0);
+        this.tileImage = this.game.add.image(this.worldX, this.worldY - overhang / 2, atlas.tileTextureKey, initialFrame);
         this.tileImage.setOrigin(0.5, 0.5);
         this.tileImage.setDepth(0);
 
@@ -263,19 +281,15 @@ export class Breakable extends Tile {
             this.tileImage.setVisible(false);
         }
 
-        this.crackSprite = this.game.add.image(this.worldX, this.worldY, 'crack');
-        this.crackSprite.setDisplaySize(ts - 1, ts - 1);
-        this.crackSprite.setAlpha(1 - this.tileDetails.health + 0.1);
-        this.crackSprite.setDepth(4);
+        // crackSprite is lazy: only damaged tiles need it on creation
+        // (saves where health < 1). Fresh tiles get a crack sprite on the
+        // first hit via _ensureCrackSprite.
+        if (this.tileDetails.health != null && this.tileDetails.health < 1) {
+            this._ensureCrackSprite();
+        }
 
-        // Inside-corner curve overlay — small Image rendered above the body
-        // depth, with curve pixels in its corner overhang regions that
-        // extend INTO adjacent open diagonal cells. Uses the dark outline
-        // colour so it blends with the surrounding tile borders.
-        this.curveOverlay = this.game.add.image(this.worldX, this.worldY, atlas.cornerCurveKey(0));
-        this.curveOverlay.setOrigin(0.5, 0.5);
-        this.curveOverlay.setDepth(0.5);
-        this.curveOverlay.setVisible(false);
+        // curveOverlay also lazy — most cells never sit at an inside cave
+        // corner so creation up front was wasted. See refreshCurveOverlay.
         this.lastCurveMask = -1;
 
         this.fadeElements = [this.tileImage];
@@ -302,13 +316,14 @@ export class Breakable extends Tile {
     removeElements() {
         this.active = false;
         this.removeFromGroup();
-        this.crackSprite.destroy();
+        if (this.crackSprite) this.crackSprite.destroy();
         this.sprite.destroy();
         if (this.overlaySprite) this.overlaySprite.destroy();
         if (this.tileImage) this.tileImage.destroy();
         if (this.curveOverlay) this.curveOverlay.destroy();
         if (this.detailGraphics) this.detailGraphics.destroy();
         if (this.edgeRefreshDelay) this.edgeRefreshDelay.remove();
+        this._destroyBorderGraphics();
     }
 
     destroy(prefs) {
@@ -345,7 +360,7 @@ export class Breakable extends Tile {
 
                 if (health <= 0) {
                     this.game.physics.world.disable(this.sprite);
-                    this.crackSprite.setAlpha(0);
+                    if (this.crackSprite) this.crackSprite.setAlpha(0);
                     this.sprite.setStrokeStyle(0, 0);
                     this.game.dustEmitter.explode(50);
                     baseCell = this.tileDetails.trapped || {...this.game.tileTypes.empty};
@@ -353,8 +368,9 @@ export class Breakable extends Tile {
                     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
                 } else {
                     this.game.dustEmitter.explode(5);
+                    const crack = this._ensureCrackSprite();
                     this.game.tweens.add({
-                        targets: this.crackSprite,
+                        targets: crack,
                         alpha: 1 - health,
                         duration: 50,
                         ease: 'Cubic.easeOut',

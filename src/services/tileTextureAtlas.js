@@ -1,7 +1,9 @@
-// Pre-renders dirt and grass tile variants as Phaser canvas textures
-// at scene init. Each tile becomes a cheap Image sprite that just
-// references one of these atlas textures, swapping keys when its
-// neighbour state changes.
+// Pre-renders dirt and grass tile variants into a single packed canvas
+// texture (with named frames per mask/variant), plus a second canvas for
+// the inner-corner curve overlays. Tiles all reference the same atlas
+// texture and only swap frames as their neighbour state changes — this
+// lets Phaser batch their draw calls instead of issuing one GL bind
+// per unique tile texture.
 //
 // Visual approach mirrors Terraria-style auto-tiles:
 // - sharp pixel-art square base
@@ -12,6 +14,9 @@
 // - 3 variants per edge mask for visual variety
 
 const VARIANT_COUNT = 8;
+// Edge mask is 4 outside-corner bits + 4 inside-corner bits = 8 bits.
+const MAX_MASKS = 256;
+const MASKS_PER_ROW = 16;
 
 function makeRng(seed) {
     let s = seed | 0;
@@ -60,35 +65,221 @@ export default class TileTextureAtlas {
         this.grassB = 0x88b85c;
         this.grassDark = 0x4f7330;
 
-        this.generate();
+        this.tileTextureKey = 'tile_atlas';
+        this.curveTextureKey = 'tile_curve_atlas';
+
+        // 1px transparent gutter on every side of every frame keeps the
+        // GPU from sampling into a neighbouring frame at sub-pixel
+        // sprite positions (otherwise visible as thin coloured seams
+        // along tile edges during smooth camera moves).
+        this.gutter = 1;
+        const cellW = this.tileSize + this.gutter * 2;
+        const cellH = this.textureHeight + this.gutter * 2;
+
+        // Atlas layout: each (mask, variant) gets one padded cell at a
+        // deterministic position. MASKS_PER_ROW masks per row,
+        // VARIANT_COUNT variants packed horizontally within each mask cell.
+        // Grass frames live below all dirt frames so kind→y is constant.
+        this.cellsPerMaskRow = MASKS_PER_ROW;
+        this.cellWidth = cellW;
+        this.cellHeight = cellH;
+        this.atlasWidth = this.cellsPerMaskRow * this.variantCount * cellW;
+        this.kindRows = Math.ceil(MAX_MASKS / this.cellsPerMaskRow);
+        this.grassYOffset = this.kindRows * cellH;
+        this.atlasHeight = this.grassYOffset * 2;
+
+        this.curveSize = this.tileSize + 4;
+        this.curveCellSize = this.curveSize + this.gutter * 2;
+        this.curveAtlasWidth = 16 * this.curveCellSize;
+        this.curveAtlasHeight = this.curveCellSize;
+
+        this._tileFramesAdded = new Set();
+        this._curveFramesAdded = new Set();
+        this._tileDirty = false;
+        this._curveDirty = false;
+
+        this._initAtlases();
+        this._generateEager();
     }
 
-    generate() {
-        // Pre-generate the simple 4-bit (no-inner-corner) cases. Inner-corner
-        // variants (mask bits 16/32/64/128) are generated lazily on first use
-        // since most aren't needed in any given playthrough.
+    _initAtlases() {
+        if (this.game.textures.exists(this.tileTextureKey)) {
+            this.game.textures.remove(this.tileTextureKey);
+        }
+        this.tileTex = this.game.textures.createCanvas(this.tileTextureKey, this.atlasWidth, this.atlasHeight);
+        this.tileCtx = this.tileTex.context;
+        this.tileCtx.imageSmoothingEnabled = false;
+
+        if (this.game.textures.exists(this.curveTextureKey)) {
+            this.game.textures.remove(this.curveTextureKey);
+        }
+        this.curveTex = this.game.textures.createCanvas(this.curveTextureKey, this.curveAtlasWidth, this.curveAtlasHeight);
+        this.curveCtx = this.curveTex.context;
+        this.curveCtx.imageSmoothingEnabled = false;
+    }
+
+    _generateEager() {
+        // 4-bit silhouette masks (0..15) cover every neighbour combination
+        // without inner-corner state, which is most of the tiles in any
+        // playthrough. Higher 8-bit masks (16+) are lazy.
         for (let mask = 0; mask < 16; mask++) {
             for (let variant = 0; variant < this.variantCount; variant++) {
-                this.makeDirtTexture(mask, variant);
+                this._makeDirtFrame(mask, variant);
                 if (mask & 1) {
-                    this.makeGrassTexture(mask, variant);
+                    this._makeGrassFrame(mask, variant);
                 }
             }
         }
+        for (let mask = 0; mask < 16; mask++) {
+            this._makeCurveFrame(mask);
+        }
+        this._flushTile();
+        this._flushCurve();
     }
 
+    _flushTile() {
+        if (!this._tileDirty) return;
+        this.tileTex.refresh();
+        this._tileDirty = false;
+    }
+
+    _flushCurve() {
+        if (!this._curveDirty) return;
+        this.curveTex.refresh();
+        this._curveDirty = false;
+    }
+
+    tileFrameName(kind, mask, variant) {
+        return `${kind}_${mask}_${variant}`;
+    }
+
+    curveFrameName(mask) {
+        return `curve_${mask}`;
+    }
+
+    _tileFramePosition(kind, mask, variant) {
+        const col = mask % this.cellsPerMaskRow;
+        const row = Math.floor(mask / this.cellsPerMaskRow);
+        // Cell origin (top-left of the padded cell), then offset by the
+        // gutter so the frame rect sits inside the cell with transparent
+        // pixels around it.
+        const cellX = col * this.variantCount * this.cellWidth + variant * this.cellWidth;
+        const cellY = row * this.cellHeight + (kind === 'grass' ? this.grassYOffset : 0);
+        return { x: cellX + this.gutter, y: cellY + this.gutter };
+    }
+
+    _curveFramePosition(mask) {
+        return { x: mask * this.curveCellSize + this.gutter, y: this.gutter };
+    }
+
+    ensureTileFrame(kind, mask, variant) {
+        const name = this.tileFrameName(kind, mask, variant);
+        if (this._tileFramesAdded.has(name)) return name;
+        if (kind === 'grass') this._makeGrassFrame(mask, variant);
+        else this._makeDirtFrame(mask, variant);
+        this._flushTile();
+        return name;
+    }
+
+    ensureCurveFrame(mask) {
+        const name = this.curveFrameName(mask);
+        if (this._curveFramesAdded.has(name)) return name;
+        this._makeCurveFrame(mask);
+        this._flushCurve();
+        return name;
+    }
+
+    // Legacy-named wrappers kept for the existing call sites.
     keyFor(kind, mask, variant) {
-        return `tile_${kind}_${mask}_${variant}`;
+        return this.tileFrameName(kind, mask, variant);
     }
 
     ensureTexture(kind, mask, variant) {
-        const key = this.keyFor(kind, mask, variant);
-        if (!this.game.textures.exists(key)) {
-            if (kind === 'grass') this.makeGrassTexture(mask, variant);
-            else this.makeDirtTexture(mask, variant);
-        }
-        return key;
+        return this.ensureTileFrame(kind, mask, variant);
     }
+
+    cornerCurveKey(mask) {
+        return this.curveFrameName(mask);
+    }
+
+    ensureCornerCurveTexture(mask) {
+        return this.ensureCurveFrame(mask);
+    }
+
+    _makeDirtFrame(mask, variant) {
+        const name = this.tileFrameName('dirt', mask, variant);
+        if (this._tileFramesAdded.has(name)) return;
+        const { x, y } = this._tileFramePosition('dirt', mask, variant);
+        const ctx = this.tileCtx;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.clearRect(0, 0, this.tileSize, this.textureHeight);
+        this.drawBody(ctx, mask, variant, this.dirtBaseColor);
+        ctx.restore();
+        this.tileTex.add(name, 0, x, y, this.tileSize, this.textureHeight);
+        this._tileFramesAdded.add(name);
+        this._tileDirty = true;
+    }
+
+    _makeGrassFrame(mask, variant) {
+        const name = this.tileFrameName('grass', mask, variant);
+        if (this._tileFramesAdded.has(name)) return;
+        const { x, y } = this._tileFramePosition('grass', mask, variant);
+        const ctx = this.tileCtx;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.clearRect(0, 0, this.tileSize, this.textureHeight);
+        const filled = this.drawBody(ctx, mask, variant, this.dirtBaseColor);
+        this.drawGrass(ctx, mask, variant, filled);
+        ctx.restore();
+        this.tileTex.add(name, 0, x, y, this.tileSize, this.textureHeight);
+        this._tileFramesAdded.add(name);
+        this._tileDirty = true;
+    }
+
+    _makeCurveFrame(mask) {
+        const name = this.curveFrameName(mask);
+        if (this._curveFramesAdded.has(name)) return;
+        const { x, y } = this._curveFramePosition(mask);
+        const size = this.curveSize;
+        const ctx = this.curveCtx;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.clearRect(0, 0, size, size);
+
+        const outline = toCss(darken(this.dirtBaseColor, 55));
+        ctx.fillStyle = outline;
+
+        // 3-pixel L per corner. "Near" pixel sits diagonally adjacent to
+        // the tile body; the other two extend along the cave walls formed
+        // by the two solid neighbours.
+        if (mask & 1) {                         // top-left
+            ctx.fillRect(1, 1, 1, 1);
+            ctx.fillRect(0, 1, 1, 1);
+            ctx.fillRect(1, 0, 1, 1);
+        }
+        if (mask & 2) {                         // top-right
+            ctx.fillRect(size - 2, 1, 1, 1);
+            ctx.fillRect(size - 1, 1, 1, 1);
+            ctx.fillRect(size - 2, 0, 1, 1);
+        }
+        if (mask & 4) {                         // bottom-left
+            ctx.fillRect(1, size - 2, 1, 1);
+            ctx.fillRect(0, size - 2, 1, 1);
+            ctx.fillRect(1, size - 1, 1, 1);
+        }
+        if (mask & 8) {                         // bottom-right
+            ctx.fillRect(size - 2, size - 2, 1, 1);
+            ctx.fillRect(size - 1, size - 2, 1, 1);
+            ctx.fillRect(size - 2, size - 1, 1, 1);
+        }
+        ctx.restore();
+        this.curveTex.add(name, 0, x, y, size, size);
+        this._curveFramesAdded.add(name);
+        this._curveDirty = true;
+    }
+
+    // ----- Pixel-build helpers (unchanged) -----
 
     // Build a per-pixel filled mask for the body, applying corner cuts
     // where two adjacent sides face air, plus optional edge erosion for
@@ -166,11 +357,6 @@ export default class TileTextureAtlas {
     }
 
     drawBody(ctx, mask, variant, baseColor) {
-        const top = !!(mask & 1);
-        const right = !!(mask & 2);
-        const bottom = !!(mask & 4);
-        const left = !!(mask & 8);
-
         const ts = this.tileSize;
         const yOff = this.grassOverhang;
         const rng = makeRng(mask * 17 + variant * 257 + 1);
@@ -200,6 +386,10 @@ export default class TileTextureAtlas {
         // every 4-tile junction. Use a softer darken than lo.
         const seamShade = darken(baseColor, 16);
         const seamBits = Math.floor(rng() * 16);
+        const top = !!(mask & 1);
+        const right = !!(mask & 2);
+        const bottom = !!(mask & 4);
+        const left = !!(mask & 8);
         const seam = (cornerX, cornerY, conds, bit) => {
             if (!conds || !(seamBits & bit)) return;
             if (filled[cornerY][cornerX]) {
@@ -280,93 +470,12 @@ export default class TileTextureAtlas {
         }
     }
 
-    makeDirtTexture(mask, variant) {
-        const key = this.keyFor('dirt', mask, variant);
-        if (this.game.textures.exists(key)) return;
-        const tex = this.game.textures.createCanvas(key, this.tileSize, this.textureHeight);
-        const ctx = tex.context;
-        ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, this.tileSize, this.textureHeight);
-        this.drawBody(ctx, mask, variant, this.dirtBaseColor);
-        tex.refresh();
-    }
-
-    makeGrassTexture(mask, variant) {
-        const key = this.keyFor('grass', mask, variant);
-        if (this.game.textures.exists(key)) return;
-        const tex = this.game.textures.createCanvas(key, this.tileSize, this.textureHeight);
-        const ctx = tex.context;
-        ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, this.tileSize, this.textureHeight);
-        const filled = this.drawBody(ctx, mask, variant, this.dirtBaseColor);
-        this.drawGrass(ctx, mask, variant, filled);
-        tex.refresh();
-    }
-
-    // ----- Corner curve overlays for solid tiles -----
-    // Each solid tile can add a small overlay Image centred on its world
-    // position. The overlay's texture is the same size as the tile body
-    // plus a 2px overhang on each side (so e.g. 14x14 for a 10px tile).
-    // Curve pixels are drawn ONLY in the corner overhang regions — never
-    // in the body region — so the overlay sits cleanly outside the
-    // tile's bounds, extending into the adjacent diagonal cell.
-    //
-    // Pixels use the dark outline colour so they blend with the
-    // surrounding tile silhouette borders regardless of tile type.
-
     cornerCurveOverhang() {
         return 2;
     }
 
     cornerCurveSize() {
-        return this.tileSize + this.cornerCurveOverhang() * 2;
-    }
-
-    cornerCurveKey(mask) {
-        return `tile_corner_curve_${mask}`;
-    }
-
-    ensureCornerCurveTexture(mask) {
-        const key = this.cornerCurveKey(mask);
-        if (!this.game.textures.exists(key)) this.makeCornerCurveTexture(mask, key);
-        return key;
-    }
-
-    makeCornerCurveTexture(mask, key) {
-        const size = this.cornerCurveSize();
-        const tex = this.game.textures.createCanvas(key, size, size);
-        const ctx = tex.context;
-        ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, size, size);
-
-        const outline = toCss(darken(this.dirtBaseColor, 55));
-        ctx.fillStyle = outline;
-
-        // 3-pixel L per corner. The "near" pixel sits diagonally adjacent
-        // to the tile body; the other two extend along the cave walls
-        // formed by the two solid neighbours.
-        if (mask & 1) {                         // top-left
-            ctx.fillRect(1, 1, 1, 1);
-            ctx.fillRect(0, 1, 1, 1);
-            ctx.fillRect(1, 0, 1, 1);
-        }
-        if (mask & 2) {                         // top-right
-            ctx.fillRect(size - 2, 1, 1, 1);
-            ctx.fillRect(size - 1, 1, 1, 1);
-            ctx.fillRect(size - 2, 0, 1, 1);
-        }
-        if (mask & 4) {                         // bottom-left
-            ctx.fillRect(1, size - 2, 1, 1);
-            ctx.fillRect(0, size - 2, 1, 1);
-            ctx.fillRect(1, size - 1, 1, 1);
-        }
-        if (mask & 8) {                         // bottom-right
-            ctx.fillRect(size - 2, size - 2, 1, 1);
-            ctx.fillRect(size - 1, size - 2, 1, 1);
-            ctx.fillRect(size - 2, size - 1, 1, 1);
-        }
-
-        tex.refresh();
+        return this.curveSize;
     }
 
     // True when the cell at (worldX, worldY) is a solid wall-forming tile.

@@ -16,6 +16,11 @@ const config = {
     backgroundColor: "#000000",
     pixelArt: true, // Ensures pixel art rendering
     antialias: false, // Disables default smoothing
+    // Snap sprite screen positions to integer pixels. Without this,
+    // sprites can sit at fractional positions during smooth camera
+    // moves (e.g. lift tweens), leaving 1-pixel transparent seams or
+    // bleeding the neighbouring frame of the packed tile atlas.
+    roundPixels: true,
     fps: {
         target: 30,  // ✅ Force 60 FPS
         forceSetTimeOut: false, // ✅ Ensure requestAnimationFrame is used

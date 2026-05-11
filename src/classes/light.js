@@ -58,6 +58,7 @@ export class Light extends Tile {
             this.sprite.destroy();
             this.lampSprite.destroy();
             this.light.destroy();
+            this._destroyBorderGraphics();
         }, prefs)
     }
 

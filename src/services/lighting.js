@@ -173,16 +173,34 @@ export default class LightingManager {
 
     updateLighting(deltaTime) {
         const ctx = this.game.lightCtx;
-        ctx.clearRect(0, 0, this.game.lightCanvas.width, this.game.lightCanvas.height);
+        const canvas = this.game.lightCanvas;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "rgba(0,0,0,1)";
-        ctx.fillRect(0, 0, this.game.lightCanvas.width, this.game.lightCanvas.height);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        this.lights.forEach(light => !light.off && this.castLight(light));
+        // Cull lights that fall outside the camera view. The bloom halo
+        // extends to ~1.9× radius, so use that as the bounding box.
+        const cam = this.game.cameras.main;
+        const view = cam.worldView;
+        const viewLeft = view.x;
+        const viewRight = view.x + view.width;
+        const viewTop = view.y;
+        const viewBottom = view.y + view.height;
+
+        const lights = this.lights;
+        for (let i = 0; i < lights.length; i++) {
+            const light = lights[i];
+            if (light.off) continue;
+            const r = light.radius * 1.9;
+            if (light.x + r < viewLeft) continue;
+            if (light.x - r > viewRight) continue;
+            if (light.y + r < viewTop) continue;
+            if (light.y - r > viewBottom) continue;
+            this.castLight(light);
+        }
 
         this.updateSky();
-
-        // this.updateViewMask();
 
         ctx.globalCompositeOperation = "source-over";
     }
@@ -325,9 +343,10 @@ export default class LightingManager {
         _gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
         // Paint the sky background by interpolating through the diurnal
-        // palette: bright blue at noon, navy at midnight, with warm
-        // orange swept through at dusk and dawn.
-        if (this.game.skyBox) {
+        // palette. The cycle is minutes long, so the per-frame color
+        // delta is invisible — sample at ~8 Hz to skip the work.
+        if (this.game.skyBox && (now - (this._lastSkyTintMs || 0) > 120)) {
+            this._lastSkyTintMs = now;
             const [r, g, b] = paletteColor(timeFraction);
             const tintColor = (r << 16) | (g << 8) | b;
             this.game.skyBox.setFillStyle(tintColor, 1);
