@@ -5,17 +5,15 @@
 // monospace text stays sharp regardless of the canvas zoom (same approach
 // the rest of the HUD uses, see src/services/uiManager.js).
 //
-// Crafting / upgrade hookups (TODO):
-// - "Metal rope" is the resource that extends the rig's reach. The flow we
-//   want long-term is: ore (existing mining system) -> smelt to ingots ->
-//   craft into metal rope segments -> consumed here when the player presses
-//   EXTEND ROPE.
-// - For now we hold a placeholder `metal` count on the terminal itself and
-//   deduct from it on extend. When the crafting/upgrade system lands, swap
-//   the placeholder reads/writes for real inventory ops at the marked
-//   spots below.
-// - `maxExtension` should also be persisted with the save game when the
-//   save system is updated to include rig state.
+// Layout: a fixed-size 3-column panel — rig status / stockpile on the
+// left, travel (levels + extend rope) in the middle, blueprints on the
+// right. The whole thing fits inside the viewport at typical resolutions
+// so there is no scrollbar; if a column overflows internally it scrolls
+// on its own without dragging the rest of the screen with it.
+//
+// Persistence TODO: rope reach (maxExtension) and the metal-rope pool
+// should be serialised with the save game when rig state is added to the
+// save schema.
 
 import { RECIPES } from './recipes.js';
 
@@ -25,8 +23,6 @@ const TERMINAL_RED = '#ff5050';
 const TERMINAL_BG = 'rgba(0, 16, 0, 0.97)';
 const STYLE_ID = 'lift-terminal-styles';
 
-// Friendly labels for the raw materials referenced in recipes. Kept here
-// (rather than in recipes.js) so the data file stays pure.
 const RESOURCE_LABELS = {
     wood: 'WOOD',
     coal: 'COAL',
@@ -43,23 +39,24 @@ function injectStyles() {
     style.id = STYLE_ID;
     style.textContent = `
         .lift-terminal {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 480px;
-            max-height: 80vh;
-            overflow-y: auto;
+            width: min(900px, calc(100vw - 32px));
+            max-height: calc(100vh - 32px);
             background: ${TERMINAL_BG};
             border: 2px solid ${TERMINAL_GREEN};
             box-shadow: 0 0 30px rgba(51, 255, 51, 0.4),
                         inset 0 0 60px rgba(51, 255, 51, 0.05);
             font-family: 'VT323', 'Share Tech Mono', monospace;
             color: ${TERMINAL_GREEN};
-            padding: 18px 22px 16px;
+            padding: 16px 20px 14px;
             z-index: 2000;
             text-shadow: 0 0 4px rgba(51, 255, 51, 0.6);
             user-select: none;
+            display: flex;
+            flex-direction: column;
         }
         .lift-terminal::after {
             content: '';
@@ -74,36 +71,92 @@ function injectStyles() {
             );
             pointer-events: none;
         }
+        .lift-terminal-header {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: baseline;
+            gap: 12px;
+            border-bottom: 1px dashed ${TERMINAL_DIM};
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
         .lift-terminal-title {
+            grid-column: 2;
             font-size: 22px;
             letter-spacing: 0.14em;
             text-align: center;
-            margin: 0 0 2px;
+            margin: 0;
         }
-        .lift-terminal-sub {
-            font-size: 13px;
+        .lift-terminal-link {
+            font-size: 12px;
             color: ${TERMINAL_DIM};
-            text-align: center;
-            margin-bottom: 12px;
             letter-spacing: 0.2em;
+            justify-self: start;
+        }
+        .lift-terminal-link-right {
+            justify-self: end;
+        }
+        .lift-terminal-link .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: ${TERMINAL_GREEN};
+            box-shadow: 0 0 6px ${TERMINAL_GREEN};
+            margin-right: 6px;
+            animation: lift-terminal-blink 1.2s ease-in-out infinite;
+        }
+        @keyframes lift-terminal-blink {
+            0%, 60%, 100% { opacity: 1; }
+            70%, 90% { opacity: 0.25; }
+        }
+        .lift-terminal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.1fr;
+            gap: 14px;
+            flex: 1;
+            min-height: 0;
+        }
+        .lift-terminal-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0;
         }
         .lift-terminal-section {
-            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
             font-size: 16px;
-            line-height: 1.5;
+            line-height: 1.4;
         }
         .lift-terminal-section h3 {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: normal;
-            margin: 0 0 4px 0;
+            margin: 0 0 6px 0;
             border-bottom: 1px dashed ${TERMINAL_DIM};
             padding-bottom: 2px;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.18em;
+            color: ${TERMINAL_GREEN};
         }
+        .lift-terminal-section-body {
+            min-height: 0;
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: ${TERMINAL_DIM} transparent;
+        }
+        .lift-terminal-section-body::-webkit-scrollbar { width: 6px; }
+        .lift-terminal-section-body::-webkit-scrollbar-thumb {
+            background: ${TERMINAL_DIM};
+        }
+        .lift-terminal-section.grow { flex: 1; min-height: 0; }
         .lift-terminal-row {
             display: flex;
             justify-content: space-between;
+            font-size: 15px;
+            padding: 1px 0;
         }
+        .lift-terminal-row .lbl { color: ${TERMINAL_DIM}; letter-spacing: 0.06em; }
         .lift-terminal-btn {
             display: block;
             width: 100%;
@@ -112,12 +165,12 @@ function injectStyles() {
             border: 1px solid ${TERMINAL_GREEN};
             color: ${TERMINAL_GREEN};
             font-family: inherit;
-            font-size: 16px;
+            font-size: 14px;
             text-align: left;
-            padding: 5px 10px;
-            margin: 4px 0;
+            padding: 4px 8px;
+            margin: 3px 0;
             cursor: pointer;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             transition: background 80ms;
             text-shadow: inherit;
         }
@@ -130,80 +183,96 @@ function injectStyles() {
             cursor: not-allowed;
         }
         .lift-terminal-btn .right { float: right; }
-        .lift-terminal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 12px;
-        }
-        .lift-terminal-actions .lift-terminal-btn { margin: 0; flex: 1; }
         .lift-terminal-empty {
             color: ${TERMINAL_DIM};
-            font-size: 14px;
+            font-size: 13px;
             padding: 4px 0;
         }
-        .lift-terminal-tabs {
-            display: flex;
+        .lift-terminal-stockpile {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 6px;
-            margin: 6px 0 10px;
         }
-        .lift-terminal-tab {
-            flex: 1;
-            background: transparent;
+        .lift-terminal-stockpile .cell {
             border: 1px solid ${TERMINAL_DIM};
+            padding: 4px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .lift-terminal-stockpile .lbl {
+            font-size: 11px;
             color: ${TERMINAL_DIM};
-            font-family: inherit;
-            font-size: 14px;
-            padding: 4px 8px;
-            cursor: pointer;
-            letter-spacing: 0.12em;
-            text-align: center;
-            text-shadow: inherit;
+            letter-spacing: 0.14em;
         }
-        .lift-terminal-tab:hover {
-            background: rgba(51, 255, 51, 0.08);
-        }
-        .lift-terminal-tab.active {
-            border-color: ${TERMINAL_GREEN};
+        .lift-terminal-stockpile .val {
+            font-size: 20px;
             color: ${TERMINAL_GREEN};
-            background: rgba(51, 255, 51, 0.12);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+        .lift-terminal-recipes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding-right: 4px;
         }
         .lift-terminal-recipe {
             border: 1px solid ${TERMINAL_DIM};
-            padding: 6px 8px;
-            margin: 6px 0;
+            padding: 5px 7px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
         }
         .lift-terminal-recipe-head {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 16px;
+            gap: 6px;
+            font-size: 14px;
+            letter-spacing: 0.04em;
         }
         .lift-terminal-recipe-head img {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             object-fit: contain;
             filter: drop-shadow(0 0 3px rgba(51, 255, 51, 0.45));
+            flex-shrink: 0;
         }
-        .lift-terminal-recipe-desc {
-            font-size: 12px;
-            color: ${TERMINAL_DIM};
-            margin: 2px 0 4px;
-            letter-spacing: 0.04em;
+        .lift-terminal-recipe-head .label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .lift-terminal-recipe-costs {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px 12px;
-            font-size: 13px;
-            margin-bottom: 4px;
+            gap: 2px 8px;
+            font-size: 12px;
+            margin: 3px 0;
+            color: ${TERMINAL_DIM};
         }
         .lift-terminal-recipe-costs .short {
             color: ${TERMINAL_RED};
         }
         .lift-terminal-recipe .lift-terminal-btn {
-            margin: 4px 0 0;
-            font-size: 14px;
-            padding: 4px 8px;
+            margin: 2px 0 0;
+            font-size: 12px;
+            padding: 3px 6px;
+            letter-spacing: 0.06em;
+            text-align: center;
+        }
+        .lift-terminal-footer {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed ${TERMINAL_DIM};
+        }
+        .lift-terminal-footer .lift-terminal-btn {
+            text-align: center;
+        }
+        .lift-terminal-levels {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
     `;
     document.head.appendChild(style);
@@ -216,13 +285,12 @@ export default class LiftTerminal {
         this.game = craneManager.game;
         this.isOpen = false;
 
-        // TODO(crafting): replace placeholder with real metal-rope inventory.
-        // The player will craft rope segments from smelted ore and consume
-        // them here. For now, treat as fully stocked.
+        // Player starts with a single rope-segment's worth of slack — enough
+        // for one EXTEND ROPE before they have to head back up and craft
+        // more from wood + coal at the blueprint table.
         this.metal = 50;
         this.extendCost = 50;
         this.extendIncrement = 100;
-        this.activeTab = 'main';
         // How far below the surface the rig's rope can reach (world units).
         // TODO(persistence): persist with save game once rig state is saved.
         this.maxExtension = 0;
@@ -240,45 +308,51 @@ export default class LiftTerminal {
         root.className = 'lift-terminal';
         root.style.display = 'none';
         root.innerHTML = `
-            <div class="lift-terminal-title">ROOBOO MINING RIG / TERMINAL</div>
-            <div class="lift-terminal-sub">SYS-LINK ESTABLISHED</div>
-            <div class="lift-terminal-tabs">
-                <button class="lift-terminal-tab active" data-tab="main">[ RIG ]</button>
-                <button class="lift-terminal-tab" data-tab="crafting">[ CRAFTING ]</button>
+            <div class="lift-terminal-header">
+                <div class="lift-terminal-link"><span class="dot"></span>SYS-LINK</div>
+                <div class="lift-terminal-title">ROOBOO MINING RIG</div>
+                <div class="lift-terminal-link lift-terminal-link-right">TERMINAL v1.0</div>
             </div>
-            <div data-pane="main">
-                <div class="lift-terminal-section">
-                    <h3>RIG STATUS</h3>
-                    <div class="lift-terminal-row"><span>CURRENT DEPTH</span><span data-field="depth">--</span></div>
-                    <div class="lift-terminal-row"><span>ROPE LENGTH</span><span data-field="rope">--</span></div>
-                    <div class="lift-terminal-row"><span>STATUS</span><span data-field="status">--</span></div>
+            <div class="lift-terminal-grid">
+                <div class="lift-terminal-col">
+                    <div class="lift-terminal-section">
+                        <h3>RIG STATUS</h3>
+                        <div class="lift-terminal-row"><span class="lbl">DEPTH</span><span data-field="depth">--</span></div>
+                        <div class="lift-terminal-row"><span class="lbl">ROPE</span><span data-field="rope">--</span></div>
+                        <div class="lift-terminal-row"><span class="lbl">STATUS</span><span data-field="status">--</span></div>
+                    </div>
+                    <div class="lift-terminal-section">
+                        <h3>STOCKPILE</h3>
+                        <div class="lift-terminal-stockpile">
+                            <div class="cell"><span class="lbl">WOOD</span><span class="val" data-field="stockWood">0</span></div>
+                            <div class="cell"><span class="lbl">COAL</span><span class="val" data-field="stockCoal">0</span></div>
+                            <div class="cell"><span class="lbl">ROPE</span><span class="val" data-field="stockMetal">0</span></div>
+                        </div>
+                    </div>
+                    <div class="lift-terminal-section">
+                        <h3>EXTEND ROPE</h3>
+                        <button class="lift-terminal-btn" data-action="extend">
+                            +<span data-field="extendIncrement">--</span>m
+                            <span class="right">COST <span data-field="extendCost">--</span></span>
+                        </button>
+                    </div>
                 </div>
-                <div class="lift-terminal-section">
-                    <h3>RESOURCES</h3>
-                    <div class="lift-terminal-row"><span>METAL ROPE STOCK</span><span data-field="metal">--</span></div>
-                    <button class="lift-terminal-btn" data-action="extend">
-                        EXTEND ROPE +<span data-field="extendIncrement">--</span>m
-                        <span class="right">COST <span data-field="extendCost">--</span></span>
-                    </button>
+                <div class="lift-terminal-col">
+                    <div class="lift-terminal-section grow">
+                        <h3>LEVELS</h3>
+                        <div class="lift-terminal-section-body lift-terminal-levels" data-field="levels"></div>
+                    </div>
                 </div>
-                <div class="lift-terminal-section">
-                    <h3>LEVELS</h3>
-                    <div data-field="levels"></div>
+                <div class="lift-terminal-col">
+                    <div class="lift-terminal-section grow">
+                        <h3>BLUEPRINTS</h3>
+                        <div class="lift-terminal-section-body">
+                            <div class="lift-terminal-recipes" data-field="recipes"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div data-pane="crafting" style="display:none;">
-                <div class="lift-terminal-section">
-                    <h3>STOCKPILE</h3>
-                    <div class="lift-terminal-row"><span>WOOD</span><span data-field="stockWood">--</span></div>
-                    <div class="lift-terminal-row"><span>COAL</span><span data-field="stockCoal">--</span></div>
-                    <div class="lift-terminal-row"><span>METAL ROPE</span><span data-field="stockMetal">--</span></div>
-                </div>
-                <div class="lift-terminal-section">
-                    <h3>BLUEPRINTS</h3>
-                    <div data-field="recipes"></div>
-                </div>
-            </div>
-            <div class="lift-terminal-actions">
+            <div class="lift-terminal-footer">
                 <button class="lift-terminal-btn" data-action="close">[ DISCONNECT ]</button>
             </div>
         `;
@@ -288,7 +362,6 @@ export default class LiftTerminal {
             depth: root.querySelector('[data-field="depth"]'),
             rope: root.querySelector('[data-field="rope"]'),
             status: root.querySelector('[data-field="status"]'),
-            metal: root.querySelector('[data-field="metal"]'),
             extendIncrement: root.querySelector('[data-field="extendIncrement"]'),
             extendCost: root.querySelector('[data-field="extendCost"]'),
             levels: root.querySelector('[data-field="levels"]'),
@@ -297,17 +370,9 @@ export default class LiftTerminal {
             stockMetal: root.querySelector('[data-field="stockMetal"]'),
             recipes: root.querySelector('[data-field="recipes"]'),
         };
-        this.panes = {
-            main: root.querySelector('[data-pane="main"]'),
-            crafting: root.querySelector('[data-pane="crafting"]'),
-        };
-        this.tabButtons = root.querySelectorAll('[data-tab]');
 
         root.querySelector('[data-action="extend"]').addEventListener('click', () => this.extendRope());
         root.querySelector('[data-action="close"]').addEventListener('click', () => this.close());
-        this.tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.setTab(btn.dataset.tab));
-        });
 
         // Stop terminal-internal input from leaking to the canvas so the
         // player doesn't swing tools / change toolbar slot while clicking
@@ -322,23 +387,11 @@ export default class LiftTerminal {
         if (this.isOpen) this.close(); else this.open();
     }
 
-    setTab(tab) {
-        if (!this.panes[tab]) return;
-        this.activeTab = tab;
-        Object.entries(this.panes).forEach(([name, el]) => {
-            el.style.display = name === tab ? 'block' : 'none';
-        });
-        this.tabButtons.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
-        });
-        this.refresh();
-    }
-
     open() {
         if (this.isOpen) return;
         this.isOpen = true;
         this.game.freezePlayer = true;
-        this.root.style.display = 'block';
+        this.root.style.display = 'flex';
         this.refresh();
     }
 
@@ -382,12 +435,16 @@ export default class LiftTerminal {
         this.fields.depth.textContent = `-${currentDepth} M`;
         this.fields.rope.textContent = `-${Math.round(this.maxExtension)} M`;
         this.fields.status.textContent = cm.moving ? 'IN MOTION' : 'IDLE';
-        this.fields.metal.textContent = String(this.metal);
         this.fields.extendIncrement.textContent = String(this.extendIncrement);
         this.fields.extendCost.textContent = String(this.extendCost);
 
-        const levels = this._scanLevelsFromGrid();
+        this.renderLevels(currentY, surfaceY);
+        this.renderCrafting();
+    }
 
+    renderLevels(currentY, surfaceY) {
+        const cm = this.craneManager;
+        const levels = this._scanLevelsFromGrid();
         const list = this.fields.levels;
         list.innerHTML = '';
 
@@ -396,7 +453,6 @@ export default class LiftTerminal {
             empty.className = 'lift-terminal-empty';
             empty.textContent = '> NO LIFT CONTROLS DETECTED IN SHAFT.';
             list.appendChild(empty);
-            this.renderCrafting();
             return;
         }
 
@@ -417,8 +473,6 @@ export default class LiftTerminal {
             });
             list.appendChild(btn);
         });
-
-        this.renderCrafting();
     }
 
     // Resource lookup that bridges the inventory (wood, coal) and the rig's
@@ -457,17 +511,11 @@ export default class LiftTerminal {
             img.alt = '';
             if (recipe.iconRotate) img.style.transform = `rotate(${recipe.iconRotate}deg)`;
             const name = document.createElement('span');
+            name.className = 'label';
             name.textContent = recipe.name.toUpperCase();
             head.appendChild(img);
             head.appendChild(name);
             card.appendChild(head);
-
-            if (recipe.description) {
-                const desc = document.createElement('div');
-                desc.className = 'lift-terminal-recipe-desc';
-                desc.textContent = recipe.description;
-                card.appendChild(desc);
-            }
 
             const costs = document.createElement('div');
             costs.className = 'lift-terminal-recipe-costs';
@@ -487,8 +535,9 @@ export default class LiftTerminal {
             btn.className = 'lift-terminal-btn';
             btn.disabled = !canAfford;
             btn.innerHTML = canAfford
-                ? `[ CRAFT ]<span class="right">+${recipe.output.amount}</span>`
-                : `[ INSUFFICIENT ]<span class="right">+${recipe.output.amount}</span>`;
+                ? `[ CRAFT ] +${recipe.output.amount}`
+                : `[ INSUFFICIENT ]`;
+            btn.title = recipe.description || '';
             btn.addEventListener('click', () => {
                 if (!btn.disabled) this.craft(recipe);
             });
