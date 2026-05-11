@@ -1,5 +1,51 @@
 import { HUD } from './uiManager.js';
 
+// Pip-Boy phosphor palette — matches the lift terminal and inventory
+// panel so the radial selector reads as the same in-world device.
+const PIP_GREEN = '#33ff33';
+const PIP_DIM = '#1a8a1a';
+const PIP_FONT = "'VT323', 'Share Tech Mono', monospace";
+const WHEEL_STYLE_ID = 'pipboy-wheel-styles';
+
+function injectWheelStyles() {
+    if (document.getElementById(WHEEL_STYLE_ID)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap';
+    document.head.appendChild(link);
+
+    const style = document.createElement('style');
+    style.id = WHEEL_STYLE_ID;
+    style.textContent = `
+        .pipboy-wheel-inner::before,
+        .pipboy-wheel-inner::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .pipboy-wheel-inner::before {
+            inset: -8px;
+            border: 1px solid ${PIP_DIM};
+            box-shadow: 0 0 18px rgba(51, 255, 51, 0.25),
+                        inset 0 0 18px rgba(51, 255, 51, 0.08);
+        }
+        .pipboy-wheel-inner::after {
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0,0,0,0) 0,
+                rgba(0,0,0,0) 2px,
+                rgba(0,0,0,0.22) 2px,
+                rgba(0,0,0,0.22) 3px
+            );
+            -webkit-mask: radial-gradient(circle at center, #000 60%, transparent 100%);
+            mask: radial-gradient(circle at center, #000 60%, transparent 100%);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 function describeArc(cx, cy, outerR, innerR, startAngle, endAngle) {
     const x1 = cx + outerR * Math.cos(startAngle);
     const y1 = cy + outerR * Math.sin(startAngle);
@@ -97,6 +143,7 @@ export default class ToolbarManager {
     }
 
     createWheelOverlay() {
+        injectWheelStyles();
         this.wheelOverlay = document.createElement('div');
         Object.assign(this.wheelOverlay.style, {
             position: 'fixed',
@@ -106,11 +153,12 @@ export default class ToolbarManager {
             justifyContent: 'center',
             pointerEvents: 'none',
             zIndex: '2000',
-            background: 'radial-gradient(circle at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 60%)',
+            background: 'radial-gradient(circle at center, rgba(0, 24, 0, 0.55) 0%, rgba(0, 0, 0, 0) 60%)',
             opacity: '0',
             transition: 'opacity 140ms ease',
         });
         this.wheelInner = document.createElement('div');
+        this.wheelInner.className = 'pipboy-wheel-inner';
         Object.assign(this.wheelInner.style, {
             position: 'relative',
             width: '320px',
@@ -142,7 +190,7 @@ export default class ToolbarManager {
         svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
         svg.style.position = 'absolute';
         svg.style.inset = '0';
-        svg.style.filter = 'drop-shadow(0 8px 24px rgba(0,0,0,0.55))';
+        svg.style.filter = 'drop-shadow(0 0 12px rgba(51, 255, 51, 0.35))';
 
         for (let i = 0; i < slotsCount; i++) {
             const a0 = startOffset + i * sliceAngle;
@@ -151,8 +199,8 @@ export default class ToolbarManager {
             const path = describeArc(cx, cy, outerR, innerR, a0, a1);
             const pathEl = document.createElementNS(svgNS, 'path');
             pathEl.setAttribute('d', path);
-            pathEl.setAttribute('fill', selected ? 'rgba(91,157,255,0.32)' : 'rgba(16,19,26,0.78)');
-            pathEl.setAttribute('stroke', selected ? '#5b9dff' : 'rgba(255,255,255,0.10)');
+            pathEl.setAttribute('fill', selected ? 'rgba(51, 255, 51, 0.22)' : 'rgba(0, 16, 0, 0.85)');
+            pathEl.setAttribute('stroke', selected ? PIP_GREEN : PIP_DIM);
             pathEl.setAttribute('stroke-width', selected ? '2' : '1');
             svg.appendChild(pathEl);
         }
@@ -176,13 +224,14 @@ export default class ToolbarManager {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: selected ? HUD.accent : HUD.textDim,
-                fontFamily: HUD.fontMono,
-                fontSize: '11px',
-                fontWeight: '600',
-                opacity: item ? '1' : (selected ? '0.9' : '0.4'),
+                color: selected ? PIP_GREEN : PIP_DIM,
+                fontFamily: PIP_FONT,
+                fontSize: '18px',
+                letterSpacing: '0.08em',
+                opacity: item ? '1' : (selected ? '0.95' : '0.5'),
                 transition: 'transform 120ms ease, color 120ms ease, opacity 120ms ease',
                 pointerEvents: 'none',
+                textShadow: '0 0 4px rgba(51, 255, 51, 0.6)',
             });
             if (item) {
                 const img = document.createElement('img');
@@ -193,8 +242,8 @@ export default class ToolbarManager {
                     objectFit: 'contain',
                     transform: `rotate(${item.rotate || 0}deg)`,
                     filter: selected
-                        ? 'drop-shadow(0 0 6px rgba(91,157,255,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.6))'
-                        : 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))',
+                        ? 'drop-shadow(0 0 6px rgba(51, 255, 51, 0.75)) brightness(0.8) sepia(1) hue-rotate(60deg) saturate(6)'
+                        : 'drop-shadow(0 0 3px rgba(51, 255, 51, 0.45)) brightness(0.6) sepia(1) hue-rotate(60deg) saturate(5)',
                 });
                 wrap.appendChild(img);
             } else {
@@ -213,11 +262,12 @@ export default class ToolbarManager {
                 left: `${lx}px`,
                 top: `${ly}px`,
                 transform: 'translate(-50%, -50%)',
-                fontFamily: HUD.fontMono,
-                fontSize: '9px',
-                fontWeight: '600',
-                color: selected ? HUD.accent : HUD.textDim,
+                fontFamily: PIP_FONT,
+                fontSize: '14px',
+                letterSpacing: '0.06em',
+                color: selected ? PIP_GREEN : PIP_DIM,
                 pointerEvents: 'none',
+                textShadow: '0 0 3px rgba(51, 255, 51, 0.5)',
             });
             this.wheelInner.appendChild(hotkey);
         }
@@ -225,20 +275,23 @@ export default class ToolbarManager {
         // Center label
         const center = document.createElement('div');
         const highlighted = this.wheelHighlightIndex >= 0 ? this.slots[this.wheelHighlightIndex] : null;
-        center.textContent = highlighted ? highlighted.name : '';
+        center.innerHTML = highlighted
+            ? `<div style="font-size:11px;color:${PIP_DIM};letter-spacing:0.2em;margin-bottom:2px;">EQUIP</div><div>${highlighted.name.toUpperCase()}</div>`
+            : `<div style="color:${PIP_DIM};letter-spacing:0.18em;">SELECT</div>`;
         Object.assign(center.style, {
             position: 'absolute',
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            fontFamily: HUD.font,
-            fontSize: '13px',
-            fontWeight: '600',
-            color: HUD.text,
+            fontFamily: PIP_FONT,
+            fontSize: '18px',
+            color: PIP_GREEN,
             textAlign: 'center',
             pointerEvents: 'none',
-            textShadow: '0 1px 3px rgba(0,0,0,0.7)',
-            maxWidth: '90px',
+            textShadow: '0 0 5px rgba(51, 255, 51, 0.7)',
+            letterSpacing: '0.08em',
+            maxWidth: '92px',
+            lineHeight: '1.15',
         });
         this.wheelInner.appendChild(center);
     }

@@ -1,7 +1,13 @@
-import { HUD } from './uiManager.js';
 import InventoryItem from '../classes/InventoryItem.js';
 
 const STYLE_ID = 'inventory-panel-styles';
+
+// Pip-Boy phosphor palette — matches the lift terminal so the whole
+// player-facing UI reads as the same in-world device.
+const PIP_GREEN = '#33ff33';
+const PIP_DIM = '#1a8a1a';
+const PIP_FAINT = '#0d4a0d';
+const PIP_BG = 'rgba(0, 16, 0, 0.97)';
 
 // Equipment slots are passive for now — they accept any item via drag &
 // drop so the rig of equipment can be assembled, but there's no armor /
@@ -16,68 +22,115 @@ const EQUIPMENT_SLOTS = [
 
 function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
+    // VT323 / Share Tech Mono are loaded by the lift terminal too. The
+    // request is idempotent so a second <link> is fine if the terminal
+    // hasn't been opened yet.
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap';
+    document.head.appendChild(link);
+
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
         .inventory-panel {
-            font-family: ${HUD.font};
-            color: ${HUD.text};
+            font-family: 'VT323', 'Share Tech Mono', monospace;
+            color: ${PIP_GREEN};
+            background: ${PIP_BG};
+            border: 2px solid ${PIP_GREEN};
+            box-shadow: 0 0 30px rgba(51, 255, 51, 0.4),
+                        inset 0 0 60px rgba(51, 255, 51, 0.05);
+            text-shadow: 0 0 4px rgba(51, 255, 51, 0.6);
             display: flex;
             flex-direction: column;
-            gap: 0;
             width: min(720px, calc(100vw - 32px));
             max-height: calc(100vh - 32px);
+            user-select: none;
+            border-radius: 0;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        .inventory-panel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0,0,0,0) 0,
+                rgba(0,0,0,0) 2px,
+                rgba(0,0,0,0.18) 2px,
+                rgba(0,0,0,0.18) 3px
+            );
+            pointer-events: none;
         }
         .inventory-panel .ip-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: baseline;
+            gap: 12px;
+            padding: 12px 18px 8px;
+            border-bottom: 1px dashed ${PIP_DIM};
         }
         .inventory-panel .ip-title {
-            display: flex; align-items: center; gap: 10px;
+            grid-column: 2;
+            text-align: center;
+            font-size: 22px;
+            letter-spacing: 0.18em;
+            color: ${PIP_GREEN};
         }
-        .inventory-panel .ip-title .dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: ${HUD.accent};
-            box-shadow: 0 0 10px ${HUD.accent};
+        .inventory-panel .ip-link {
+            font-size: 12px;
+            letter-spacing: 0.22em;
+            color: ${PIP_DIM};
         }
-        .inventory-panel .ip-title span {
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: ${HUD.text};
+        .inventory-panel .ip-link .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: ${PIP_GREEN};
+            box-shadow: 0 0 6px ${PIP_GREEN};
+            margin-right: 6px;
+            animation: ip-blink 1.2s ease-in-out infinite;
+        }
+        .inventory-panel .ip-link-right {
+            justify-self: end;
+        }
+        @keyframes ip-blink {
+            0%, 60%, 100% { opacity: 1; }
+            70%, 90% { opacity: 0.25; }
         }
         .inventory-panel .ip-hint {
-            font-size: 11px;
-            color: ${HUD.textMuted};
+            grid-column: 1;
+            justify-self: start;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            color: ${PIP_DIM};
         }
         .inventory-panel .ip-hint kbd {
-            font-family: ${HUD.fontMono};
-            font-size: 10px;
-            font-weight: 600;
-            color: ${HUD.text};
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 4px;
-            padding: 2px 6px;
+            font-family: inherit;
+            font-size: 12px;
+            color: ${PIP_GREEN};
+            background: transparent;
+            border: 1px solid ${PIP_DIM};
+            border-radius: 0;
+            padding: 0 5px;
             margin: 0 2px;
+            text-shadow: inherit;
         }
         .inventory-panel .ip-body {
             display: grid;
-            grid-template-columns: 220px 1fr;
+            grid-template-columns: 240px 1fr;
             gap: 16px;
-            padding: 16px;
+            padding: 14px 18px 16px;
         }
         .inventory-panel .ip-section-label {
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            color: ${HUD.textMuted};
-            margin: 0 0 8px;
+            font-size: 13px;
+            letter-spacing: 0.18em;
+            color: ${PIP_GREEN};
+            margin: 0 0 6px;
+            padding-bottom: 2px;
+            border-bottom: 1px dashed ${PIP_DIM};
         }
         .inventory-panel .ip-character {
             display: flex;
@@ -87,24 +140,21 @@ function injectStyles() {
         .inventory-panel .ip-char-frame {
             position: relative;
             display: grid;
-            grid-template-columns: 1fr 60px;
+            grid-template-columns: 1fr 72px;
             gap: 8px;
-            padding: 10px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            background: rgba(0, 24, 0, 0.45);
+            border: 1px solid ${PIP_DIM};
         }
         .inventory-panel .ip-char-portrait {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 180px;
+            min-height: 190px;
             background:
-                radial-gradient(120% 90% at 50% 30%, rgba(91, 157, 255, 0.18) 0%, rgba(91, 157, 255, 0) 60%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.25) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 8px;
+                radial-gradient(120% 90% at 50% 30%, rgba(51, 255, 51, 0.10) 0%, rgba(0, 0, 0, 0) 65%),
+                linear-gradient(180deg, rgba(0, 24, 0, 0.4) 0%, rgba(0, 0, 0, 0.5) 100%);
+            border: 1px solid ${PIP_DIM};
             position: relative;
             overflow: hidden;
         }
@@ -115,17 +165,20 @@ function injectStyles() {
             background: repeating-linear-gradient(
                 to bottom,
                 rgba(0,0,0,0) 0,
-                rgba(0,0,0,0) 3px,
-                rgba(0,0,0,0.18) 3px,
-                rgba(0,0,0,0.18) 4px
+                rgba(0,0,0,0) 2px,
+                rgba(0,0,0,0.30) 2px,
+                rgba(0,0,0,0.30) 3px
             );
             pointer-events: none;
         }
         .inventory-panel .ip-char-portrait img {
             image-rendering: pixelated;
-            height: 78%;
-            max-height: 160px;
-            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+            height: 82%;
+            max-height: 170px;
+            filter:
+                drop-shadow(0 0 6px rgba(51, 255, 51, 0.55))
+                drop-shadow(0 0 2px rgba(51, 255, 51, 0.8))
+                brightness(0.6) sepia(1) hue-rotate(60deg) saturate(6);
         }
         .inventory-panel .ip-equipment {
             display: flex;
@@ -134,7 +187,7 @@ function injectStyles() {
         }
         .inventory-panel .ip-grid {
             display: grid;
-            gap: 6px;
+            gap: 4px;
         }
         .inventory-panel .ip-grid.inv {
             grid-template-columns: repeat(6, 56px);
@@ -146,87 +199,83 @@ function injectStyles() {
             width: 56px;
             height: 56px;
             box-sizing: border-box;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
+            background: rgba(0, 24, 0, 0.35);
+            border: 1px solid ${PIP_DIM};
+            border-radius: 0;
             padding: 6px;
             position: relative;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            transition: background 80ms, border-color 80ms;
         }
         .inventory-panel .ip-slot:hover {
-            transform: translateY(-1px);
-            border-color: rgba(91, 157, 255, 0.55);
-            background: linear-gradient(135deg, rgba(91, 157, 255, 0.12) 0%, rgba(91, 157, 255, 0.04) 100%);
-            box-shadow: 0 0 0 2px rgba(91, 157, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            background: rgba(51, 255, 51, 0.12);
+            border-color: ${PIP_GREEN};
         }
         .inventory-panel .ip-slot.equipment {
             width: 100%;
-            height: 48px;
-            border-radius: 6px;
+            height: 56px;
         }
         .inventory-panel .ip-slot.equipment .placeholder {
-            font-size: 9px;
-            font-weight: 600;
-            color: ${HUD.textDim};
+            font-size: 12px;
+            color: ${PIP_DIM};
             letter-spacing: 0.16em;
             text-transform: uppercase;
             text-align: center;
             line-height: 1.1;
         }
         .inventory-panel .ip-slot.hotbar.selected {
-            border-color: ${HUD.accent};
-            background: linear-gradient(135deg, rgba(91, 157, 255, 0.20) 0%, rgba(91, 157, 255, 0.08) 100%);
-            box-shadow: 0 0 0 2px rgba(91, 157, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            border-color: ${PIP_GREEN};
+            background: rgba(51, 255, 51, 0.18);
+            box-shadow: inset 0 0 8px rgba(51, 255, 51, 0.35),
+                        0 0 6px rgba(51, 255, 51, 0.4);
         }
         .inventory-panel .ip-slot img {
             width: 78%;
             height: 78%;
             object-fit: contain;
-            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+            filter:
+                drop-shadow(0 0 3px rgba(51, 255, 51, 0.55))
+                brightness(0.7) sepia(1) hue-rotate(60deg) saturate(5);
             pointer-events: auto;
         }
         .inventory-panel .ip-slot .stack {
-            color: #fff;
+            color: ${PIP_GREEN};
             position: absolute;
-            bottom: 3px;
+            bottom: 2px;
             right: 4px;
-            font-weight: 700;
-            font-size: 10px;
-            font-family: ${HUD.fontMono};
-            background: rgba(0, 0, 0, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 5px;
-            padding: 1px 4px;
-            min-width: 16px;
+            font-family: inherit;
+            font-size: 13px;
+            background: rgba(0, 16, 0, 0.85);
+            border: 1px solid ${PIP_DIM};
+            padding: 0 3px;
+            min-width: 14px;
             text-align: center;
-            backdrop-filter: blur(6px);
             pointer-events: none;
             font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 3px rgba(51, 255, 51, 0.6);
+            line-height: 1.1;
         }
         .inventory-panel .ip-slot .hotkey {
             position: absolute;
-            top: 3px;
-            left: 5px;
-            font-family: ${HUD.fontMono};
-            font-size: 9px;
-            font-weight: 600;
-            color: ${HUD.textDim};
+            top: 1px;
+            left: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            color: ${PIP_DIM};
             letter-spacing: 0.05em;
             pointer-events: none;
+            text-shadow: 0 0 2px rgba(51, 255, 51, 0.4);
         }
         .inventory-panel .ip-slot.hotbar.selected .hotkey {
-            color: ${HUD.accent};
+            color: ${PIP_GREEN};
         }
         .inventory-panel .ip-slot .empty {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-            border: 1px dashed rgba(255, 255, 255, 0.10);
+            width: 12px;
+            height: 12px;
+            border: 1px dashed ${PIP_FAINT};
             pointer-events: none;
         }
         .inventory-panel .ip-slot.equipment .empty { display: none; }
@@ -234,11 +283,6 @@ function injectStyles() {
             display: flex;
             flex-direction: column;
             gap: 14px;
-        }
-        .inventory-panel .ip-divider {
-            border: 0;
-            border-top: 1px dashed rgba(255, 255, 255, 0.08);
-            margin: 4px 0 2px;
         }
     `;
     document.head.appendChild(style);
@@ -263,7 +307,7 @@ export default class InventoryManager {
         injectStyles();
         this.container = document.createElement('div');
         this.container.id = containerId;
-        this.container.className = 'hud-panel inventory-panel';
+        this.container.className = 'inventory-panel';
         Object.assign(this.container.style, {
             position: 'fixed',
             top: '50%',
@@ -277,15 +321,13 @@ export default class InventoryManager {
 
         this.container.innerHTML = `
             <div class="ip-header">
-                <div class="ip-title">
-                    <span class="dot"></span>
-                    <span>Inventory</span>
-                </div>
-                <div class="ip-hint">Press <kbd>I</kbd> to close</div>
+                <div class="ip-hint">[ <kbd>I</kbd> CLOSE ]</div>
+                <div class="ip-title">ROOBOO PIP-INV</div>
+                <div class="ip-link ip-link-right"><span class="dot"></span>SYS-LINK</div>
             </div>
             <div class="ip-body">
                 <div class="ip-character">
-                    <div class="ip-section-label">Character</div>
+                    <div class="ip-section-label">CHARACTER</div>
                     <div class="ip-char-frame">
                         <div class="ip-char-portrait">
                             <img src="images/player.png" alt="Character" draggable="false">
@@ -295,11 +337,11 @@ export default class InventoryManager {
                 </div>
                 <div class="ip-inv-side">
                     <div>
-                        <div class="ip-section-label">Backpack</div>
+                        <div class="ip-section-label">BACKPACK</div>
                         <div class="ip-grid inv" data-slot-group="inventory"></div>
                     </div>
                     <div>
-                        <div class="ip-section-label">Hotbar</div>
+                        <div class="ip-section-label">HOTBAR</div>
                         <div class="ip-grid hotbar" data-slot-group="hotbar"></div>
                     </div>
                 </div>
