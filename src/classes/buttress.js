@@ -20,16 +20,22 @@ export class Buttress extends Tile {
     }
 
     refreshCurveOverlay() {
-        if (!this.curveOverlay) return;
         const mask = this.game.tileAtlas.cornerCurveMaskFor(this.worldX, this.worldY);
         if (mask === this.lastCurveMask) return;
         this.lastCurveMask = mask;
         if (mask === 0) {
-            this.curveOverlay.setVisible(false);
+            if (this.curveOverlay) this.curveOverlay.setVisible(false);
             return;
         }
-        const key = this.game.tileAtlas.ensureCornerCurveTexture(mask);
-        if (this.curveOverlay.texture.key !== key) this.curveOverlay.setTexture(key);
+        const atlas = this.game.tileAtlas;
+        const key = atlas.ensureCornerCurveTexture(mask);
+        if (!this.curveOverlay) {
+            this.curveOverlay = this.game.add.image(this.worldX, this.worldY, key);
+            this.curveOverlay.setOrigin(0.5, 0.5);
+            this.curveOverlay.setDepth(0.5);
+        } else if (this.curveOverlay.texture.key !== key) {
+            this.curveOverlay.setTexture(key);
+        }
         this.curveOverlay.setVisible(true);
     }
 
@@ -39,11 +45,8 @@ export class Buttress extends Tile {
         this.buttressSprite.setDisplaySize(this.game.tileSize, this.game.tileSize);
         baseSprite.setAlpha(0);
 
-        // Inside-corner curve overlay (same machinery as Breakable).
-        this.curveOverlay = this.game.add.image(this.worldX, this.worldY, this.game.tileAtlas.cornerCurveKey(0));
-        this.curveOverlay.setOrigin(0.5, 0.5);
-        this.curveOverlay.setDepth(0.5);
-        this.curveOverlay.setVisible(false);
+        // curveOverlay is lazy — most cells aren't at an inside cave corner
+        // so they never need one. See refreshCurveOverlay.
         this.lastCurveMask = -1;
 
         this.fadeElements = [this.buttressSprite];
@@ -64,6 +67,7 @@ export class Buttress extends Tile {
         if (this.curveOverlay) this.curveOverlay.destroy();
         if (this.curveRefreshDelay) this.curveRefreshDelay.remove();
         this.sprite.destroy();
+        this._destroyBorderGraphics();
     }
 
     destroy(prefs) {

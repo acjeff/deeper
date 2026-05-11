@@ -36,5 +36,6 @@ export class Empty extends Tile {
     destroy() {
         this.removeFromGroup();
         this.sprite.destroy();
+        this._destroyBorderGraphics();
     }
 }

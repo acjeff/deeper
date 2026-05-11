@@ -89,6 +89,7 @@ export class LiftControl extends Tile {
             this.sprite.destroy();
             this.light.destroy();
             this.switchSprite.destroy();
+            this._destroyBorderGraphics();
         }, prefs)
     }
 

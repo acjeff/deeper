@@ -26,6 +26,7 @@ export class Liquid extends Tile {
         this.active = false;
         this.removeFromGroup();
         this.sprite.destroy();
+        this._destroyBorderGraphics();
     }
 
     checkState() {

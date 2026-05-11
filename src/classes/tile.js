@@ -29,15 +29,10 @@ export class Tile {
         this.sprite.cellX = this.cellX;
         this.sprite.cellY = this.cellY;
         this.sprite.chunkKey = this.chunkKey;
-        this.borderGraphics = this.game.add.graphics();
-        this.borderGraphics.lineStyle(1, 0xfff1c4, 1);
-        this.borderGraphics.strokeRect(
-            this.sprite.x - this.sprite.displayWidth / 2,
-            this.sprite.y - this.sprite.displayHeight / 2,
-            this.sprite.displayWidth,
-            this.sprite.displayHeight);
-        this.borderGraphics.setDepth(10);
-        this.borderGraphics.setAlpha(0);
+        // borderGraphics is lazy — see _ensureBorderGraphics. The hover
+        // highlight only ever shows on the few tiles the player points at,
+        // and creating one per tile up front was burning ~one GameObject
+        // per cell across the whole loaded world.
         this.setupInteractions();
         this.addToGroup();
         // if (this.light) {
@@ -64,6 +59,32 @@ export class Tile {
                 this.game.dustEmitter.explode(50);
             }
             this.game.tweens.add(anims);
+        }
+    }
+
+    _ensureBorderGraphics() {
+        if (this.borderGraphics) return this.borderGraphics;
+        const g = this.game.add.graphics();
+        g.lineStyle(1, 0xfff1c4, 1);
+        g.strokeRect(
+            this.sprite.x - this.sprite.displayWidth / 2,
+            this.sprite.y - this.sprite.displayHeight / 2,
+            this.sprite.displayWidth,
+            this.sprite.displayHeight);
+        g.setDepth(10);
+        g.setAlpha(0);
+        this.borderGraphics = g;
+        return g;
+    }
+
+    _destroyBorderGraphics() {
+        if (this.borderPulseTween) {
+            this.borderPulseTween.stop();
+            this.borderPulseTween = null;
+        }
+        if (this.borderGraphics) {
+            this.borderGraphics.destroy();
+            this.borderGraphics = null;
         }
     }
 
@@ -143,7 +164,7 @@ export class Tile {
             this.borderPulseTween.stop();
             this.borderPulseTween = null;
         }
-        this.borderGraphics.setAlpha(0);
+        if (this.borderGraphics) this.borderGraphics.setAlpha(0);
     }
 
     checkAdjacentBlocks(metadata) {
@@ -174,10 +195,11 @@ export class Tile {
         ))) || (metadata?.reclaimFrom?.id === this.tileDetails.id)) {
             const adj = this.checkAdjacentBlocks(metadata);
             if (adj) {
-                this.borderGraphics.setAlpha(1);
+                const g = this._ensureBorderGraphics();
+                g.setAlpha(1);
                 if (this.borderPulseTween) this.borderPulseTween.stop();
                 this.borderPulseTween = this.game.tweens.add({
-                    targets: this.borderGraphics,
+                    targets: g,
                     alpha: 0.55,
                     duration: 700,
                     ease: 'Sine.easeInOut',

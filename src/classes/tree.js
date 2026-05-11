@@ -118,6 +118,7 @@ export class Tree extends Tile {
         this.removeFromGroup();
         if (this.treeSprite) this.treeSprite.destroy();
         this.sprite.destroy();
+        this._destroyBorderGraphics();
     }
 
     destroy(prefs) {

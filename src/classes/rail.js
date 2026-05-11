@@ -41,6 +41,7 @@ export class Rail extends Tile {
         this.removeFromGroup();
         this.railSprite.destroy();
         this.sprite.destroy();
+        this._destroyBorderGraphics();
     }
 
     destroy(prefs) {
