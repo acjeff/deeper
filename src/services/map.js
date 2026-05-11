@@ -683,37 +683,39 @@ export default class MapService {
     }
 
     loadChunks(playerX, playerY, renderDistance = this.game.renderDistance) {
-        requestAnimationFrame(() => {
-            const chunkSizeInPixels = this.game.chunkSize * this.game.tileSize;
-            const baseChunkX = Math.floor(playerX / chunkSizeInPixels) * this.game.chunkSize;
-            const baseChunkY = Math.floor(playerY / chunkSizeInPixels) * this.game.chunkSize;
-            let newChunks = new Map();
+        // Run synchronously instead of deferring to the next rAF. The
+        // deferral let the camera scroll one frame ahead of the visible
+        // chunks, which on a fast lift travel produced a brief blank
+        // strip of tiles that hadn't loaded yet.
+        const chunkSizeInPixels = this.game.chunkSize * this.game.tileSize;
+        const baseChunkX = Math.floor(playerX / chunkSizeInPixels) * this.game.chunkSize;
+        const baseChunkY = Math.floor(playerY / chunkSizeInPixels) * this.game.chunkSize;
+        let newChunks = new Map();
 
-            for (let dx = -renderDistance; dx <= renderDistance; dx++) {
-                for (let dy = -renderDistance; dy <= renderDistance; dy++) {
-                    const cx = baseChunkX + dx * this.game.chunkSize;
-                    const cy = baseChunkY + dy * this.game.chunkSize;
-                    const chunkKey = `${cx}_${cy}`;
-                    if (this.game.grid[chunkKey]) {
-                        if (!this.game.loadedChunks.has(chunkKey)) {
-                            this.renderChunk(cx, cy);
-                        }
-                        newChunks.set(chunkKey, this.game.grid[chunkKey]);
+        for (let dx = -renderDistance; dx <= renderDistance; dx++) {
+            for (let dy = -renderDistance; dy <= renderDistance; dy++) {
+                const cx = baseChunkX + dx * this.game.chunkSize;
+                const cy = baseChunkY + dy * this.game.chunkSize;
+                const chunkKey = `${cx}_${cy}`;
+                if (this.game.grid[chunkKey]) {
+                    if (!this.game.loadedChunks.has(chunkKey)) {
+                        this.renderChunk(cx, cy);
                     }
+                    newChunks.set(chunkKey, this.game.grid[chunkKey]);
                 }
             }
+        }
 
-            // Unload chunks that are no longer within the render distance
-            this.game.loadedChunks.forEach((grid, key) => {
-                if (!newChunks.has(key)) {
-                    this.unloadChunk(key);
-                    this.game.loadedChunks.delete(key);
-                }
-            });
-
-            this.game.loadedChunks = newChunks;
-            this.game.children.bringToTop(this.game.shadowGraphics);
+        // Unload chunks that are no longer within the render distance
+        this.game.loadedChunks.forEach((grid, key) => {
+            if (!newChunks.has(key)) {
+                this.unloadChunk(key);
+                this.game.loadedChunks.delete(key);
+            }
         });
+
+        this.game.loadedChunks = newChunks;
+        this.game.children.bringToTop(this.game.shadowGraphics);
     }
 
     setTile(worldX, worldY, tileType, cellItem, prefs) {
