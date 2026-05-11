@@ -17,10 +17,20 @@
 // - `maxExtension` should also be persisted with the save game when the
 //   save system is updated to include rig state.
 
+import { RECIPES } from './recipes.js';
+
 const TERMINAL_GREEN = '#33ff33';
 const TERMINAL_DIM = '#1a8a1a';
+const TERMINAL_RED = '#ff5050';
 const TERMINAL_BG = 'rgba(0, 16, 0, 0.97)';
 const STYLE_ID = 'lift-terminal-styles';
+
+// Friendly labels for the raw materials referenced in recipes. Kept here
+// (rather than in recipes.js) so the data file stays pure.
+const RESOURCE_LABELS = {
+    wood: 'WOOD',
+    coal: 'COAL',
+};
 
 function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -131,6 +141,70 @@ function injectStyles() {
             font-size: 14px;
             padding: 4px 0;
         }
+        .lift-terminal-tabs {
+            display: flex;
+            gap: 6px;
+            margin: 6px 0 10px;
+        }
+        .lift-terminal-tab {
+            flex: 1;
+            background: transparent;
+            border: 1px solid ${TERMINAL_DIM};
+            color: ${TERMINAL_DIM};
+            font-family: inherit;
+            font-size: 14px;
+            padding: 4px 8px;
+            cursor: pointer;
+            letter-spacing: 0.12em;
+            text-align: center;
+            text-shadow: inherit;
+        }
+        .lift-terminal-tab:hover {
+            background: rgba(51, 255, 51, 0.08);
+        }
+        .lift-terminal-tab.active {
+            border-color: ${TERMINAL_GREEN};
+            color: ${TERMINAL_GREEN};
+            background: rgba(51, 255, 51, 0.12);
+        }
+        .lift-terminal-recipe {
+            border: 1px solid ${TERMINAL_DIM};
+            padding: 6px 8px;
+            margin: 6px 0;
+        }
+        .lift-terminal-recipe-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+        .lift-terminal-recipe-head img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 3px rgba(51, 255, 51, 0.45));
+        }
+        .lift-terminal-recipe-desc {
+            font-size: 12px;
+            color: ${TERMINAL_DIM};
+            margin: 2px 0 4px;
+            letter-spacing: 0.04em;
+        }
+        .lift-terminal-recipe-costs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .lift-terminal-recipe-costs .short {
+            color: ${TERMINAL_RED};
+        }
+        .lift-terminal-recipe .lift-terminal-btn {
+            margin: 4px 0 0;
+            font-size: 14px;
+            padding: 4px 8px;
+        }
     `;
     document.head.appendChild(style);
 }
@@ -145,9 +219,10 @@ export default class LiftTerminal {
         // TODO(crafting): replace placeholder with real metal-rope inventory.
         // The player will craft rope segments from smelted ore and consume
         // them here. For now, treat as fully stocked.
-        this.metal = 9999;
+        this.metal = 50;
         this.extendCost = 50;
         this.extendIncrement = 100;
+        this.activeTab = 'main';
         // How far below the surface the rig's rope can reach (world units).
         // TODO(persistence): persist with save game once rig state is saved.
         this.maxExtension = 0;
@@ -167,23 +242,41 @@ export default class LiftTerminal {
         root.innerHTML = `
             <div class="lift-terminal-title">ROOBOO MINING RIG / TERMINAL</div>
             <div class="lift-terminal-sub">SYS-LINK ESTABLISHED</div>
-            <div class="lift-terminal-section">
-                <h3>RIG STATUS</h3>
-                <div class="lift-terminal-row"><span>CURRENT DEPTH</span><span data-field="depth">--</span></div>
-                <div class="lift-terminal-row"><span>ROPE LENGTH</span><span data-field="rope">--</span></div>
-                <div class="lift-terminal-row"><span>STATUS</span><span data-field="status">--</span></div>
+            <div class="lift-terminal-tabs">
+                <button class="lift-terminal-tab active" data-tab="main">[ RIG ]</button>
+                <button class="lift-terminal-tab" data-tab="crafting">[ CRAFTING ]</button>
             </div>
-            <div class="lift-terminal-section">
-                <h3>RESOURCES</h3>
-                <div class="lift-terminal-row"><span>METAL ROPE STOCK</span><span data-field="metal">--</span></div>
-                <button class="lift-terminal-btn" data-action="extend">
-                    EXTEND ROPE +<span data-field="extendIncrement">--</span>m
-                    <span class="right">COST <span data-field="extendCost">--</span></span>
-                </button>
+            <div data-pane="main">
+                <div class="lift-terminal-section">
+                    <h3>RIG STATUS</h3>
+                    <div class="lift-terminal-row"><span>CURRENT DEPTH</span><span data-field="depth">--</span></div>
+                    <div class="lift-terminal-row"><span>ROPE LENGTH</span><span data-field="rope">--</span></div>
+                    <div class="lift-terminal-row"><span>STATUS</span><span data-field="status">--</span></div>
+                </div>
+                <div class="lift-terminal-section">
+                    <h3>RESOURCES</h3>
+                    <div class="lift-terminal-row"><span>METAL ROPE STOCK</span><span data-field="metal">--</span></div>
+                    <button class="lift-terminal-btn" data-action="extend">
+                        EXTEND ROPE +<span data-field="extendIncrement">--</span>m
+                        <span class="right">COST <span data-field="extendCost">--</span></span>
+                    </button>
+                </div>
+                <div class="lift-terminal-section">
+                    <h3>LEVELS</h3>
+                    <div data-field="levels"></div>
+                </div>
             </div>
-            <div class="lift-terminal-section">
-                <h3>LEVELS</h3>
-                <div data-field="levels"></div>
+            <div data-pane="crafting" style="display:none;">
+                <div class="lift-terminal-section">
+                    <h3>STOCKPILE</h3>
+                    <div class="lift-terminal-row"><span>WOOD</span><span data-field="stockWood">--</span></div>
+                    <div class="lift-terminal-row"><span>COAL</span><span data-field="stockCoal">--</span></div>
+                    <div class="lift-terminal-row"><span>METAL ROPE</span><span data-field="stockMetal">--</span></div>
+                </div>
+                <div class="lift-terminal-section">
+                    <h3>BLUEPRINTS</h3>
+                    <div data-field="recipes"></div>
+                </div>
             </div>
             <div class="lift-terminal-actions">
                 <button class="lift-terminal-btn" data-action="close">[ DISCONNECT ]</button>
@@ -199,10 +292,22 @@ export default class LiftTerminal {
             extendIncrement: root.querySelector('[data-field="extendIncrement"]'),
             extendCost: root.querySelector('[data-field="extendCost"]'),
             levels: root.querySelector('[data-field="levels"]'),
+            stockWood: root.querySelector('[data-field="stockWood"]'),
+            stockCoal: root.querySelector('[data-field="stockCoal"]'),
+            stockMetal: root.querySelector('[data-field="stockMetal"]'),
+            recipes: root.querySelector('[data-field="recipes"]'),
         };
+        this.panes = {
+            main: root.querySelector('[data-pane="main"]'),
+            crafting: root.querySelector('[data-pane="crafting"]'),
+        };
+        this.tabButtons = root.querySelectorAll('[data-tab]');
 
         root.querySelector('[data-action="extend"]').addEventListener('click', () => this.extendRope());
         root.querySelector('[data-action="close"]').addEventListener('click', () => this.close());
+        this.tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => this.setTab(btn.dataset.tab));
+        });
 
         // Stop terminal-internal input from leaking to the canvas so the
         // player doesn't swing tools / change toolbar slot while clicking
@@ -215,6 +320,18 @@ export default class LiftTerminal {
 
     toggle() {
         if (this.isOpen) this.close(); else this.open();
+    }
+
+    setTab(tab) {
+        if (!this.panes[tab]) return;
+        this.activeTab = tab;
+        Object.entries(this.panes).forEach(([name, el]) => {
+            el.style.display = name === tab ? 'block' : 'none';
+        });
+        this.tabButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        this.refresh();
     }
 
     open() {
@@ -235,7 +352,9 @@ export default class LiftTerminal {
     extendRope() {
         if (this.craneManager.moving) return;
         if (this.metal < this.extendCost) return;
-        // TODO(crafting): deduct from real metal-rope inventory once available.
+        // Metal rope is crafted at the table (wood + coal → metal). When
+        // the rope-segment-as-inventory-item rework lands this should drain
+        // from inventoryManager.consumeResource('metalRope', ...) instead.
         this.metal -= this.extendCost;
         this.maxExtension += this.extendIncrement;
         this.refresh();
@@ -277,6 +396,7 @@ export default class LiftTerminal {
             empty.className = 'lift-terminal-empty';
             empty.textContent = '> NO LIFT CONTROLS DETECTED IN SHAFT.';
             list.appendChild(empty);
+            this.renderCrafting();
             return;
         }
 
@@ -297,6 +417,119 @@ export default class LiftTerminal {
             });
             list.appendChild(btn);
         });
+
+        this.renderCrafting();
+    }
+
+    // Resource lookup that bridges the inventory (wood, coal) and the rig's
+    // own pools (metal). Recipe inputs reference these ids verbatim.
+    _resourceCount(id) {
+        if (id === 'metal') return this.metal;
+        return this.game.inventoryManager?.getResourceCount?.(id) || 0;
+    }
+
+    _consumeResource(id, amount) {
+        if (id === 'metal') {
+            if (this.metal < amount) return false;
+            this.metal -= amount;
+            return true;
+        }
+        return !!this.game.inventoryManager?.consumeResource?.(id, amount);
+    }
+
+    renderCrafting() {
+        if (!this.fields.recipes) return;
+        this.fields.stockWood.textContent = String(this._resourceCount('wood'));
+        this.fields.stockCoal.textContent = String(this._resourceCount('coal'));
+        this.fields.stockMetal.textContent = String(this.metal);
+
+        const list = this.fields.recipes;
+        list.innerHTML = '';
+
+        RECIPES.forEach(recipe => {
+            const card = document.createElement('div');
+            card.className = 'lift-terminal-recipe';
+
+            const head = document.createElement('div');
+            head.className = 'lift-terminal-recipe-head';
+            const img = document.createElement('img');
+            img.src = recipe.icon;
+            img.alt = '';
+            if (recipe.iconRotate) img.style.transform = `rotate(${recipe.iconRotate}deg)`;
+            const name = document.createElement('span');
+            name.textContent = recipe.name.toUpperCase();
+            head.appendChild(img);
+            head.appendChild(name);
+            card.appendChild(head);
+
+            if (recipe.description) {
+                const desc = document.createElement('div');
+                desc.className = 'lift-terminal-recipe-desc';
+                desc.textContent = recipe.description;
+                card.appendChild(desc);
+            }
+
+            const costs = document.createElement('div');
+            costs.className = 'lift-terminal-recipe-costs';
+            let canAfford = true;
+            recipe.inputs.forEach(input => {
+                const have = this._resourceCount(input.id);
+                const short = have < input.amount;
+                if (short) canAfford = false;
+                const tag = document.createElement('span');
+                tag.textContent = `${RESOURCE_LABELS[input.id] || input.id.toUpperCase()} ${have}/${input.amount}`;
+                if (short) tag.classList.add('short');
+                costs.appendChild(tag);
+            });
+            card.appendChild(costs);
+
+            const btn = document.createElement('button');
+            btn.className = 'lift-terminal-btn';
+            btn.disabled = !canAfford;
+            btn.innerHTML = canAfford
+                ? `[ CRAFT ]<span class="right">+${recipe.output.amount}</span>`
+                : `[ INSUFFICIENT ]<span class="right">+${recipe.output.amount}</span>`;
+            btn.addEventListener('click', () => {
+                if (!btn.disabled) this.craft(recipe);
+            });
+            card.appendChild(btn);
+
+            list.appendChild(card);
+        });
+    }
+
+    /**
+     * Run a recipe: re-check costs (in case state changed between render
+     * and click), then consume inputs and apply the output. Output kinds:
+     *   - 'metal': top up the rig's rope stockpile.
+     *   - 'tool':  bump an existing tool stack's metadata.number. If the
+     *              player isn't carrying that tool, the craft is refused
+     *              (resources stay untouched) so we don't silently eat
+     *              materials for an item the player can't receive.
+     */
+    craft(recipe) {
+        for (const input of recipe.inputs) {
+            if (this._resourceCount(input.id) < input.amount) return;
+        }
+        if (recipe.output.kind === 'tool') {
+            const im = this.game.inventoryManager;
+            const tb = this.game.toolBarManager;
+            const hasSlot = im?.slots?.some(s => s && s.id === recipe.output.toolId)
+                || tb?.slots?.some(s => s && s.id === recipe.output.toolId);
+            if (!hasSlot) return;
+        }
+
+        for (const input of recipe.inputs) {
+            this._consumeResource(input.id, input.amount);
+        }
+
+        if (recipe.output.kind === 'metal') {
+            this.metal += recipe.output.amount;
+        } else if (recipe.output.kind === 'tool') {
+            this.game.inventoryManager?.addToToolStack?.(recipe.output.toolId, recipe.output.amount);
+        }
+
+        this.refresh();
     }
 
     /**

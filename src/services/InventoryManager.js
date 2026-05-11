@@ -120,11 +120,26 @@ export default class InventoryManager {
     // Adds to the existing wood stack if present in either the inventory or
     // the toolbar, otherwise creates a new stack in the inventory.
     addWood(amount = 1) {
+        this._addOrStack('wood', amount, () =>
+            new InventoryItem('wood', null, 'Wood', 'material', 'images/wood.png', {number: amount})
+        );
+    }
+
+    // Coal mined from coal-veined soil. Mirrors addWood so the same stack
+    // semantics apply (single stack across inventory + toolbar). Used as a
+    // crafting ingredient by the lift terminal.
+    addCoal(amount = 1) {
+        this._addOrStack('coal', amount, () =>
+            new InventoryItem('coal', null, 'Coal', 'material', 'images/coal.png', {number: amount})
+        );
+    }
+
+    _addOrStack(id, amount, factory) {
         const bump = (existing) => {
             const current = existing.metadata?.number || 0;
             existing.updateMetaData({...(existing.metadata || {}), number: current + amount});
         };
-        const inSlot = this.slots.find(s => s && s.id === 'wood');
+        const inSlot = this.slots.find(s => s && s.id === id);
         if (inSlot) {
             bump(inSlot);
             this.render();
@@ -133,7 +148,7 @@ export default class InventoryManager {
         }
         const tb = this.game.toolBarManager;
         if (tb) {
-            const inToolbar = tb.slots.find(s => s && s.id === 'wood');
+            const inToolbar = tb.slots.find(s => s && s.id === id);
             if (inToolbar) {
                 bump(inToolbar);
                 tb.render();
@@ -141,8 +156,82 @@ export default class InventoryManager {
                 return;
             }
         }
-        const wood = new InventoryItem('wood', null, 'Wood', 'material', 'images/wood.png', {number: amount});
-        this.addItem(wood);
+        this.addItem(factory());
+    }
+
+    // Walk inventory + toolbar and total up every stack whose id matches.
+    // Items without a metadata.number count as a single unit so non-stacked
+    // tools still register as "1 owned".
+    getResourceCount(id) {
+        let total = 0;
+        const tally = (item) => {
+            if (!item || item.id !== id) return;
+            const n = item.metadata?.number;
+            total += (n == null ? 1 : n);
+        };
+        this.slots.forEach(tally);
+        this.game.toolBarManager?.slots?.forEach(tally);
+        return total;
+    }
+
+    // Drain `amount` units from stacks of `id` across inventory + toolbar.
+    // Stacks are emptied left-to-right (inventory first, then toolbar) and
+    // a stack hitting 0 is cleared so the slot frees up. Returns true on
+    // success — the caller should pre-check with getResourceCount so we
+    // never partially consume on a failed craft.
+    consumeResource(id, amount) {
+        if (amount <= 0) return true;
+        let remaining = amount;
+        const drainStack = (item, onEmpty) => {
+            if (!item || item.id !== id || remaining <= 0) return;
+            const have = item.metadata?.number != null ? item.metadata.number : 1;
+            const take = Math.min(have, remaining);
+            const left = have - take;
+            remaining -= take;
+            if (left <= 0) onEmpty();
+            else item.updateMetaData({...(item.metadata || {}), number: left});
+        };
+
+        for (let i = 0; i < this.slots.length && remaining > 0; i++) {
+            drainStack(this.slots[i], () => { this.slots[i] = null; });
+        }
+        const tb = this.game.toolBarManager;
+        if (tb) {
+            for (let i = 0; i < tb.slots.length && remaining > 0; i++) {
+                drainStack(tb.slots[i], () => tb.removeItemBySlot(i));
+            }
+        }
+
+        this.render();
+        tb?.render();
+        if (tb && this.game.selectedIndex != null) tb.setSelected(this.game.selectedIndex);
+        return remaining === 0;
+    }
+
+    // Bump an existing tool stack's metadata.number by `amount`. Returns
+    // true if a matching item was found (and incremented), false otherwise.
+    // Crafting recipes that target tools the player isn't carrying skip
+    // production silently — see liftTerminal.craft().
+    addToToolStack(id, amount) {
+        const bump = (item) => {
+            const current = item.metadata?.number || 0;
+            item.updateMetaData({...(item.metadata || {}), number: current + amount});
+        };
+        const inSlot = this.slots.find(s => s && s.id === id);
+        if (inSlot) {
+            bump(inSlot);
+            this.render();
+            return true;
+        }
+        const tb = this.game.toolBarManager;
+        const inToolbar = tb?.slots.find(s => s && s.id === id);
+        if (inToolbar) {
+            bump(inToolbar);
+            tb.render();
+            tb.setSelected(this.game.selectedIndex);
+            return true;
+        }
+        return false;
     }
 
     addItemToSlot(index, item) {

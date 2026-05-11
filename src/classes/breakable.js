@@ -365,6 +365,13 @@ export class Breakable extends Tile {
                     this.game.dustEmitter.explode(50);
                     baseCell = this.tileDetails.trapped || {...this.game.tileTypes.empty};
                     this.clicking = false;
+                    // Coal veins also drop a unit straight to the player's
+                    // inventory so crafting at the lift doesn't require a
+                    // minecart pickup. The minecart catch path still works
+                    // for the visible debris that scatters from the break.
+                    if (this.tileDetails.type === 1) {
+                        this.game.inventoryManager?.addCoal?.(1);
+                    }
                     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
                 } else {
                     this.game.dustEmitter.explode(5);
