@@ -150,7 +150,7 @@ function injectStyles() {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 190px;
+            height: 210px;
             background:
                 radial-gradient(120% 90% at 50% 30%, rgba(51, 255, 51, 0.10) 0%, rgba(0, 0, 0, 0) 65%),
                 linear-gradient(180deg, rgba(0, 24, 0, 0.4) 0%, rgba(0, 0, 0, 0.5) 100%);
@@ -171,14 +171,50 @@ function injectStyles() {
             );
             pointer-events: none;
         }
-        .inventory-panel .ip-char-portrait img {
+        /* The player is drawn in-game as a head sprite stacked on top of
+           a body sprite, and each source file is a spritesheet — crop a
+           single frame from each via background-position/-size so the
+           portrait isn't a row of duplicate feet. Both source frames are
+           55px wide; scale 2x for a readable pixel-art portrait. */
+        .inventory-panel .ip-char-figure {
+            position: relative;
+            width: 110px;
+            height: 180px;
             image-rendering: pixelated;
-            height: 82%;
-            max-height: 170px;
             filter:
                 drop-shadow(0 0 6px rgba(51, 255, 51, 0.55))
                 drop-shadow(0 0 2px rgba(51, 255, 51, 0.8))
                 brightness(0.6) sepia(1) hue-rotate(60deg) saturate(6);
+        }
+        .inventory-panel .ip-char-figure .head,
+        .inventory-panel .ip-char-figure .body {
+            position: absolute;
+            left: 50%;
+            image-rendering: pixelated;
+            background-repeat: no-repeat;
+            transform: translateX(-50%);
+        }
+        /* Head spritesheet: 110x98 source (2x2 grid of 55x49 frames).
+           Render frame 0 by sizing the bg to the source's 2x scale and
+           leaving the offset at 0,0. Element height matches one frame. */
+        .inventory-panel .ip-char-figure .head {
+            top: 0;
+            width: 110px;
+            height: 98px;
+            background-image: url(images/player_head.png);
+            background-size: 220px 196px;
+            background-position: 0 0;
+        }
+        /* Body spritesheet: 55x70 source (single frame). Scale 2x to
+           match the head and anchor to the bottom of the figure so the
+           feet land at the floor of the portrait. */
+        .inventory-panel .ip-char-figure .body {
+            bottom: 0;
+            width: 110px;
+            height: 140px;
+            background-image: url(images/player_stationary.png);
+            background-size: 110px 140px;
+            background-position: 0 0;
         }
         .inventory-panel .ip-equipment {
             display: flex;
@@ -330,7 +366,10 @@ export default class InventoryManager {
                     <div class="ip-section-label">CHARACTER</div>
                     <div class="ip-char-frame">
                         <div class="ip-char-portrait">
-                            <img src="images/player.png" alt="Character" draggable="false">
+                            <div class="ip-char-figure" aria-label="Character">
+                                <div class="head"></div>
+                                <div class="body"></div>
+                            </div>
                         </div>
                         <div class="ip-equipment" data-slot-group="equipment"></div>
                     </div>
