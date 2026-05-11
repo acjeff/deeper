@@ -304,17 +304,23 @@ export default class GameScene extends Phaser.Scene {
             this.checkBlocksInterval = this.time.addEvent({
                 delay: 50,
                 callback: () => {
-                    // Walk batchSize tiles across the groups in order without
-                    // flattening into a new array each tick — the previous
-                    // spread allocated and GC'd ~3000 array slots per 50ms.
+                    // Snapshot each group's children before iterating: a
+                    // checkState can call setTile which removes a tile
+                    // from its group mid-batch and shifts the live array,
+                    // leaving undefined slots in the trailing indices.
+                    // The snapshot keeps array positions stable; the
+                    // block? + tileRef?. guards handle entries that
+                    // were destroyed during this same tick.
+                    const arrs = checkGroups.map(g => g.getChildren().slice());
+                    let total = 0;
+                    for (let gi = 0; gi < arrs.length; gi++) total += arrs[gi].length;
+
                     let remaining = batchSize;
                     let cursor = currentIndex;
-                    let total = 0;
-                    for (let gi = 0; gi < checkGroups.length; gi++) {
-                        const arr = checkGroups[gi].getChildren();
+                    for (let gi = 0; gi < arrs.length; gi++) {
+                        if (remaining <= 0) break;
+                        const arr = arrs[gi];
                         const len = arr.length;
-                        total += len;
-                        if (remaining <= 0) continue;
                         if (cursor >= len) {
                             cursor -= len;
                             continue;
@@ -322,9 +328,8 @@ export default class GameScene extends Phaser.Scene {
                         const end = Math.min(cursor + remaining, len);
                         for (let i = cursor; i < end; i++) {
                             const block = arr[i];
-                            if (block.tileRef?.checkState) {
-                                block.tileRef.checkState();
-                            }
+                            const ref = block?.tileRef;
+                            if (ref?.checkState) ref.checkState();
                         }
                         remaining -= (end - cursor);
                         cursor = 0;
