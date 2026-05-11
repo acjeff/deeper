@@ -35,6 +35,16 @@ export class Tile {
         // per cell across the whole loaded world.
         this.setupInteractions();
         this.addToGroup();
+        // Register this tile's sprite in the spatial index. For most
+        // tiles placeObject already did this at construction time, but
+        // for caved Breakables init() is deferred via delayedCall, so
+        // placeObject saw newTile.sprite === undefined and skipped.
+        // Re-registering here is idempotent for the eager path and
+        // is the only registration the delayed path ever gets.
+        const ms = this.game.mapService;
+        if (ms && this.chunkKey != null && this.cellX != null && this.cellY != null) {
+            ms._registerSpriteAt(this.chunkKey, this.cellY, this.cellX, this.sprite);
+        }
         // if (this.light) {
         //     this.light.fadeIn();
         // }
