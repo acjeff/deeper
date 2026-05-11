@@ -68,19 +68,30 @@ export default class TileTextureAtlas {
         this.tileTextureKey = 'tile_atlas';
         this.curveTextureKey = 'tile_curve_atlas';
 
-        // Atlas layout: each (mask, variant) gets a tileSize × textureHeight
-        // cell at a deterministic position. MASKS_PER_ROW masks per row,
+        // 1px transparent gutter on every side of every frame keeps the
+        // GPU from sampling into a neighbouring frame at sub-pixel
+        // sprite positions (otherwise visible as thin coloured seams
+        // along tile edges during smooth camera moves).
+        this.gutter = 1;
+        const cellW = this.tileSize + this.gutter * 2;
+        const cellH = this.textureHeight + this.gutter * 2;
+
+        // Atlas layout: each (mask, variant) gets one padded cell at a
+        // deterministic position. MASKS_PER_ROW masks per row,
         // VARIANT_COUNT variants packed horizontally within each mask cell.
         // Grass frames live below all dirt frames so kind→y is constant.
         this.cellsPerMaskRow = MASKS_PER_ROW;
-        this.atlasWidth = this.cellsPerMaskRow * this.variantCount * this.tileSize;
+        this.cellWidth = cellW;
+        this.cellHeight = cellH;
+        this.atlasWidth = this.cellsPerMaskRow * this.variantCount * cellW;
         this.kindRows = Math.ceil(MAX_MASKS / this.cellsPerMaskRow);
-        this.grassYOffset = this.kindRows * this.textureHeight;
+        this.grassYOffset = this.kindRows * cellH;
         this.atlasHeight = this.grassYOffset * 2;
 
         this.curveSize = this.tileSize + 4;
-        this.curveAtlasWidth = 16 * this.curveSize;
-        this.curveAtlasHeight = this.curveSize;
+        this.curveCellSize = this.curveSize + this.gutter * 2;
+        this.curveAtlasWidth = 16 * this.curveCellSize;
+        this.curveAtlasHeight = this.curveCellSize;
 
         this._tileFramesAdded = new Set();
         this._curveFramesAdded = new Set();
@@ -149,13 +160,16 @@ export default class TileTextureAtlas {
     _tileFramePosition(kind, mask, variant) {
         const col = mask % this.cellsPerMaskRow;
         const row = Math.floor(mask / this.cellsPerMaskRow);
-        const x = col * this.variantCount * this.tileSize + variant * this.tileSize;
-        const y = row * this.textureHeight + (kind === 'grass' ? this.grassYOffset : 0);
-        return { x, y };
+        // Cell origin (top-left of the padded cell), then offset by the
+        // gutter so the frame rect sits inside the cell with transparent
+        // pixels around it.
+        const cellX = col * this.variantCount * this.cellWidth + variant * this.cellWidth;
+        const cellY = row * this.cellHeight + (kind === 'grass' ? this.grassYOffset : 0);
+        return { x: cellX + this.gutter, y: cellY + this.gutter };
     }
 
     _curveFramePosition(mask) {
-        return { x: mask * this.curveSize, y: 0 };
+        return { x: mask * this.curveCellSize + this.gutter, y: this.gutter };
     }
 
     ensureTileFrame(kind, mask, variant) {
