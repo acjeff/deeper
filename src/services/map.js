@@ -645,24 +645,34 @@ export default class MapService {
     }
 
     getEntitiesAround(x, y, radius) {
-        let entities = [];
-
-        this.game.entityChildren.forEach(group => {
-            if (group?.children) {
-                group.children.each(entity => {
-                    if (this.isWithinRadius(entity.x, entity.y, x, y, radius)) {
-                        entities.push(entity);
-                    }
-                });
-            } else if (Array.isArray(group)) {
-                group.forEach(entity => {
-                    if (this.isWithinRadius(entity.x, entity.y, x, y, radius)) {
-                        entities.push(entity);
-                    }
-                });
+        // Walk the spatial sprite index in a tile bounding box around the
+        // point and keep entries inside the circle. Replaces a full scan
+        // of every entity group's children.
+        const ts = this.game.tileSize;
+        const cs = this.game.chunkSize;
+        const r2 = radius * radius;
+        const minTx = Math.floor((x - radius) / ts);
+        const maxTx = Math.floor((x + radius) / ts);
+        const minTy = Math.floor((y - radius) / ts);
+        const maxTy = Math.floor((y + radius) / ts);
+        const entities = [];
+        for (let ty = minTy; ty <= maxTy; ty++) {
+            const chunkY = Math.floor(ty / cs) * cs;
+            const ly = ((ty % cs) + cs) % cs;
+            for (let tx = minTx; tx <= maxTx; tx++) {
+                const chunkX = Math.floor(tx / cs) * cs;
+                const chunk = this.spriteIndex[`${chunkX}_${chunkY}`];
+                if (!chunk) continue;
+                const row = chunk[ly];
+                if (!row) continue;
+                const lx = ((tx % cs) + cs) % cs;
+                const sprite = row[lx];
+                if (!sprite || !sprite.active) continue;
+                const dx = sprite.x - x;
+                const dy = sprite.y - y;
+                if (dx * dx + dy * dy <= r2) entities.push(sprite);
             }
-        });
-
+        }
         return entities;
     }
 

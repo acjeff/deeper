@@ -142,6 +142,10 @@ export default class GameScene extends Phaser.Scene {
         this.treeGroup = this.add.group();
         this.treeTextures = new TreeTextureFactory(this);
         this.liftControlGroup = this.physics.add.staticGroup();
+        // interactableGroup is just a stable alias for liftControlGroup —
+        // physics.overlap accepts the Group directly, so no per-frame
+        // array snapshot is needed.
+        this.interactableGroup = this.liftControlGroup;
         this.liquidGroup = this.physics.add.staticGroup();
         this.lightingManager = new LightingManager(this);
         this.lightingManager.registerGroup(this.soilGroup);
@@ -289,32 +293,43 @@ export default class GameScene extends Phaser.Scene {
             if (this.newGame) {
                 await this.saveGame(this.user, this.grid);
             }
+            const checkGroups = [
+                this.emptyGroup,
+                this.lightGroup,
+                this.liquidGroup,
+                this.railGroup,
+                this.soilGroup,
+                this.buttressGroup,
+            ];
             this.checkBlocksInterval = this.time.addEvent({
                 delay: 50,
                 callback: () => {
-                    // Option 1: If groups change rarely, you could cache this combined array externally.
-                    // For now, we're computing it on every call.
-
-                    const emptyChildren = this.emptyGroup.getChildren();
-                    const lightChildren = this.lightGroup.getChildren();
-                    const liquidChildren = this.liquidGroup.getChildren();
-                    const railChildren = this.railGroup.getChildren();
-                    const soilChildren = this.soilGroup.getChildren();
-                    const buttressChildren = this.buttressGroup.getChildren();
-                    // Combine arrays using spread syntax (more readable and possibly more optimized)
-                    const softSoil = [...emptyChildren, ...lightChildren, ...liquidChildren, ...railChildren, ...soilChildren, ...buttressChildren];
-                    const total = softSoil.length;
-
-                    // Process a batch of blocks using a for loop.
-                    const max = Math.min(currentIndex + batchSize, total);
-                    for (let i = currentIndex; i < max; i++) {
-                        const block = softSoil[i];
-                        if (block.tileRef?.checkState) {
-                            block.tileRef.checkState();
+                    // Walk batchSize tiles across the groups in order without
+                    // flattening into a new array each tick — the previous
+                    // spread allocated and GC'd ~3000 array slots per 50ms.
+                    let remaining = batchSize;
+                    let cursor = currentIndex;
+                    let total = 0;
+                    for (let gi = 0; gi < checkGroups.length; gi++) {
+                        const arr = checkGroups[gi].getChildren();
+                        const len = arr.length;
+                        total += len;
+                        if (remaining <= 0) continue;
+                        if (cursor >= len) {
+                            cursor -= len;
+                            continue;
                         }
+                        const end = Math.min(cursor + remaining, len);
+                        for (let i = cursor; i < end; i++) {
+                            const block = arr[i];
+                            if (block.tileRef?.checkState) {
+                                block.tileRef.checkState();
+                            }
+                        }
+                        remaining -= (end - cursor);
+                        cursor = 0;
                     }
                     currentIndex = (currentIndex + batchSize) >= total ? 0 : currentIndex + batchSize;
-
                 },
                 callbackScope: this,
                 loop: true
@@ -450,7 +465,6 @@ export default class GameScene extends Phaser.Scene {
             }
             this.lightingManager.updateLighting(delta);
             this.backgroundManager?.update();
-            this.interactableGroup = [...this.liftControlGroup.getChildren()];
             this.uiManager.updateUI();
             this.revealFogAroundPlayer(time);
             this.minimapManager?.update(time);
