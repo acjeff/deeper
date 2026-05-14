@@ -94,6 +94,9 @@ export default class GameScene extends Phaser.Scene {
             },
             tree: {
                 id: 8
+            },
+            hut: {
+                id: 9
             }
         }
 
@@ -141,6 +144,7 @@ export default class GameScene extends Phaser.Scene {
         this.lightGroup = this.add.group();
         this.treeGroup = this.add.group();
         this.treeTextures = new TreeTextureFactory(this);
+        this.hutGroup = this.physics.add.staticGroup();
         this.liftControlGroup = this.physics.add.staticGroup();
         // interactableGroup is just a stable alias for liftControlGroup —
         // physics.overlap accepts the Group directly, so no per-frame
@@ -232,7 +236,7 @@ export default class GameScene extends Phaser.Scene {
             }, number: 50, limited: true, reclaimFrom: this.tileTypes.rail
         }, {rotate: -this.railRotate});
 
-        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup, this.liftControlGroup, this.treeGroup];
+        this.entityChildren = [this.soilGroup, this.lightGroup, this.emptyGroup, this.liquidGroup, this.buttressGroup, this.railGroup, this.liftControlGroup, this.treeGroup, this.hutGroup];
         this.mapService = new MapService(32, 16, this);
         if (this.newGame) {
             this.mapService.generateMap();
@@ -241,6 +245,9 @@ export default class GameScene extends Phaser.Scene {
         // pre-existing saves so the player always has a "call lift to
         // surface" point at the very top.
         this.mapService.ensureSurfaceLiftControls();
+        // Same idempotent pattern — drop the ghost town onto the surface
+        // for existing saves that pre-date the feature.
+        this.mapService.ensureGhostTown();
 
         window.setTimeout(async () => {
             // Parallax backdrop sits underneath the world, behind every

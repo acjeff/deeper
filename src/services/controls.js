@@ -11,11 +11,21 @@ export default class ControlsManager {
             up: Phaser.Input.Keyboard.KeyCodes.W,
             left: Phaser.Input.Keyboard.KeyCodes.A,
             right: Phaser.Input.Keyboard.KeyCodes.D,
-            down: Phaser.Input.Keyboard.KeyCodes.S
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            jump: Phaser.Input.Keyboard.KeyCodes.SPACE,
+            enter: Phaser.Input.Keyboard.KeyCodes.UP
         });
+        // SPACE doubles as the page-scroll trigger in browsers; suppress it
+        // when the game has focus so jumping doesn't also flick the window.
+        this.game.input.keyboard.addCapture('SPACE,UP');
 
 
         window.addEventListener("keydown", (e) => {
+            // Don't fire surface-world prompts while the player is inside
+            // a house (HouseScene runs paused-on-top of GameScene). Stale
+            // showInteractionPrompt callbacks could otherwise call crane
+            // moves while the player is sleeping.
+            if (this.game.scene && !this.game.scene.isActive()) return;
             if (e.key === "e") {
                 if (this.game.showInteractionPrompt) {
                     this.game.showInteractionPrompt();
@@ -200,6 +210,24 @@ export default class ControlsManager {
             }
         });
 
+        // Standing-at-the-door hut entry. Up arrow is the dedicated
+        // "open this door" key (jump is now SPACE) so the prompt stays
+        // legible even on a controller-style WASD layout.
+        this.game.activeHut = null;
+        this.game.hutEnterPrompt = null;
+        if (this.game.hutGroup) {
+            this.game.physics.overlap(this.game.player, this.game.hutGroup, (obj1, obj2) => {
+                const ref = obj2?.tileRef;
+                if (!ref) return;
+                this.game.activeHut = ref;
+                const label = ref.tileDetails?.isPlayerHouse ? 'Enter Home' : 'Enter Hut';
+                this.game.hutEnterPrompt = label;
+            });
+            if (this.game.activeHut && Phaser.Input.Keyboard.JustDown(this.game.keys.enter)) {
+                this.game.activeHut.enterHut();
+            }
+        }
+
         this.game.mineCartGroup.getChildren().forEach(child => {
             child.cartRef.playerOver = false;
         })
@@ -282,11 +310,15 @@ export default class ControlsManager {
         // pinning Y every frame. Letting jump/swim impulses through here
         // would just be overwritten on the next crane.update() tick.
         if (!onLift) {
-            if (this.game.keys.up.isDown) {
+            // Jump is on SPACE so the up arrow stays free for entering
+            // buildings on the surface. W still swims upward when floating
+            // so divers can rise without thumb-stretching to space.
+            const wantsUp = this.game.keys.jump.isDown || this.game.keys.up.isDown;
+            if (wantsUp) {
                 if (this.game.isFloating) {
                     this.game.player.anims.play('jump', true);
                     this.game.player.setVelocityY(-30);
-                } else if (this.game.player.body.blocked.down) {
+                } else if (this.game.keys.jump.isDown && this.game.player.body.blocked.down) {
                     this.game.player.setVelocityY(-100);
                 }
             }
@@ -296,7 +328,7 @@ export default class ControlsManager {
                     this.game.player.setVelocityY(30);
                 }
             }
-            if (this.game.isFloating && !this.game.keys.down.isDown && !this.game.keys.up.isDown) {
+            if (this.game.isFloating && !this.game.keys.down.isDown && !wantsUp) {
                 this.game.player.anims.play('jump', true);
                 this.game.player.setVelocityY(20);
             }
@@ -320,12 +352,24 @@ export default class ControlsManager {
             this.game.player.anims.play('jump', true);
         }
 
-        if (this.game.showInteractionPrompt) {
+        const hutPrompt = this.game.hutEnterPrompt;
+        if (this.game.showInteractionPrompt || hutPrompt) {
             const playerX = this.game.player.body.x - 10;
             const playerY = this.game.player.body.y - 5;
 
+            const promptLines = [];
+            if (this.game.showInteractionPrompt) {
+                promptLines.push(`E to ${this.game.interactionText || 'Interact'}`);
+            }
+            if (this.game.secondaryInteractionText) {
+                promptLines.push(`Q to ${this.game.secondaryInteractionText}`);
+            }
+            if (hutPrompt) {
+                promptLines.push(`↑ to ${hutPrompt}`);
+            }
+
             const textX = playerX;
-            const textY = playerY - (this.game.secondaryInteractionText ? 9 : 5);
+            const textY = playerY - (promptLines.length > 1 ? 4 + promptLines.length * 4 : 5);
 
             const style = {
                 font: '3px',
@@ -334,34 +378,20 @@ export default class ControlsManager {
                 padding: {left: 3, right: 3, top: 2, bottom: 1}
             };
 
-            const primary = `E to ${this.game.interactionText || 'Interact'}`;
-            const secondary = this.game.secondaryInteractionText
-                ? `\nQ to ${this.game.secondaryInteractionText}`
-                : '';
-            const promptText = primary + secondary;
+            const promptText = promptLines.join('\n');
 
             if (!this.interactionText) {
                 this.interactionText = this.game.add.text(textX, textY, promptText, style);
-                // this.interactionText.setOrigin(0.5);
             } else {
                 this.interactionText.setText(promptText);
                 this.interactionText.setPosition(textX, textY);
                 this.interactionText.setDepth(999999);
             }
-            // this.interactionText.setOrigin(0.5);
             this.interactionText.setResolution(10);
         } else {
-            if (
-
-                this
-                    .interactionText
-            ) {
-                this
-                    .interactionText
-                    .destroy();
-
-                this
-                    .interactionText = null;
+            if (this.interactionText) {
+                this.interactionText.destroy();
+                this.interactionText = null;
             }
         }
 
