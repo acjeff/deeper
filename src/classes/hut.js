@@ -44,10 +44,32 @@ export const HUT_PALETTES = {
     },
 };
 
+// Hardware palette shared across huts — stone foundations, brick
+// chimneys, planter flowers, and the warm lantern glow that reads as
+// "someone lives here" from a distance.
+const HUT_TRIM = {
+    stone:        '#5a544a',
+    stoneLight:   '#7a7468',
+    stoneDark:    '#2a2620',
+    brick:        '#8a3a22',
+    brickLight:   '#a85440',
+    brickHi:      '#c46044',
+    mortar:       '#3c1d10',
+    leaf:         '#6a9050',
+    flowerRed:    '#e85a44',
+    flowerPink:   '#e8a4b2',
+    flowerYellow: '#f4d56a',
+    lanternGlow:  '#ffeaa8',
+    lanternHi:    '#fff8d0',
+    curtain:      '#c43a3a',
+    plankHi:      '#8a4a28',
+};
+
 export function ensureHutFacadeTexture(game, paletteKey, abandoned = false) {
     const key = `hut_facade_${paletteKey}${abandoned ? '_aged' : ''}`;
     if (game.textures.exists(key)) return key;
     const palette = HUT_PALETTES[paletteKey] || HUT_PALETTES.cozy;
+    const T = HUT_TRIM;
     const ts = game.tileSize;
     const w = HUT_TILE_W * ts;
     const h = HUT_TILE_H * ts;
@@ -56,92 +78,239 @@ export function ensureHutFacadeTexture(game, paletteKey, abandoned = false) {
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, w, h);
 
-    const roofH = Math.floor(h * 0.42);
+    const roofH = Math.floor(h * 0.4);
     const wallTop = roofH;
-
-    // Wall body
-    ctx.fillStyle = palette.wall;
-    ctx.fillRect(0, wallTop, w, h - wallTop);
-
-    // Plank seams
-    ctx.fillStyle = palette.wallShadow;
-    for (let y = wallTop + 3; y < h; y += 4) {
-        ctx.fillRect(0, y, w, 1);
-    }
-    ctx.fillStyle = palette.wallLight;
-    for (let y = wallTop + 4; y < h; y += 4) {
-        ctx.fillRect(0, y, w, 1);
-    }
-
-    // Foundation strip
-    ctx.fillStyle = palette.wallShadow;
-    ctx.fillRect(0, h - 2, w, 2);
-
-    // Pitched roof — drawn as horizontal slabs with a peak at center.
+    const footingH = 3;            // stone foundation thickness
+    const wallBottom = h - footingH;
     const peakX = Math.floor(w / 2);
+
+    // === Wall body ============================================
+    ctx.fillStyle = palette.wall;
+    ctx.fillRect(0, wallTop, w, wallBottom - wallTop);
+
+    // Horizontal log/plank seams with a paired highlight row.
+    for (let y = wallTop + 3; y < wallBottom; y += 4) {
+        ctx.fillStyle = palette.wallShadow;
+        ctx.fillRect(0, y, w, 1);
+        ctx.fillStyle = palette.wallLight;
+        ctx.fillRect(0, y + 1, w, 1);
+    }
+
+    // Corner timber posts so the cabin reads as framed rather than
+    // monolithic. Darkened innermost stripe + light highlight gives the
+    // posts a bit of round-log dimensionality.
+    ctx.fillStyle = palette.wallShadow;
+    ctx.fillRect(0, wallTop, 3, wallBottom - wallTop);
+    ctx.fillRect(w - 3, wallTop, 3, wallBottom - wallTop);
+    ctx.fillStyle = palette.roofTrim;
+    ctx.fillRect(0, wallTop, 1, wallBottom - wallTop);
+    ctx.fillRect(w - 1, wallTop, 1, wallBottom - wallTop);
+    ctx.fillStyle = palette.wallLight;
+    ctx.fillRect(1, wallTop, 1, wallBottom - wallTop);
+
+    // === Stone foundation =====================================
+    ctx.fillStyle = T.stone;
+    ctx.fillRect(0, wallBottom, w, footingH);
+    ctx.fillStyle = T.stoneLight;
+    ctx.fillRect(0, wallBottom, w, 1);
+    ctx.fillStyle = T.stoneDark;
+    ctx.fillRect(0, h - 1, w, 1);
+    // Block seams every ~8px, plus a couple of brighter stones for life.
+    ctx.fillStyle = T.stoneDark;
+    for (let x = 6; x < w; x += 8) {
+        ctx.fillRect(x, wallBottom, 1, footingH);
+    }
+    ctx.fillStyle = T.stoneLight;
+    ctx.fillRect(3, wallBottom + 1, 1, 1);
+    ctx.fillRect(25, wallBottom + 1, 1, 1);
+    ctx.fillRect(42, wallBottom + 1, 1, 1);
+
+    // === Pitched roof =========================================
     for (let y = 0; y < roofH; y++) {
         const slope = Math.floor((y / roofH) * (w / 2));
-        const x0 = peakX - slope - 1;
-        const x1 = peakX + slope + 1;
-        const colour = (y === 0 || y === 1) ? palette.roofTrim : (y % 3 === 0 ? palette.roofShadow : palette.roof);
+        const x0 = Math.max(0, peakX - slope - 1);
+        const x1 = Math.min(w, peakX + slope + 1);
+        let colour;
+        if (y <= 1) colour = palette.roofTrim;
+        else if (y % 3 === 0) colour = palette.roofShadow;
+        else colour = palette.roof;
         ctx.fillStyle = colour;
-        ctx.fillRect(Math.max(0, x0), y, Math.min(w, x1) - Math.max(0, x0), 1);
+        ctx.fillRect(x0, y, x1 - x0, 1);
     }
-    // Roof eaves
+    // Shingle scallops — staggered single-pixel shadows across rows,
+    // alternating offsets so the roof reads as overlapping tiles rather
+    // than horizontal stripes.
+    ctx.fillStyle = palette.roofShadow;
+    for (let y = 3; y < roofH - 1; y += 3) {
+        const slope = Math.floor((y / roofH) * (w / 2));
+        const xStart = peakX - slope;
+        const xEnd = peakX + slope;
+        const offset = ((y / 3) | 0) % 2 * 2;
+        for (let x = xStart + offset; x < xEnd; x += 4) {
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+    // Eave trim — heavier under-line so the roof feels like it has weight.
     ctx.fillStyle = palette.roofTrim;
-    ctx.fillRect(0, roofH - 1, w, 2);
+    ctx.fillRect(0, roofH, w, 1);
+    ctx.fillStyle = palette.wallShadow;
+    ctx.fillRect(2, roofH + 1, w - 4, 1);
 
-    // Door — centered, takes most of the bottom-middle column
+    // Ridge cap at the peak.
+    ctx.fillStyle = palette.roofTrim;
+    ctx.fillRect(peakX - 2, 0, 4, 2);
+    ctx.fillStyle = palette.roofShadow;
+    ctx.fillRect(peakX - 1, 1, 2, 1);
+
+    // === Brick chimney ========================================
+    const chimneyX = Math.floor(w * 0.66);
+    const chimneyW = 5;
+    const chimneyTop = -4;
+    const chimneyBase = Math.floor(roofH * 0.5);
+    ctx.fillStyle = T.brick;
+    ctx.fillRect(chimneyX, chimneyTop, chimneyW, chimneyBase - chimneyTop);
+    // Horizontal mortar courses.
+    ctx.fillStyle = T.mortar;
+    for (let y = chimneyTop + 2; y < chimneyBase; y += 3) {
+        ctx.fillRect(chimneyX, y, chimneyW, 1);
+    }
+    // Running-bond vertical mortar — alternating offsets per course.
+    let band = 0;
+    for (let y = chimneyTop; y < chimneyBase; y += 3) {
+        ctx.fillStyle = T.mortar;
+        if (band % 2 === 0) {
+            ctx.fillRect(chimneyX + 2, y, 1, 2);
+        } else {
+            ctx.fillRect(chimneyX + 1, y, 1, 2);
+            ctx.fillRect(chimneyX + 3, y, 1, 2);
+        }
+        band++;
+    }
+    // A few brighter bricks for variation.
+    ctx.fillStyle = T.brickLight;
+    ctx.fillRect(chimneyX + 1, chimneyTop + 3, 1, 1);
+    ctx.fillRect(chimneyX + 3, chimneyTop + 6, 1, 1);
+    ctx.fillRect(chimneyX, chimneyTop + 1, 1, 1);
+    // Capstone — a slightly wider stone slab perched on top.
+    ctx.fillStyle = T.stoneDark;
+    ctx.fillRect(chimneyX - 1, chimneyTop - 1, chimneyW + 2, 2);
+    ctx.fillStyle = T.stone;
+    ctx.fillRect(chimneyX - 1, chimneyTop - 1, chimneyW + 2, 1);
+
+    // === Door ================================================
     const doorW = Math.floor(ts * 0.9);
     const doorH = Math.floor(ts * 1.6);
     const doorX = Math.floor((w - doorW) / 2);
-    const doorY = h - doorH - 2;
+    const doorY = wallBottom - doorH;
+    // Frame
     ctx.fillStyle = palette.doorTrim;
     ctx.fillRect(doorX - 1, doorY - 1, doorW + 2, doorH + 2);
+    // Lintel above the door.
+    ctx.fillStyle = palette.roofTrim;
+    ctx.fillRect(doorX - 2, doorY - 2, doorW + 4, 1);
+    ctx.fillStyle = palette.wallShadow;
+    ctx.fillRect(doorX - 2, doorY - 1, doorW + 4, 1);
+    // Door body
     ctx.fillStyle = palette.door;
     ctx.fillRect(doorX, doorY, doorW, doorH);
-    // Door planks
+    // Plank divisions
     ctx.fillStyle = palette.doorTrim;
-    for (let y = doorY + 2; y < doorY + doorH; y += 3) {
-        ctx.fillRect(doorX, y, doorW, 1);
-    }
-    // Door knob
+    ctx.fillRect(doorX + 2, doorY, 1, doorH);
+    ctx.fillRect(doorX + 5, doorY, 1, doorH);
+    // Plank highlights for a hint of grain
+    ctx.fillStyle = T.plankHi;
+    ctx.fillRect(doorX + 1, doorY, 1, doorH);
+    ctx.fillRect(doorX + 6, doorY, 1, doorH);
+    // Cross-braces (Z-frame battens)
+    ctx.fillStyle = palette.doorTrim;
+    ctx.fillRect(doorX, doorY + 5, doorW, 1);
+    ctx.fillRect(doorX, doorY + 11, doorW, 1);
+    // Knob with bezel
+    ctx.fillStyle = palette.doorTrim;
+    ctx.fillRect(doorX + doorW - 3, doorY + 7, 2, 2);
     ctx.fillStyle = palette.doorKnob;
-    ctx.fillRect(doorX + doorW - 2, doorY + Math.floor(doorH * 0.55), 1, 1);
+    ctx.fillRect(doorX + doorW - 2, doorY + 8, 1, 1);
 
-    // Two windows flanking the door
-    const winW = Math.floor(ts * 0.6);
-    const winH = Math.floor(ts * 0.6);
-    const winY = wallTop + Math.floor((h - wallTop - doorH - winH) / 2);
+    // === Lantern beside the door =============================
+    const lanternX = doorX - 6;
+    const lanternY = doorY + 2;
+    // Hanging hook
+    ctx.fillStyle = palette.roofTrim;
+    ctx.fillRect(lanternX + 1, lanternY - 2, 1, 1);
+    ctx.fillRect(lanternX + 2, lanternY - 2, 1, 1);
+    // Mounting arm
+    ctx.fillRect(lanternX + 2, lanternY - 1, 2, 1);
+    // Lantern frame (top, sides, bottom cap)
+    ctx.fillRect(lanternX, lanternY, 4, 1);
+    ctx.fillRect(lanternX, lanternY + 1, 1, 3);
+    ctx.fillRect(lanternX + 3, lanternY + 1, 1, 3);
+    ctx.fillRect(lanternX, lanternY + 4, 4, 1);
+    // Flame glow
+    ctx.fillStyle = T.lanternGlow;
+    ctx.fillRect(lanternX + 1, lanternY + 1, 2, 3);
+    ctx.fillStyle = T.lanternHi;
+    ctx.fillRect(lanternX + 1, lanternY + 2, 2, 1);
+
+    // === Windows with planter boxes ==========================
+    const winW = Math.floor(ts * 0.7);
+    const winH = Math.floor(ts * 0.5);
+    const winY = wallTop + 5;
     const drawWindow = (cx) => {
         const wx = cx - Math.floor(winW / 2);
+        // Lintel + shadow row
+        ctx.fillStyle = palette.roofTrim;
+        ctx.fillRect(wx - 1, winY - 2, winW + 2, 1);
+        ctx.fillStyle = palette.wallShadow;
+        ctx.fillRect(wx - 1, winY - 1, winW + 2, 1);
+        // Frame
         ctx.fillStyle = palette.doorTrim;
-        ctx.fillRect(wx - 1, winY - 1, winW + 2, winH + 2);
+        ctx.fillRect(wx - 1, winY, winW + 2, winH + 1);
+        // Glass
         ctx.fillStyle = palette.window;
         ctx.fillRect(wx, winY, winW, winH);
-        // Cross frame
+        // Mullions
         ctx.fillStyle = palette.doorTrim;
         ctx.fillRect(wx + Math.floor(winW / 2), winY, 1, winH);
         ctx.fillRect(wx, winY + Math.floor(winH / 2), winW, 1);
-        // Shutters
-        ctx.fillStyle = palette.shutter;
-        ctx.fillRect(wx - 3, winY, 2, winH);
-        ctx.fillRect(wx + winW + 1, winY, 2, winH);
+        // Curtain hints in upper corners
+        ctx.fillStyle = T.curtain;
+        ctx.fillRect(wx, winY, 1, 1);
+        ctx.fillRect(wx + winW - 1, winY, 1, 1);
+        // Sill (light over shadow)
+        ctx.fillStyle = palette.wallLight;
+        ctx.fillRect(wx - 2, winY + winH + 1, winW + 4, 1);
+        ctx.fillStyle = palette.wallShadow;
+        ctx.fillRect(wx - 2, winY + winH + 2, winW + 4, 1);
+        // Planter box
+        ctx.fillStyle = palette.doorTrim;
+        ctx.fillRect(wx - 2, winY + winH + 3, winW + 4, 2);
+        ctx.fillStyle = palette.door;
+        ctx.fillRect(wx - 2, winY + winH + 3, winW + 4, 1);
+        // Flowers spilling out the top of the planter
+        const fy = winY + winH + 2;
+        const flowerCols = [T.flowerRed, T.flowerPink, T.flowerYellow, T.flowerRed, T.flowerYellow];
+        const leafXs = [wx, wx + 2, wx + 4];
+        for (const lx of leafXs) {
+            if (lx >= 0 && lx < w) {
+                ctx.fillStyle = T.leaf;
+                ctx.fillRect(lx, fy, 1, 1);
+            }
+        }
+        for (let i = 0; i < flowerCols.length; i++) {
+            const fx = wx - 1 + i * 2;
+            if (fx >= 0 && fx < w) {
+                ctx.fillStyle = flowerCols[i];
+                ctx.fillRect(fx, fy, 1, 1);
+            }
+        }
     };
     drawWindow(Math.floor(w * 0.22));
     drawWindow(Math.floor(w * 0.78));
 
-    // Chimney — small notch on the right pitch of the roof
-    const chimneyX = Math.floor(w * 0.72);
-    const chimneyW = 3;
-    const chimneyTop = Math.max(0, Math.floor(roofH * 0.25));
-    ctx.fillStyle = palette.roofTrim;
-    ctx.fillRect(chimneyX, chimneyTop, chimneyW, roofH - chimneyTop);
-    ctx.fillStyle = palette.wallLight;
-    ctx.fillRect(chimneyX, chimneyTop, chimneyW, 1);
-
     if (abandoned) {
-        // Boarded windows + cracks for ghost-town huts
+        // Boarded windows + cracks for ghost-town huts. Drawn last so it
+        // sits over the flower planters and lantern (which an abandoned
+        // hut wouldn't have lit anyway).
         ctx.fillStyle = 'rgba(20, 12, 8, 0.55)';
         for (let i = 0; i < 18; i++) {
             const x = Math.floor((i * 13.7) % w);
@@ -149,10 +318,12 @@ export function ensureHutFacadeTexture(game, paletteKey, abandoned = false) {
             ctx.fillRect(x, y, 1, 1);
         }
         ctx.fillStyle = palette.doorTrim;
-        ctx.fillRect(Math.floor(w * 0.18), winY + Math.floor(winH * 0.2), Math.floor(winW + 4), 2);
-        ctx.fillRect(Math.floor(w * 0.74), winY + Math.floor(winH * 0.2), Math.floor(winW + 4), 2);
+        ctx.fillRect(Math.floor(w * 0.18), winY + Math.floor(winH * 0.2), winW + 4, 2);
+        ctx.fillRect(Math.floor(w * 0.74), winY + Math.floor(winH * 0.2), winW + 4, 2);
+        // Cover the lantern (extinguished)
+        ctx.fillRect(lanternX, lanternY, 4, 5);
         // Slight darkening overlay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.fillRect(0, 0, w, h);
     }
 

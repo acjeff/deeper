@@ -387,13 +387,6 @@ export default class CraneManager {
         windowGlow.setDepth(0.59);
         windowGlow.setBlendMode(Phaser.BlendModes.ADD);
 
-        const namePlate = this.game.add.text(
-            platformX, platformTop - ts * 3.9, 'HOME',
-            {font: '4px monospace', fill: '#fff1c4', stroke: '#000000', strokeThickness: 2}
-        ).setOrigin(0.5, 0.5);
-        namePlate.setResolution(8);
-        namePlate.setDepth(0.61);
-
         // Invisible interactable rectangle sat just above the platform so
         // the existing hutGroup overlap picks it up like a normal hut.
         const door = this.game.add.rectangle(
@@ -407,7 +400,7 @@ export default class CraneManager {
             enterHut: () => this._enterPlatformHut(),
         };
 
-        this.platformHut = {facade, stoop, windowGlow, namePlate, door};
+        this.platformHut = {facade, stoop, windowGlow, door};
         this._syncPlatformHut();
     }
 
@@ -415,15 +408,13 @@ export default class CraneManager {
         if (!this.platformHut) return;
         const ts = this.game.tileSize;
         const platformTop = this.craneFlat.y - PLATFORM_HALF_H;
-        const {facade, stoop, windowGlow, namePlate, door} = this.platformHut;
+        const {facade, stoop, windowGlow, door} = this.platformHut;
         facade.x = this.craneFlat.x;
         facade.y = platformTop;
         stoop.x = this.craneFlat.x;
         stoop.y = platformTop;
         windowGlow.x = this.craneFlat.x;
         windowGlow.y = platformTop - ts * 2.1;
-        namePlate.x = this.craneFlat.x;
-        namePlate.y = platformTop - ts * 3.9;
         door.x = this.craneFlat.x;
         door.y = platformTop - (ts * 1.4) / 2;
         if (door.body) door.body.updateFromGameObject();
