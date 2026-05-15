@@ -107,6 +107,8 @@ export class MineCart {
         const handlers = {
             coal: (n) => im.addCoal(n),
             wood: (n) => im.addWood(n),
+            copper: (n) => im.addCopper(n),
+            iron: (n) => im.addIron(n),
         };
         Object.entries(this.inventory).forEach(([key, count]) => {
             if (count > 0 && handlers[key]) handlers[key](count);

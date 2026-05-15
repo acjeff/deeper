@@ -90,6 +90,10 @@ export default class HouseScene extends Phaser.Scene {
         this._exiting = false;
         this._toast = null;
         this._tvIdx = 0;
+        // Tier the platform shelter is sitting at. 0 = bedroll/tarp,
+        // 1 = pitched tent, 2 = full cabin. World-placed huts (ghost town)
+        // pre-date the tier system and stay at the legacy "full" interior.
+        this.homeTier = this.hut.isPlayerHouse ? (this.hut.homeTier ?? 2) : 2;
         // Snapshot the persisted decor (if any) before mutating any fields.
         // Player house: hut.decor lives on the world tile so changes
         // survive reloads; ghost huts ignore decor entirely.
@@ -125,7 +129,9 @@ export default class HouseScene extends Phaser.Scene {
         this.buildPlayer();
         this.buildPrompts();
         this.buildVignette();
-        if (this.hut.isPlayerHouse) this.buildDecorButton();
+        // Decorating only makes sense once the player has a real cabin;
+        // before that there's no wallpaper or floor to swap.
+        if (this.hut.isPlayerHouse && this.homeTier >= 2) this.buildDecorButton();
         this.buildExitButton();
 
         this.cursors = this.input.keyboard.addKeys({
@@ -396,6 +402,7 @@ export default class HouseScene extends Phaser.Scene {
     buildHomeFurniture() {
         const W = ROOM_W;
         this.furniture = [];
+        const tier = this.homeTier;
 
         // Door — left side. Walking up against it + W/↑ exits.
         const doorX = 22, doorY = FLOOR_Y - 14;
@@ -413,58 +420,82 @@ export default class HouseScene extends Phaser.Scene {
             label: 'Leave', interact: () => this.exitHouse(),
         });
 
-        // TV — left of bed, mounted-style on its own console
-        const tvX = 70, tvY = FLOOR_Y - 18;
-        this.add.rectangle(tvX, tvY + 8, 22, 6, 0x4a3a26).setDepth(3);
-        this.add.rectangle(tvX, tvY, 20, 12, 0x111111).setDepth(3.1);
-        this.tvScreen = this.add.rectangle(tvX, tvY, 16, 8, 0x2a4a8a).setDepth(3.2);
-        this.tvStatic = this.add.graphics().setDepth(3.3);
-        this.tvStatic.fillStyle(0xffffff, 0.18);
-        for (let y = -3; y <= 3; y += 2) this.tvStatic.fillRect(tvX - 8, tvY + y, 16, 1);
-        this.add.rectangle(tvX - 2, tvY + 8, 4, 1, 0x222222).setDepth(3.4);
-        this.add.rectangle(tvX + 2, tvY + 8, 4, 1, 0x222222).setDepth(3.4);
-        this.tweens.add({
-            targets: this.tvScreen,
-            alpha: {from: 0.85, to: 1},
-            duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-        });
-        this.furniture.push({
-            kind: 'tv', x: tvX, y: tvY, range: 14,
-            label: 'Watch TV', interact: () => this.openTv(),
-        });
+        if (tier >= 2) {
+            // TV — left of bed, mounted-style on its own console
+            const tvX = 70, tvY = FLOOR_Y - 18;
+            this.add.rectangle(tvX, tvY + 8, 22, 6, 0x4a3a26).setDepth(3);
+            this.add.rectangle(tvX, tvY, 20, 12, 0x111111).setDepth(3.1);
+            this.tvScreen = this.add.rectangle(tvX, tvY, 16, 8, 0x2a4a8a).setDepth(3.2);
+            this.tvStatic = this.add.graphics().setDepth(3.3);
+            this.tvStatic.fillStyle(0xffffff, 0.18);
+            for (let y = -3; y <= 3; y += 2) this.tvStatic.fillRect(tvX - 8, tvY + y, 16, 1);
+            this.add.rectangle(tvX - 2, tvY + 8, 4, 1, 0x222222).setDepth(3.4);
+            this.add.rectangle(tvX + 2, tvY + 8, 4, 1, 0x222222).setDepth(3.4);
+            this.tweens.add({
+                targets: this.tvScreen,
+                alpha: {from: 0.85, to: 1},
+                duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+            this.furniture.push({
+                kind: 'tv', x: tvX, y: tvY, range: 14,
+                label: 'Watch TV', interact: () => this.openTv(),
+            });
+        }
 
-        // Bed — middle-right
+        // Bed (or its lower-tier stand-in). All three tiers have somewhere
+        // to sleep, but the visible piece changes:
+        //   tier 0 = bedroll on the floor
+        //   tier 1 = simple cot
+        //   tier 2 = full bed with decor swatches
         const bedX = 122, bedY = FLOOR_Y - 6;
-        const bed = resolveDecor('bed', this.decor.bed);
-        const bedFrameC = Phaser.Display.Color.HexStringToColor(bed.frame).color;
-        const blanketC = Phaser.Display.Color.HexStringToColor(bed.blanket).color;
-        const pillowC = Phaser.Display.Color.HexStringToColor(bed.pillow).color;
-        this.bedFrame = this.add.rectangle(bedX, bedY, 32, 10, bedFrameC).setDepth(3);
-        this.bedBlanket = this.add.rectangle(bedX + 2, bedY - 1, 26, 6, blanketC).setDepth(3.1);
-        this.bedPillow = this.add.rectangle(bedX - 10, bedY - 3, 6, 3, pillowC).setDepth(3.2);
-        this.add.rectangle(bedX - 14, bedY + 6, 2, 4, bedFrameC).setDepth(2.9);
-        this.add.rectangle(bedX + 14, bedY + 6, 2, 4, bedFrameC).setDepth(2.9);
+        if (tier >= 2) {
+            const bed = resolveDecor('bed', this.decor.bed);
+            const bedFrameC = Phaser.Display.Color.HexStringToColor(bed.frame).color;
+            const blanketC = Phaser.Display.Color.HexStringToColor(bed.blanket).color;
+            const pillowC = Phaser.Display.Color.HexStringToColor(bed.pillow).color;
+            this.bedFrame = this.add.rectangle(bedX, bedY, 32, 10, bedFrameC).setDepth(3);
+            this.bedBlanket = this.add.rectangle(bedX + 2, bedY - 1, 26, 6, blanketC).setDepth(3.1);
+            this.bedPillow = this.add.rectangle(bedX - 10, bedY - 3, 6, 3, pillowC).setDepth(3.2);
+            this.add.rectangle(bedX - 14, bedY + 6, 2, 4, bedFrameC).setDepth(2.9);
+            this.add.rectangle(bedX + 14, bedY + 6, 2, 4, bedFrameC).setDepth(2.9);
+        } else if (tier === 1) {
+            // Cot: low frame + thin mattress + small pillow.
+            this.add.rectangle(bedX, bedY + 2, 28, 4, 0x4a3220).setDepth(3);
+            this.add.rectangle(bedX, bedY - 1, 26, 4, 0x9a7a5a).setDepth(3.1);
+            this.add.rectangle(bedX - 9, bedY - 3, 5, 2, 0xe7d8b8).setDepth(3.2);
+            this.add.rectangle(bedX - 12, bedY + 5, 1, 4, 0x2a1808).setDepth(2.9);
+            this.add.rectangle(bedX + 12, bedY + 5, 1, 4, 0x2a1808).setDepth(2.9);
+        } else {
+            // Bedroll: blanket-on-floor with a tiny pillow.
+            this.add.rectangle(bedX, bedY + 4, 30, 4, 0x5a3a22).setDepth(3);
+            this.add.rectangle(bedX, bedY + 2, 26, 5, 0xa8443a).setDepth(3.1);
+            this.add.rectangle(bedX - 10, bedY + 1, 5, 2, 0xe7d8b8).setDepth(3.2);
+        }
+        const bedLabel = tier === 0 ? 'Doze (light rest)' : tier === 1 ? 'Sleep' : 'Sleep';
         this.furniture.push({
             kind: 'bed', x: bedX, y: bedY, range: 16,
-            label: 'Sleep', interact: () => this.sleepInBed(),
+            label: bedLabel, interact: () => this.sleepInBed(),
         });
 
-        // Kitchen — far right
-        const kitchenX = 168, kitchenY = FLOOR_Y - 6;
-        this.add.rectangle(kitchenX, kitchenY, 28, 10, 0x8a6a44).setDepth(3);
-        this.add.rectangle(kitchenX, kitchenY - 4, 28, 2, 0xb5895a).setDepth(3.1);
-        // Stove
-        this.add.rectangle(kitchenX - 8, kitchenY - 1, 8, 6, 0x2a2a2a).setDepth(3.2);
-        this.add.rectangle(kitchenX - 8, kitchenY - 3, 7, 1, 0x6a6a6a).setDepth(3.3);
-        this.add.circle(kitchenX - 10, kitchenY - 1, 0.8, 0xff5a1c).setDepth(3.4);
-        this.add.circle(kitchenX - 6, kitchenY - 1, 0.8, 0xff5a1c).setDepth(3.4);
-        // Sink
-        this.add.rectangle(kitchenX + 8, kitchenY - 1, 8, 5, 0x6a8a99).setDepth(3.2);
-        this.add.rectangle(kitchenX + 8, kitchenY - 3, 2, 2, 0xc0d0d8).setDepth(3.3);
-        this.furniture.push({
-            kind: 'kitchen', x: kitchenX, y: kitchenY, range: 16,
-            label: 'Cook', interact: () => this.openKitchen(),
-        });
+        if (tier >= 2) {
+            // Kitchen — far right. Locked behind the cabin upgrade so the
+            // tent/raft tiers feel meaningfully sparse.
+            const kitchenX = 168, kitchenY = FLOOR_Y - 6;
+            this.add.rectangle(kitchenX, kitchenY, 28, 10, 0x8a6a44).setDepth(3);
+            this.add.rectangle(kitchenX, kitchenY - 4, 28, 2, 0xb5895a).setDepth(3.1);
+            // Stove
+            this.add.rectangle(kitchenX - 8, kitchenY - 1, 8, 6, 0x2a2a2a).setDepth(3.2);
+            this.add.rectangle(kitchenX - 8, kitchenY - 3, 7, 1, 0x6a6a6a).setDepth(3.3);
+            this.add.circle(kitchenX - 10, kitchenY - 1, 0.8, 0xff5a1c).setDepth(3.4);
+            this.add.circle(kitchenX - 6, kitchenY - 1, 0.8, 0xff5a1c).setDepth(3.4);
+            // Sink
+            this.add.rectangle(kitchenX + 8, kitchenY - 1, 8, 5, 0x6a8a99).setDepth(3.2);
+            this.add.rectangle(kitchenX + 8, kitchenY - 3, 2, 2, 0xc0d0d8).setDepth(3.3);
+            this.furniture.push({
+                kind: 'kitchen', x: kitchenX, y: kitchenY, range: 16,
+                label: 'Cook', interact: () => this.openKitchen(),
+            });
+        }
     }
 
     buildAbandonedFurniture() {
@@ -563,8 +594,12 @@ export default class HouseScene extends Phaser.Scene {
         }).setOrigin(0.5, 1).setDepth(50).setVisible(false);
         this.prompt.setResolution(6);
 
+        let title = 'HOME';
+        if (!this.hut.isPlayerHouse) title = 'ABANDONED HUT';
+        else if (this.homeTier === 0) title = 'BEDROLL CAMP';
+        else if (this.homeTier === 1) title = 'TENT';
         this.title = this.add.text(ROOM_W / 2, 6,
-            this.hut.isPlayerHouse ? 'HOME' : 'ABANDONED HUT', {
+            title, {
                 font: '7px monospace',
                 color: this.hut.isPlayerHouse ? '#fff1c4' : '#a89888',
                 stroke: '#000000',
@@ -722,16 +757,28 @@ export default class HouseScene extends Phaser.Scene {
             ROOM_W / 2, ROOM_H / 2, ROOM_W, ROOM_H, 0x000000, 0
         ).setDepth(80);
         this.prompt.setVisible(false);
+        // Restoration scales with the rig tier so the upgrade ladder pays
+        // off in survivability, not just looks. Tier 0 is a stop-gap "doze"
+        // worth ~30%, tier 1 is a comfortable cot at 60%, tier 2 maxes out.
+        const factor = this.homeTier >= 2 ? 1.0 : this.homeTier === 1 ? 0.6 : 0.3;
+        const energyGain = Math.round(player.maxEnergy * factor);
+        const breathGain = Math.round(player.maxBreath * factor);
+        const healthGain = Math.round(25 * factor);
         this.tweens.add({
             targets: overlay,
             alpha: 0.85,
             duration: 600, yoyo: true, hold: 600,
             onComplete: () => {
-                player.energy = player.maxEnergy;
-                player.breath = player.maxBreath;
-                player.health = Math.min(player.maxHealth, player.health + 25);
+                player.energy = Math.min(player.maxEnergy, player.energy + energyGain);
+                player.breath = Math.min(player.maxBreath, player.breath + breathGain);
+                player.health = Math.min(player.maxHealth, player.health + healthGain);
                 overlay.destroy();
-                this.flashToast('Rested. Energy restored.');
+                const msg = this.homeTier >= 2
+                    ? 'Rested. Stats restored.'
+                    : this.homeTier === 1
+                        ? 'Rough sleep in the tent. Partially rested.'
+                        : 'Catnap on the bedroll. Lightly rested.';
+                this.flashToast(msg);
             },
         });
     }
