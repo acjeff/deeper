@@ -5,8 +5,8 @@ import {Tile} from "./tile";
 // anchor — pure visual decoration, no collision, so the player walks past
 // the building like in Stardew Valley until they line up with the door
 // and press ↑ to enter.
-const HUT_TILE_W = 5;
-const HUT_TILE_H = 4;
+export const HUT_TILE_W = 5;
+export const HUT_TILE_H = 4;
 
 // Per-hut palettes. The first player-house style is pickable in the
 // interior decor menu; the rest are baked-in flavours for ghost-town
@@ -44,7 +44,7 @@ export const HUT_PALETTES = {
     },
 };
 
-function ensureHutFacadeTexture(game, paletteKey, abandoned = false) {
+export function ensureHutFacadeTexture(game, paletteKey, abandoned = false) {
     const key = `hut_facade_${paletteKey}${abandoned ? '_aged' : ''}`;
     if (game.textures.exists(key)) return key;
     const palette = HUT_PALETTES[paletteKey] || HUT_PALETTES.cozy;

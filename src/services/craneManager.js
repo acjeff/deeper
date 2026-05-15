@@ -1,4 +1,9 @@
 import LiftTerminal from './liftTerminal';
+import {ensureHutFacadeTexture, HUT_TILE_W, HUT_TILE_H} from '../classes/hut';
+
+// Platform thickness (matches craneFlat.setDisplaySize height). Centered
+// origin means the platform top is platformY - PLATFORM_HALF_H.
+const PLATFORM_HALF_H = 2.5;
 
 function degrees_to_radians(degrees) {
     let pi = Math.PI;
@@ -52,6 +57,7 @@ export default class CraneManager {
         this.ropeThree.setDepth(2);
 
         this.createControlPanel(platformX, platformY);
+        this.createPlatformHut(platformX, platformY);
 
         // Snapshot initial visual state so "return to surface" via the
         // terminal lands the platform exactly back where it started.
@@ -59,6 +65,103 @@ export default class CraneManager {
 
         // Terminal owns rope length, resource count, and the level UI.
         this.liftTerminal = new LiftTerminal(this);
+    }
+
+    /**
+     * The player's home rides on the platform instead of sitting on the
+     * surface. Visual + interactable bits are placed relative to the
+     * platform's top and re-synced every frame so they stay glued during
+     * lift travel. Decor is persisted on the GameScene so it survives
+     * scene transitions even though there's no world grid cell to anchor.
+     */
+    createPlatformHut(platformX, platformY) {
+        const ts = this.game.tileSize;
+        const platformTop = platformY - PLATFORM_HALF_H;
+        const paletteKey = 'homestead';
+        const textureKey = ensureHutFacadeTexture(this.game, paletteKey, false);
+
+        if (!this.game.platformHutDecor) {
+            this.game.platformHutDecor = {
+                wallpaper: 'cream',
+                floor: 'oak',
+                bed: 'quilt',
+                rug: 'rag',
+            };
+        }
+
+        const facade = this.game.add.image(platformX, platformTop, textureKey);
+        facade.setOrigin(0.5, 1);
+        facade.setDisplaySize(HUT_TILE_W * ts, HUT_TILE_H * ts);
+        // Same low depth as the world-placed hut so the player (depth 2)
+        // walks in front of the building. The facade sits entirely above
+        // the platform sprite vertically, so the platform's higher depth
+        // doesn't end up rendering on top of it.
+        facade.setDepth(0.6);
+
+        const windowGlow = this.game.add.rectangle(
+            platformX, platformTop - ts * 2.1, ts * 0.6, ts * 0.6, 0xffd27a, 0.35
+        );
+        windowGlow.setDepth(0.59);
+        windowGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+        const namePlate = this.game.add.text(
+            platformX, platformTop - ts * 3.9, 'HOME',
+            {font: '4px monospace', fill: '#fff1c4', stroke: '#000000', strokeThickness: 2}
+        ).setOrigin(0.5, 0.5);
+        namePlate.setResolution(8);
+        namePlate.setDepth(0.61);
+
+        // Invisible interactable rectangle sat just above the platform so
+        // the existing hutGroup overlap picks it up like a normal hut.
+        const door = this.game.add.rectangle(
+            platformX, platformTop - (ts * 1.4) / 2, ts, ts * 1.4, 0xffffff
+        );
+        door.setAlpha(0);
+        this.game.hutGroup.add(door);
+        door.tileRef = {
+            tileDetails: {isPlayerHouse: true, paletteKey, hutId: 'platform_home'},
+            interactionText: 'Enter Home',
+            enterHut: () => this._enterPlatformHut(),
+        };
+
+        this.platformHut = {facade, windowGlow, namePlate, door};
+        this._syncPlatformHut();
+    }
+
+    _syncPlatformHut() {
+        if (!this.platformHut) return;
+        const ts = this.game.tileSize;
+        const platformTop = this.craneFlat.y - PLATFORM_HALF_H;
+        const {facade, windowGlow, namePlate, door} = this.platformHut;
+        facade.x = this.craneFlat.x;
+        facade.y = platformTop;
+        windowGlow.x = this.craneFlat.x;
+        windowGlow.y = platformTop - ts * 2.1;
+        namePlate.x = this.craneFlat.x;
+        namePlate.y = platformTop - ts * 3.9;
+        door.x = this.craneFlat.x;
+        door.y = platformTop - (ts * 1.4) / 2;
+        if (door.body) door.body.updateFromGameObject();
+    }
+
+    _enterPlatformHut() {
+        if (this._enteringPlatformHut) return;
+        this._enteringPlatformHut = true;
+        this.game.scene.pause('GameScene');
+        this.game.scene.launch('HouseScene', {
+            hut: {
+                hutId: 'platform_home',
+                isPlayerHouse: true,
+                paletteKey: 'homestead',
+                decor: this.game.platformHutDecor,
+            },
+            persistDecor: (group, key) => {
+                this.game.platformHutDecor[group] = key;
+            },
+        });
+        this.game.scene.get('GameScene').events.once('resume', () => {
+            this._enteringPlatformHut = false;
+        });
     }
 
     createControlPanel(platformX, platformY) {
@@ -117,6 +220,10 @@ export default class CraneManager {
      * naturally instead of skating in mid-air.
      */
     update() {
+        // Keep the home glued to the platform every frame so it tracks
+        // mid-tween motion without flickering against the lift's render.
+        this._syncPlatformHut();
+
         const lift = this.craneFlat;
         if (!lift?.body) return;
         if (!this.moving) {

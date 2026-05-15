@@ -411,180 +411,37 @@ export default class MapService {
     }
 
     /**
-     * Drop a row of huts onto the surface around the spawn point. The
-     * westernmost (closest to the chasm on the right side) is the
-     * player's home; the rest are weather-beaten ghost-town facades.
-     * Each hut occupies a single cell — its `door cell` — and the Hut
-     * tile renders a multi-tile facade around it for the player to walk
-     * past. Trees that would clip the facade get cleared in a small
-     * clearance window so saplings don't poke out of roofs.
+     * Huts no longer live in the world grid — the player's home rides on
+     * the moving platform (see CraneManager.createPlatformHut) and the
+     * abandoned ghost-town huts are hidden for now. Kept as a no-op so
+     * generateMap can still call it without branching.
      */
     placeGhostTown() {
-        const tileTypes = this.game.tileTypes;
-        if (!tileTypes?.hut) return;
-        const chasm = this.game.chasmRange;
-        const maxScan = this.game.aboveGround + (this.game.maxSurfaceDrop || 0) + 6;
-
-        const findDoorRow = (x) => {
-            for (let y = 1; y <= maxScan; y++) {
-                const cell = this._cellAt(x, y);
-                if (!cell) continue;
-                if (cell.id !== tileTypes.soil.id) continue;
-                return y - 1;
-            }
-            return null;
-        };
-
-        // Anchored relative to the chasm so the player spawns next door
-        // to their home regardless of map width changes. Spread out enough
-        // (8 tiles between doors) that the 5-tile-wide facades don't
-        // overlap or look wallpapered together. The spawn point sits on
-        // the left chasm wall (walking right plunges into the shaft) so
-        // the player house lives on the LEFT side, immediately reachable.
-        const layout = [
-            {dx: -6,  isPlayer: true, paletteKey: 'homestead'},
-            {dx: -14, paletteKey: 'cozy'},
-            {dx: -22, paletteKey: 'dusty'},
-            {dx: -30, paletteKey: 'mossy'},
-            {dx: +6,  paletteKey: 'rusted'},
-            {dx: +14, paletteKey: 'dusty'},
-            {dx: +22, paletteKey: 'mossy'},
-            {dx: +30, paletteKey: 'rusted'},
-        ];
-
-        // For each hut, take the door column's soil row as the reference
-        // and flatten the surrounding ±2 columns to the same row so the
-        // facade sits on a clean horizontal foundation regardless of the
-        // procedural rolling-hills offsets. Without this the hut visual
-        // floats over dips or sinks into peaks where adjacent columns
-        // differ by 1-3 rows.
-        const flattenFootprint = (centerX, doorRow) => {
-            const targetSoilTop = doorRow + 1;
-            for (let dx = -2; dx <= 2; dx++) {
-                const cx = centerX + dx;
-                if (cx < 1 || cx >= this.game.mapWidth - 1) continue;
-                // Walk down each column: rows above targetSoilTop become
-                // empty (carving away any high terrain), rows from
-                // targetSoilTop downward stay/become soil until we hit
-                // the existing soil column.
-                for (let y = 1; y < targetSoilTop; y++) {
-                    const cell = this._cellAt(cx, y);
-                    if (!cell) continue;
-                    // Preserve chasm walls + the lift-control row, which
-                    // carry strength 999999 and must not be carved.
-                    if (cell.id === tileTypes.soil.id && (cell.strength ?? 0) >= 999999) continue;
-                    if (cell.id === tileTypes.liftControl?.id) continue;
-                    this._setCell(cx, y, {...tileTypes.empty});
-                }
-                // Top soil row: ensure it's a surface-tagged soil cell so
-                // grass + breakable edges draw correctly.
-                this._setCell(cx, targetSoilTop, {
-                    ...tileTypes.soil,
-                    strength: 100,
-                    surface: true,
-                });
-                // One row below: if it's currently empty or weak, fill so
-                // there's no gap between the new top and the existing
-                // column.
-                const below = this._cellAt(cx, targetSoilTop + 1);
-                if (below && below.id !== tileTypes.soil.id) {
-                    this._setCell(cx, targetSoilTop + 1, {...tileTypes.soil, strength: 100});
-                }
-                // Surface-tag may have been left on a now-buried cell —
-                // walk down a few rows clearing stale surface flags.
-                for (let y = targetSoilTop + 1; y <= targetSoilTop + 6; y++) {
-                    const c = this._cellAt(cx, y);
-                    if (c?.surface === true) {
-                        const {surface, ...rest} = c;
-                        this._setCell(cx, y, rest);
-                    }
-                }
-            }
-        };
-
-        layout.forEach((entry, idx) => {
-            const baseX = entry.dx > 0 ? chasm[1] : chasm[0];
-            const x = baseX + entry.dx;
-            if (x < 4 || x > this.game.mapWidth - 4) return;
-
-            const doorRow = findDoorRow(x);
-            if (doorRow == null || doorRow < 1) return;
-
-            // Level the footprint first so the door cell's row matches
-            // the soil-top row across the whole facade.
-            flattenFootprint(x, doorRow);
-
-            // Carve out trees + leftover decorations in the door row so
-            // the building isn't impaled by oaks. Half-width 2 covers
-            // the 5-tile facade; height 4 covers the vertical extent so
-            // a tree can't poke out of the roof either.
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -3; dy <= 0; dy++) {
-                    const cx = x + dx;
-                    const cy = doorRow + dy;
-                    if (cy < 1) continue;
-                    const cell = this._cellAt(cx, cy);
-                    if (!cell) continue;
-                    if (cell.id === tileTypes.tree?.id) {
-                        this._setCell(cx, cy, {...tileTypes.empty});
-                    }
-                }
-            }
-
-            // The player house defaults its decor to a comfortable starter
-            // set; ghost huts get a fixed dusty interior we don't surface
-            // an editor for.
-            const decor = entry.isPlayer
-                ? {
-                    wallpaper: 'cream',
-                    floor: 'oak',
-                    bed: 'quilt',
-                    rug: 'rag',
-                }
-                : null;
-
-            this._setCell(x, doorRow, {
-                ...tileTypes.hut,
-                hutId: `hut_${idx}`,
-                isPlayerHouse: !!entry.isPlayer,
-                paletteKey: entry.paletteKey || (entry.isPlayer ? 'homestead' : 'dusty'),
-                decor,
-            });
-        });
     }
 
     /**
-     * Idempotent ghost-town injection. New worlds already get the town
-     * placed by generateMap; existing saves call this on load so the
-     * surface picks up the new buildings without forcing a fresh start.
-     * Runs the placement pass only when no hut tile is found in the
-     * spawn band — the per-cell layout is otherwise authoritative.
+     * Strip any leftover hut cells from existing saves — huts have moved
+     * onto the moving platform (player's home) or been hidden (ghost-town
+     * facades). Any cell that still carries the hut id is replaced with an
+     * empty cell so chunk rendering doesn't spawn a stale Hut tile.
      */
     ensureGhostTown() {
         const hutId = this.game.tileTypes?.hut?.id;
-        if (hutId == null || !this.game.grid) return;
-        const chasm = this.game.chasmRange;
-        const cs = this.game.chunkSize;
-        const scanColumns = [
-            chasm[0] - 30, chasm[0] - 22, chasm[0] - 14, chasm[0] - 6,
-            chasm[1] + 6, chasm[1] + 14, chasm[1] + 22, chasm[1] + 30,
-        ];
-        const maxScan = this.game.aboveGround + (this.game.maxSurfaceDrop || 0) + 6;
-        for (const x of scanColumns) {
-            if (x < 0 || x >= this.game.mapWidth) continue;
-            for (let y = 0; y <= maxScan; y++) {
-                const cell = this._cellAt(x, y);
-                if (cell?.id === hutId) return; // already populated
+        const emptyType = this.game.tileTypes?.empty;
+        if (hutId == null || !emptyType || !this.game.grid) return;
+        for (const chunkKey of Object.keys(this.game.grid)) {
+            const chunk = this.game.grid[chunkKey];
+            if (!chunk) continue;
+            for (let y = 0; y < chunk.length; y++) {
+                const row = chunk[y];
+                if (!row) continue;
+                for (let x = 0; x < row.length; x++) {
+                    if (row[x]?.id === hutId) {
+                        row[x] = {...emptyType};
+                    }
+                }
             }
         }
-        // Surface offsets are only set during generateMap. Stub them for
-        // legacy grids so findDoorRow doesn't read undefined.
-        if (!this.game.surfaceOffsets) {
-            this.game.surfaceOffsets = new Array(this.game.mapWidth).fill(0);
-        }
-        if (this.game.maxSurfaceDrop == null) this.game.maxSurfaceDrop = 4;
-        if (this.game.maxSurfaceLift == null) this.game.maxSurfaceLift = 5;
-        this.placeGhostTown();
     }
 
     ensureSurfaceLiftControls() {

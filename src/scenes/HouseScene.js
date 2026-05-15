@@ -82,6 +82,7 @@ export default class HouseScene extends Phaser.Scene {
     init(data) {
         this.hut = data?.hut || {hutId: 'unknown', isPlayerHouse: false, paletteKey: 'dusty'};
         this.returnDoor = data?.returnDoor || null;
+        this.persistDecor = data?.persistDecor || null;
         this.gameScene = this.scene.get('GameScene');
         // Scenes are reused across launches — reset every per-run flag
         // here so a previous exit lock doesn't trap the player on the
@@ -831,12 +832,16 @@ export default class HouseScene extends Phaser.Scene {
 
     applyDecor(group, key) {
         this.decor[group] = key;
-        if (this.hut.isPlayerHouse && this.returnDoor && this.gameScene?.grid) {
-            const grid = this.gameScene.grid;
-            const {chunkKey, cellX, cellY} = this.returnDoor;
-            const cell = grid?.[chunkKey]?.[cellY]?.[cellX];
-            if (cell) {
-                cell.decor = {...(cell.decor || {}), [group]: key};
+        if (this.hut.isPlayerHouse) {
+            if (this.persistDecor) {
+                this.persistDecor(group, key);
+            } else if (this.returnDoor && this.gameScene?.grid) {
+                const grid = this.gameScene.grid;
+                const {chunkKey, cellX, cellY} = this.returnDoor;
+                const cell = grid?.[chunkKey]?.[cellY]?.[cellX];
+                if (cell) {
+                    cell.decor = {...(cell.decor || {}), [group]: key};
+                }
             }
         }
 
