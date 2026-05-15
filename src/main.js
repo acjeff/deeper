@@ -35,6 +35,10 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+// Exposed for in-browser debugging + headless smoke tests so the running
+// scenes / managers can be poked from the dev console without rooting
+// through Phaser internals.
+window.game = game;
 
 window.addEventListener("resize", () => {
     game.scale.resize(window.innerWidth, window.innerHeight);

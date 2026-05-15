@@ -969,6 +969,29 @@ export default class MapService {
         const chunkPixelY = chunkStartY * this.game.tileSize;
         const chunkPixelSize = this.game.chunkSize * this.game.tileSize;
 
+        // Crash insulation: when a tile slips into an entity group without a
+        // properly-shaped tileRef (the platform's hut door + control panel
+        // both expose Tile-shaped stubs to satisfy this iteration), missing
+        // a destroy method would otherwise stop the player's whole session
+        // mid-walk. Skip + warn instead of throwing.
+        const safeDestroy = (tile, prefs) => {
+            const fn = tile?.tileRef?.destroy;
+            if (typeof fn === 'function') {
+                fn.call(tile.tileRef, prefs);
+            } else {
+                if (!this._warnedTileRefShape) {
+                    this._warnedTileRefShape = true;
+                    console.warn(
+                        '[map.unloadChunk] tile in entity group missing tileRef.destroy — skipping. ' +
+                        'tileRef keys:', tile?.tileRef ? Object.keys(tile.tileRef) : tile?.tileRef
+                    );
+                }
+                // Phaser-level fallback so the leftover sprite at least
+                // disappears rather than rendering forever in an unloaded chunk.
+                if (typeof tile?.destroy === 'function') tile.destroy();
+            }
+        };
+
         this.game.entityChildren.forEach((entityGroup) => {
             if (entityGroup?.children) {
                 entityGroup.children.getArray().slice().forEach((tile) => {
@@ -979,7 +1002,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.tileRef.destroy({preserveAttached: true});
+                        safeDestroy(tile, {preserveAttached: true});
                     }
                 });
             } else if (Array.isArray(entityGroup)) {
@@ -991,7 +1014,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.tileRef.destroy();
+                        safeDestroy(tile);
                     }
                 });
             }
