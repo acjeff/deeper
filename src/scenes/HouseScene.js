@@ -82,6 +82,7 @@ export default class HouseScene extends Phaser.Scene {
     init(data) {
         this.hut = data?.hut || {hutId: 'unknown', isPlayerHouse: false, paletteKey: 'dusty'};
         this.returnDoor = data?.returnDoor || null;
+        this.persistDecor = data?.persistDecor || null;
         this.gameScene = this.scene.get('GameScene');
         // Scenes are reused across launches — reset every per-run flag
         // here so a previous exit lock doesn't trap the player on the
@@ -546,7 +547,7 @@ export default class HouseScene extends Phaser.Scene {
         this.player.body.setSize(6, 10);
         if (this.anims.exists('stationary')) this.player.play('stationary');
 
-        this.playerHead = this.add.sprite(startX, startY - 4, 'player_head');
+        this.playerHead = this.add.sprite(startX, startY - 1.5, 'player_head');
         this.playerHead.setDisplaySize(7, 7);
         this.playerHead.setDepth(4.1);
 
@@ -659,7 +660,7 @@ export default class HouseScene extends Phaser.Scene {
         this.player.y = FLOOR_Y - 7;
 
         this.playerHead.x = this.player.x;
-        this.playerHead.y = this.player.y - 4;
+        this.playerHead.y = this.player.y - 1.5;
         this.shadow.x = this.player.x;
 
         // Find nearest interactable
@@ -831,12 +832,16 @@ export default class HouseScene extends Phaser.Scene {
 
     applyDecor(group, key) {
         this.decor[group] = key;
-        if (this.hut.isPlayerHouse && this.returnDoor && this.gameScene?.grid) {
-            const grid = this.gameScene.grid;
-            const {chunkKey, cellX, cellY} = this.returnDoor;
-            const cell = grid?.[chunkKey]?.[cellY]?.[cellX];
-            if (cell) {
-                cell.decor = {...(cell.decor || {}), [group]: key};
+        if (this.hut.isPlayerHouse) {
+            if (this.persistDecor) {
+                this.persistDecor(group, key);
+            } else if (this.returnDoor && this.gameScene?.grid) {
+                const grid = this.gameScene.grid;
+                const {chunkKey, cellX, cellY} = this.returnDoor;
+                const cell = grid?.[chunkKey]?.[cellY]?.[cellX];
+                if (cell) {
+                    cell.decor = {...(cell.decor || {}), [group]: key};
+                }
             }
         }
 

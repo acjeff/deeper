@@ -39,7 +39,6 @@ export default class PlayerManager {
         // toward this terminal velocity, then holds it steady.
         this.game.player.body.maxVelocity.y = 100;
         this.headBaseY = 0;
-        this.bobPhase = 0;
         this.wasGrounded = true;
         // Capture the scale that setDisplaySize produced — tweens must work
         // relative to this, not absolute 1.0 which would blow the sprite up
@@ -237,15 +236,6 @@ export default class PlayerManager {
             this.lastAirVy = 0;
         }
         this.wasGrounded = grounded;
-
-        // Idle head bob — gentle 1px sine when stationary on the ground.
-        if (grounded && !moving) {
-            this.bobPhase += (delta || 16) * 0.0042;
-            const bob = Math.sin(this.bobPhase) * 0.5;
-            this.game.playerHead.y = player.body.y + 2.5 + bob;
-        } else {
-            this.bobPhase = 0;
-        }
 
         // Soft drop shadow — anchored to the last ground position so it
         // stays on the floor while the player jumps, then shrinks and
