@@ -546,7 +546,7 @@ export default class HouseScene extends Phaser.Scene {
         this.player.body.setSize(6, 10);
         if (this.anims.exists('stationary')) this.player.play('stationary');
 
-        this.playerHead = this.add.sprite(startX, startY - 4, 'player_head');
+        this.playerHead = this.add.sprite(startX, startY - 1.5, 'player_head');
         this.playerHead.setDisplaySize(7, 7);
         this.playerHead.setDepth(4.1);
 
@@ -659,7 +659,7 @@ export default class HouseScene extends Phaser.Scene {
         this.player.y = FLOOR_Y - 7;
 
         this.playerHead.x = this.player.x;
-        this.playerHead.y = this.player.y - 4;
+        this.playerHead.y = this.player.y - 1.5;
         this.shadow.x = this.player.x;
 
         // Find nearest interactable
