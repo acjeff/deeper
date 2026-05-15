@@ -452,6 +452,56 @@ export default class MapService {
             {dx: +30, paletteKey: 'rusted'},
         ];
 
+        // For each hut, take the door column's soil row as the reference
+        // and flatten the surrounding ±2 columns to the same row so the
+        // facade sits on a clean horizontal foundation regardless of the
+        // procedural rolling-hills offsets. Without this the hut visual
+        // floats over dips or sinks into peaks where adjacent columns
+        // differ by 1-3 rows.
+        const flattenFootprint = (centerX, doorRow) => {
+            const targetSoilTop = doorRow + 1;
+            for (let dx = -2; dx <= 2; dx++) {
+                const cx = centerX + dx;
+                if (cx < 1 || cx >= this.game.mapWidth - 1) continue;
+                // Walk down each column: rows above targetSoilTop become
+                // empty (carving away any high terrain), rows from
+                // targetSoilTop downward stay/become soil until we hit
+                // the existing soil column.
+                for (let y = 1; y < targetSoilTop; y++) {
+                    const cell = this._cellAt(cx, y);
+                    if (!cell) continue;
+                    // Preserve chasm walls + the lift-control row, which
+                    // carry strength 999999 and must not be carved.
+                    if (cell.id === tileTypes.soil.id && (cell.strength ?? 0) >= 999999) continue;
+                    if (cell.id === tileTypes.liftControl?.id) continue;
+                    this._setCell(cx, y, {...tileTypes.empty});
+                }
+                // Top soil row: ensure it's a surface-tagged soil cell so
+                // grass + breakable edges draw correctly.
+                this._setCell(cx, targetSoilTop, {
+                    ...tileTypes.soil,
+                    strength: 100,
+                    surface: true,
+                });
+                // One row below: if it's currently empty or weak, fill so
+                // there's no gap between the new top and the existing
+                // column.
+                const below = this._cellAt(cx, targetSoilTop + 1);
+                if (below && below.id !== tileTypes.soil.id) {
+                    this._setCell(cx, targetSoilTop + 1, {...tileTypes.soil, strength: 100});
+                }
+                // Surface-tag may have been left on a now-buried cell —
+                // walk down a few rows clearing stale surface flags.
+                for (let y = targetSoilTop + 1; y <= targetSoilTop + 6; y++) {
+                    const c = this._cellAt(cx, y);
+                    if (c?.surface === true) {
+                        const {surface, ...rest} = c;
+                        this._setCell(cx, y, rest);
+                    }
+                }
+            }
+        };
+
         layout.forEach((entry, idx) => {
             const baseX = entry.dx > 0 ? chasm[1] : chasm[0];
             const x = baseX + entry.dx;
@@ -460,15 +510,24 @@ export default class MapService {
             const doorRow = findDoorRow(x);
             if (doorRow == null || doorRow < 1) return;
 
-            // Carve out trees + decorations under the facade footprint so
-            // the building isn't impaled by oaks. Half-width 2 covers the
-            // 5-tile facade.
+            // Level the footprint first so the door cell's row matches
+            // the soil-top row across the whole facade.
+            flattenFootprint(x, doorRow);
+
+            // Carve out trees + leftover decorations in the door row so
+            // the building isn't impaled by oaks. Half-width 2 covers
+            // the 5-tile facade; height 4 covers the vertical extent so
+            // a tree can't poke out of the roof either.
             for (let dx = -2; dx <= 2; dx++) {
-                const cx = x + dx;
-                const cell = this._cellAt(cx, doorRow);
-                if (!cell) continue;
-                if (cell.id === tileTypes.tree?.id || cell.id === tileTypes.hut.id) {
-                    this._setCell(cx, doorRow, {...tileTypes.empty});
+                for (let dy = -3; dy <= 0; dy++) {
+                    const cx = x + dx;
+                    const cy = doorRow + dy;
+                    if (cy < 1) continue;
+                    const cell = this._cellAt(cx, cy);
+                    if (!cell) continue;
+                    if (cell.id === tileTypes.tree?.id) {
+                        this._setCell(cx, cy, {...tileTypes.empty});
+                    }
                 }
             }
 

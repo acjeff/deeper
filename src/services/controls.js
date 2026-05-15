@@ -210,9 +210,9 @@ export default class ControlsManager {
             }
         });
 
-        // Standing-at-the-door hut entry. Up arrow is the dedicated
-        // "open this door" key (jump is now SPACE) so the prompt stays
-        // legible even on a controller-style WASD layout.
+        // Standing-at-the-door hut entry. Both ↑ and W open the door
+        // (W now does double duty since jump is on SPACE) so the player
+        // can keep their hand in the WASD pocket.
         this.game.activeHut = null;
         this.game.hutEnterPrompt = null;
         if (this.game.hutGroup) {
@@ -223,7 +223,10 @@ export default class ControlsManager {
                 const label = ref.tileDetails?.isPlayerHouse ? 'Enter Home' : 'Enter Hut';
                 this.game.hutEnterPrompt = label;
             });
-            if (this.game.activeHut && Phaser.Input.Keyboard.JustDown(this.game.keys.enter)) {
+            if (this.game.activeHut && (
+                Phaser.Input.Keyboard.JustDown(this.game.keys.enter) ||
+                Phaser.Input.Keyboard.JustDown(this.game.keys.up)
+            )) {
                 this.game.activeHut.enterHut();
             }
         }
