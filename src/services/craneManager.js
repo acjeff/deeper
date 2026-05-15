@@ -394,10 +394,19 @@ export default class CraneManager {
         );
         door.setAlpha(0);
         this.game.hutGroup.add(door);
+        // Stubs match the Tile-shaped interface — getAdjacentBlocks /
+        // chunk-unload / hover scans iterate every entity group and call
+        // these without checking whether they exist, so leaving them off
+        // crashes on the first chunk unload.
         door.tileRef = {
             tileDetails: {isPlayerHouse: true, paletteKey, hutId: 'platform_home'},
             interactionText: 'Enter Home',
             enterHut: () => this._enterPlatformHut(),
+            destroy: () => {},
+            checkState: () => {},
+            onMouseEnter: () => {},
+            onMouseLeave: () => {},
+            onClick: () => {},
         };
 
         this.platformHut = {facade, stoop, windowGlow, door};
