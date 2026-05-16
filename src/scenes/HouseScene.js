@@ -70,10 +70,22 @@ function resolveDecor(group, key) {
 // outdoors. Keeping the logical size tight makes the room feel like a
 // hut interior rather than a warehouse, and lets us snap furniture
 // positions to whole pixels.
+//
+// Cabin dimensions are the original full-size layout. Lower tiers
+// override them in init() so the tent/raft visuals can sit on a
+// smaller logical canvas the camera then zooms tighter on — entering
+// a tent should feel like ducking into a tent, not a cabin with
+// fewer sprites.
 const ROOM_W = 200;
 const ROOM_H = 130;
 const FLOOR_Y = 110;    // top of floor line
 const WALL_TOP_Y = 24;  // top of wallpapered band
+
+const TIER_LAYOUT = {
+    0: {w: 110, h: 80, floorY: 64, wallTopY: 14, minX: 24, maxX: 86, exitX: 32},
+    1: {w: 150, h: 100, floorY: 84, wallTopY: 18, minX: 32, maxX: 118, exitX: 38},
+    2: {w: ROOM_W, h: ROOM_H, floorY: FLOOR_Y, wallTopY: WALL_TOP_Y, minX: 10, maxX: ROOM_W - 10, exitX: 22},
+};
 
 export default class HouseScene extends Phaser.Scene {
     constructor() {
@@ -95,6 +107,19 @@ export default class HouseScene extends Phaser.Scene {
         // 1 = pitched tent, 2 = full cabin. World-placed huts (ghost town)
         // pre-date the tier system and stay at the legacy "full" interior.
         this.homeTier = this.hut.isPlayerHouse ? (this.hut.homeTier ?? 2) : 2;
+        // Pull tier-specific canvas dimensions onto the scene so every
+        // render method works in the same coordinate space — the cabin
+        // keeps its 200×130 layout, the tent shrinks to 150×100, the
+        // bedroll camp shrinks further still so the camera zoom packs
+        // the whole tent into the viewport.
+        const layout = TIER_LAYOUT[this.homeTier] || TIER_LAYOUT[2];
+        this.roomW = layout.w;
+        this.roomH = layout.h;
+        this.floorY = layout.floorY;
+        this.wallTopY = layout.wallTopY;
+        this.playerMinX = layout.minX;
+        this.playerMaxX = layout.maxX;
+        this.exitX = layout.exitX;
         // Snapshot the persisted decor (if any) before mutating any fields.
         // Player house: hut.decor lives on the world tile so changes
         // survive reloads; ghost huts ignore decor entirely.
@@ -108,12 +133,12 @@ export default class HouseScene extends Phaser.Scene {
         // feels close to the player rather than a vast empty hall.
         this.cameras.main.setBackgroundColor(0x0a0806);
         const targetZoom = Math.max(3, Math.floor(Math.min(
-            this.cameras.main.width / ROOM_W,
-            this.cameras.main.height / ROOM_H
+            this.cameras.main.width / this.roomW,
+            this.cameras.main.height / this.roomH
         )));
         this.cameras.main.setZoom(targetZoom);
         // Centre the room logical origin (0,0) in screen space.
-        this.cameras.main.centerOn(ROOM_W / 2, ROOM_H / 2);
+        this.cameras.main.centerOn(this.roomW / 2, this.roomH / 2);
         this.cameras.main.fadeIn(220, 0, 0, 0);
 
         // Hide the world-scene DOM overlays (light canvas, minimap,
@@ -187,6 +212,18 @@ export default class HouseScene extends Phaser.Scene {
     // ---------- Room layers ----------------------------------------------
 
     buildInterior() {
+        // Player house at tiers 0/1 doesn't have walls/wallpaper — the
+        // shelter is a bedroll or a tent, drawn as its own composition
+        // instead of the cabin's layered painted-wall look.
+        if (this.hut.isPlayerHouse && this.homeTier === 0) {
+            this.buildBedrollInterior();
+            return;
+        }
+        if (this.hut.isPlayerHouse && this.homeTier === 1) {
+            this.buildTentInterior();
+            return;
+        }
+
         const palette = HUT_PALETTES[this.hut.paletteKey] || HUT_PALETTES.dusty;
         const wallpaper = this.hut.isPlayerHouse
             ? resolveDecor('wallpaper', this.decor.wallpaper)
@@ -401,6 +438,11 @@ export default class HouseScene extends Phaser.Scene {
     // ---------- Furniture ------------------------------------------------
 
     buildHomeFurniture() {
+        // Tier 0 / 1 swap the cabin's full furniture layout for a much
+        // smaller compositions that match the bedroll / tent visuals.
+        if (this.homeTier === 0) return this.buildBedrollFurniture();
+        if (this.homeTier === 1) return this.buildTentFurniture();
+
         const W = ROOM_W;
         this.furniture = [];
         const tier = this.homeTier;
@@ -518,6 +560,175 @@ export default class HouseScene extends Phaser.Scene {
         }
     }
 
+    // -------- Tier-0 bedroll camp ---------------------------------------
+
+    /**
+     * Bedroll camp interior — the player has no shelter yet, just a
+     * bedroll on a wooden platform under the open sky. Tiny scene, no
+     * walls, just enough room for the bedroll + a tin lantern.
+     *
+     * Layout sits inside the smaller logical canvas (110×80) configured
+     * in init() so the camera zoom packs the whole composition into the
+     * viewport — entering reads as crouching down beside a tarp rather
+     * than walking into a cabin.
+     */
+    buildBedrollInterior() {
+        const W = this.roomW, H = this.roomH;
+        const floorY = this.floorY;
+        // Night sky background — deep navy with a few stars so the player
+        // feels exposed, not just looking at a dark void.
+        this.add.rectangle(W / 2, floorY / 2, W, floorY, 0x0a0e1a).setDepth(0);
+        const stars = this.add.graphics().setDepth(0.5);
+        stars.fillStyle(0xffffff, 0.7);
+        const starPositions = [[18, 12], [42, 8], [66, 18], [86, 10], [102, 22], [30, 28], [78, 32], [56, 6]];
+        for (const [sx, sy] of starPositions) stars.fillRect(sx, sy, 1, 1);
+        // Faint horizon glow on the right (suggesting dusk / the chasm).
+        const glow = this.add.rectangle(W - 12, floorY - 8, 28, 14, 0xff8a3a, 0.18).setDepth(0.6);
+        glow.setBlendMode(Phaser.BlendModes.ADD);
+
+        // Wooden platform deck — the visible top of the lift's deck. Plank
+        // seams give it texture.
+        this.add.rectangle(W / 2, (floorY + H) / 2, W, H - floorY, 0x7a5230).setDepth(1);
+        this.add.rectangle(W / 2, floorY, W, 1, 0xa8804e).setDepth(1.1);
+        this.add.rectangle(W / 2, H - 1, W, 1, 0x3c2412).setDepth(1.1);
+        const planks = this.add.graphics().setDepth(1.2);
+        planks.fillStyle(0x3c2412, 0.85);
+        for (let x = 0; x < W; x += 14) planks.fillRect(x, floorY, 1, H - floorY);
+        // Metal end-caps to evoke the lift deck's bolted look.
+        this.add.rectangle(2, floorY + (H - floorY) / 2, 3, H - floorY, 0x3a4248).setDepth(1.3);
+        this.add.rectangle(W - 2, floorY + (H - floorY) / 2, 3, H - floorY, 0x3a4248).setDepth(1.3);
+    }
+
+    buildBedrollFurniture() {
+        this.furniture = [];
+        const W = this.roomW;
+        const floorY = this.floorY;
+
+        // Exit hotspot — there's no door here, just a "step off the
+        // platform" prompt at the left edge. The player walks toward it
+        // and presses W/↑ to leave.
+        const exitX = this.exitX;
+        this.furniture.push({
+            kind: 'door', x: exitX, y: floorY - 5, range: 10,
+            label: 'Leave', interact: () => this.exitHouse(),
+        });
+
+        // Bedroll — centred. Drawn by hand so it sits on the deck rather
+        // than floating in a generic furniture position.
+        const bedX = Math.floor(W / 2) + 4, bedY = floorY - 2;
+        this.add.rectangle(bedX, bedY + 1, 28, 4, 0x5a3a22).setDepth(3);   // mat
+        this.add.rectangle(bedX, bedY, 28, 1, 0x7a4a28).setDepth(3.05);     // mat highlight
+        this.add.rectangle(bedX + 2, bedY - 1, 22, 4, 0xa8443a).setDepth(3.1); // blanket
+        this.add.rectangle(bedX + 2, bedY - 2, 22, 1, 0xc46044).setDepth(3.15);
+        this.add.rectangle(bedX - 8, bedY - 3, 5, 2, 0xf4e7c6).setDepth(3.2); // pillow
+        this.furniture.push({
+            kind: 'bed', x: bedX, y: bedY, range: 14,
+            label: 'Doze (light rest)', interact: () => this.sleepInBed(),
+        });
+
+        // Tin lantern beside the bedroll — warm glow against the night sky.
+        const lampX = bedX - 18, lampY = floorY - 4;
+        this.add.rectangle(lampX, lampY + 2, 4, 4, 0x3a3a3a).setDepth(3);
+        this.add.rectangle(lampX, lampY, 5, 2, 0x6a6a6a).setDepth(3.1);
+        this.add.rectangle(lampX, lampY, 3, 3, 0xff9a3a, 0.95).setDepth(3.2).setBlendMode(Phaser.BlendModes.ADD);
+        this.add.circle(lampX, lampY, 9, 0xffd27a, 0.18).setDepth(3.15).setBlendMode(Phaser.BlendModes.ADD);
+    }
+
+    // -------- Tier-1 tent -----------------------------------------------
+
+    /**
+     * Tent interior — a single small canvas tent on a tarp floor. The
+     * sloped tent walls are drawn directly into the scene (no atlas) so
+     * the shape can taper from a peak to the floor without piecing tile
+     * sprites together. There's just enough room inside for a cot and a
+     * lantern — anything bigger needs the cabin upgrade.
+     */
+    buildTentInterior() {
+        const W = this.roomW, H = this.roomH;
+        const floorY = this.floorY;
+
+        // Dark outside-the-tent ground (sky-line above peak is also dark,
+        // makes the canvas read as illuminated from within).
+        this.add.rectangle(W / 2, H / 2, W, H, 0x05080c).setDepth(0);
+
+        // Tarp floor — a wider patch than the tent footprint so the tent
+        // walls sit on something.
+        const tarpX0 = 22, tarpX1 = W - 22;
+        const tarpW = tarpX1 - tarpX0;
+        this.add.rectangle((tarpX0 + tarpX1) / 2, (floorY + H) / 2, tarpW, H - floorY, 0x3a2a18).setDepth(1);
+        this.add.rectangle((tarpX0 + tarpX1) / 2, floorY, tarpW, 1, 0x5a4232).setDepth(1.1);
+
+        // Tent silhouette — a filled triangle from peak to two ground
+        // corners. Phaser.Polygon makes the shape; we then trace the
+        // outline with a slightly darker edge so it doesn't blur into
+        // the background.
+        const peakX = W / 2, peakY = this.wallTopY;
+        const baseLeft = {x: 28, y: floorY};
+        const baseRight = {x: W - 28, y: floorY};
+        const tent = this.add.polygon(0, 0, [peakX, peakY, baseRight.x, baseRight.y, baseLeft.x, baseLeft.y], 0xb89a5e);
+        tent.setOrigin(0, 0);
+        tent.setDepth(1.5);
+        // Right slope shading for a hint of dimensionality.
+        const shade = this.add.polygon(0, 0, [peakX, peakY, baseRight.x, baseRight.y, peakX, baseRight.y], 0x7a5a28, 0.45);
+        shade.setOrigin(0, 0);
+        shade.setDepth(1.6);
+        // Ridge pole running down the centre seam.
+        this.add.rectangle(peakX, (peakY + floorY) / 2, 1, floorY - peakY, 0x3a2a10).setDepth(1.7);
+
+        // Tent flap doorway — a darker rectangle at the front-left where
+        // the door collider sits, so the exit prompt has visible context.
+        const flapX = this.exitX, flapTop = floorY - 22;
+        this.add.rectangle(flapX, (flapTop + floorY) / 2, 11, floorY - flapTop, 0x3a2a18).setDepth(2);
+        this.add.rectangle(flapX - 5, (flapTop + floorY) / 2, 1, floorY - flapTop, 0x5a4222).setDepth(2.1);
+        this.add.rectangle(flapX + 5, (flapTop + floorY) / 2, 1, floorY - flapTop, 0x5a4222).setDepth(2.1);
+        // Triangular flap pulled aside, hint of the chasm beyond.
+        this.add.polygon(0, 0,
+            [flapX - 5, flapTop, flapX, flapTop + 6, flapX - 5, floorY],
+            0x1a0e06).setOrigin(0, 0).setDepth(2.2);
+
+        // Hanging lantern at the apex — small bulb of warm light keeps the
+        // interior from reading as a single brown wedge.
+        const lampX = peakX + 18, lampY = peakY + 18;
+        this.add.rectangle(lampX, peakY + 4, 1, lampY - peakY - 4, 0x2a1808).setDepth(2.5); // chain
+        this.add.rectangle(lampX, lampY, 4, 4, 0x2a1808).setDepth(2.6);
+        this.add.rectangle(lampX, lampY, 3, 3, 0xffd27a, 1).setDepth(2.7).setBlendMode(Phaser.BlendModes.ADD);
+        this.add.circle(lampX, lampY, 16, 0xffd27a, 0.18).setDepth(2.65).setBlendMode(Phaser.BlendModes.ADD);
+    }
+
+    buildTentFurniture() {
+        this.furniture = [];
+        const W = this.roomW;
+        const floorY = this.floorY;
+
+        // Exit — through the tent flap on the left.
+        const exitX = this.exitX;
+        this.furniture.push({
+            kind: 'door', x: exitX, y: floorY - 8, range: 12,
+            label: 'Leave', interact: () => this.exitHouse(),
+        });
+
+        // Cot — a low frame with a thin mattress + pillow. Sits a little
+        // right of centre so the lantern's pool of light frames it.
+        const bedX = Math.floor(W / 2) + 8, bedY = floorY - 5;
+        this.add.rectangle(bedX, bedY + 1, 30, 4, 0x4a3220).setDepth(3);     // frame
+        this.add.rectangle(bedX, bedY - 2, 28, 4, 0x9a7a5a).setDepth(3.1);   // mattress
+        this.add.rectangle(bedX, bedY - 3, 28, 1, 0xb89a7a).setDepth(3.15);
+        this.add.rectangle(bedX - 11, bedY - 4, 5, 2, 0xe7d8b8).setDepth(3.2); // pillow
+        this.add.rectangle(bedX - 14, bedY + 4, 1, 4, 0x2a1808).setDepth(2.9); // legs
+        this.add.rectangle(bedX + 14, bedY + 4, 1, 4, 0x2a1808).setDepth(2.9);
+        this.furniture.push({
+            kind: 'bed', x: bedX, y: bedY, range: 14,
+            label: 'Sleep', interact: () => this.sleepInBed(),
+        });
+
+        // A small rolled bedroll / kit bundle in the back-right corner —
+        // visual flavour to hint at "you're roughing it out here".
+        const kitX = W - 36, kitY = floorY - 2;
+        this.add.rectangle(kitX, kitY, 8, 4, 0x5a3a22).setDepth(3);
+        this.add.rectangle(kitX, kitY - 1, 8, 1, 0x7a4a28).setDepth(3.1);
+        this.add.rectangle(kitX, kitY, 1, 4, 0x3a1808).setDepth(3.15);
+    }
+
     buildAbandonedFurniture() {
         this.furniture = [];
 
@@ -588,9 +799,11 @@ export default class HouseScene extends Phaser.Scene {
         // Spawn just inside the room — past the door's interaction range
         // so the leave-prompt doesn't immediately appear the instant the
         // player walks in (otherwise the very first input "leave" would
-        // bounce them straight back outside).
-        const startX = 44;
-        const startY = FLOOR_Y - 7;
+        // bounce them straight back outside). Offset relative to the
+        // tier's exit position so even the cramped tent doesn't dump the
+        // player on top of the flap.
+        const startX = Math.min(this.exitX + 22, this.roomW - 12);
+        const startY = this.floorY - 7;
         this.player = this.physics.add.sprite(startX, startY, 'player_stationary');
         this.player.setDisplaySize(7, 10);
         this.player.setDepth(4);
@@ -602,7 +815,7 @@ export default class HouseScene extends Phaser.Scene {
         this.playerHead.setDisplaySize(7, 7);
         this.playerHead.setDepth(4.1);
 
-        this.shadow = this.add.ellipse(startX, FLOOR_Y, 8, 2, 0x000000, 0.45).setDepth(3.5);
+        this.shadow = this.add.ellipse(startX, this.floorY, 8, 2, 0x000000, 0.45).setDepth(3.5);
     }
 
     buildPrompts() {
@@ -618,7 +831,7 @@ export default class HouseScene extends Phaser.Scene {
         if (!this.hut.isPlayerHouse) title = 'ABANDONED HUT';
         else if (this.homeTier === 0) title = 'BEDROLL CAMP';
         else if (this.homeTier === 1) title = 'TENT';
-        this.title = this.add.text(ROOM_W / 2, 6,
+        this.title = this.add.text(this.roomW / 2, 6,
             title, {
                 font: '7px monospace',
                 color: this.hut.isPlayerHouse ? '#fff1c4' : '#a89888',
@@ -633,10 +846,10 @@ export default class HouseScene extends Phaser.Scene {
         // gradients on the edges of the logical room.
         const v = this.add.graphics().setDepth(60);
         v.fillStyle(0x000000, 0.35);
-        v.fillRect(0, 0, ROOM_W, 4);
-        v.fillRect(0, ROOM_H - 4, ROOM_W, 4);
-        v.fillRect(0, 0, 4, ROOM_H);
-        v.fillRect(ROOM_W - 4, 0, 4, ROOM_H);
+        v.fillRect(0, 0, this.roomW, 4);
+        v.fillRect(0, this.roomH - 4, this.roomW, 4);
+        v.fillRect(0, 0, 4, this.roomH);
+        v.fillRect(this.roomW - 4, 0, 4, this.roomH);
     }
 
     // ---------- HUD buttons ---------------------------------------------
@@ -710,11 +923,12 @@ export default class HouseScene extends Phaser.Scene {
             if (this.anims.exists('stationary')) this.player.play('stationary', true);
         }
 
-        // Keep the player inside the walls
-        const minX = 10, maxX = ROOM_W - 10;
-        if (this.player.x < minX) this.player.x = minX;
-        if (this.player.x > maxX) this.player.x = maxX;
-        this.player.y = FLOOR_Y - 7;
+        // Keep the player inside the walls (tier-specific clamp — the
+        // tent's much narrower than the cabin, so the cabin's defaults
+        // would let the player walk straight through the canvas walls).
+        if (this.player.x < this.playerMinX) this.player.x = this.playerMinX;
+        if (this.player.x > this.playerMaxX) this.player.x = this.playerMaxX;
+        this.player.y = this.floorY - 7;
 
         this.playerHead.x = this.player.x;
         this.playerHead.y = this.player.y - 1.5;
@@ -776,7 +990,7 @@ export default class HouseScene extends Phaser.Scene {
         const player = this.gameScene?.player;
         if (!player) return;
         const overlay = this.add.rectangle(
-            ROOM_W / 2, ROOM_H / 2, ROOM_W, ROOM_H, 0x000000, 0
+            this.roomW / 2, this.roomH / 2, this.roomW, this.roomH, 0x000000, 0
         ).setDepth(80);
         this.prompt.setVisible(false);
         // Restoration scales with the rig tier so the upgrade ladder pays
@@ -1018,7 +1232,7 @@ export default class HouseScene extends Phaser.Scene {
 
     flashToast(text) {
         if (this._toast) this._toast.destroy();
-        this._toast = this.add.text(ROOM_W / 2, ROOM_H - 12, text, {
+        this._toast = this.add.text(this.roomW / 2, this.roomH - 12, text, {
             font: '5px monospace',
             color: '#fff1c4',
             backgroundColor: 'rgba(0, 0, 0, 0.8)',
