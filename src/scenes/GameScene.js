@@ -216,8 +216,8 @@ export default class GameScene extends Phaser.Scene {
         this.toolBarManager = new ToolbarManager(this);
         this.inventoryManager = new InventoryManager(this);
 
-        const pickaxe = new InventoryItem('pickaxe', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil]});
-        const axe = new InventoryItem('axe', null, 'Iron Axe', 'tool', this.textures.exists('axe') ? this.textures.get('axe').getSourceImage().toDataURL() : 'images/pickaxe.png', {interactsWith: [this.tileTypes.tree]});
+        const pickaxe = new InventoryItem('pickaxe', null, 'Worn Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil], toolTier: 0});
+        const axe = new InventoryItem('axe', null, 'Worn Axe', 'tool', this.textures.exists('axe') ? this.textures.get('axe').getSourceImage().toDataURL() : 'images/pickaxe.png', {interactsWith: [this.tileTypes.tree], toolTier: 0});
         const glowStick = new InventoryItem('glowstick', null, 'Glow-stick', 'tool', 'images/glow-stick.png', {
             throwable: true,
             number: 100,

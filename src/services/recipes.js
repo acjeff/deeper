@@ -142,3 +142,56 @@ export const RECIPES = [
         output: {kind: 'rigTier', tier: 2},
     },
 ];
+
+// Forge recipes live inside the cabin, not at the lift terminal — the
+// player has to enter the home and walk to the forge to upgrade their
+// tools. Each upgrade is one-shot and bumps the matching tool's tier on
+// the toolbar item's metadata, where breakable / tree damage formulas
+// read it back. Names ladder up worn → copper → iron in step with the
+// ore tiers unlocked by drilling.
+export const FORGE_RECIPES = [
+    {
+        id: 'pickaxeCopper',
+        name: 'Copper Pickaxe',
+        description: 'Mining hits land 60% harder.',
+        icon: 'images/pickaxe.png',
+        inputs: [
+            {id: 'copper', amount: 5},
+            {id: 'coal',   amount: 5},
+        ],
+        output: {kind: 'toolTier', toolId: 'pickaxe', tier: 1, newName: 'Copper Pickaxe'},
+    },
+    {
+        id: 'pickaxeIron',
+        name: 'Iron Pickaxe',
+        description: 'Mining hits land 150% harder.',
+        icon: 'images/pickaxe.png',
+        inputs: [
+            {id: 'iron', amount: 5},
+            {id: 'coal', amount: 5},
+        ],
+        output: {kind: 'toolTier', toolId: 'pickaxe', tier: 2, newName: 'Iron Pickaxe'},
+    },
+    {
+        id: 'axeCopper',
+        name: 'Copper Axe',
+        description: 'Fells trees twice as fast.',
+        icon: 'images/pickaxe.png',
+        inputs: [
+            {id: 'copper', amount: 5},
+            {id: 'coal',   amount: 5},
+        ],
+        output: {kind: 'toolTier', toolId: 'axe', tier: 1, newName: 'Copper Axe'},
+    },
+    {
+        id: 'axeIron',
+        name: 'Iron Axe',
+        description: 'Fells trees three times as fast.',
+        icon: 'images/pickaxe.png',
+        inputs: [
+            {id: 'iron', amount: 5},
+            {id: 'coal', amount: 5},
+        ],
+        output: {kind: 'toolTier', toolId: 'axe', tier: 2, newName: 'Iron Axe'},
+    },
+];

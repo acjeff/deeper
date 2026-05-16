@@ -1,4 +1,5 @@
 import {HUT_PALETTES} from "../classes/hut";
+import {FORGE_RECIPES} from "../services/recipes";
 
 // Decor catalogue. Each option is a colour or short procedural recipe
 // the interior renderer reads when laying out the room. Adding a new
@@ -478,22 +479,41 @@ export default class HouseScene extends Phaser.Scene {
         });
 
         if (tier >= 2) {
-            // Kitchen — far right. Locked behind the cabin upgrade so the
-            // tent/raft tiers feel meaningfully sparse.
-            const kitchenX = 168, kitchenY = FLOOR_Y - 6;
-            this.add.rectangle(kitchenX, kitchenY, 28, 10, 0x8a6a44).setDepth(3);
-            this.add.rectangle(kitchenX, kitchenY - 4, 28, 2, 0xb5895a).setDepth(3.1);
-            // Stove
-            this.add.rectangle(kitchenX - 8, kitchenY - 1, 8, 6, 0x2a2a2a).setDepth(3.2);
-            this.add.rectangle(kitchenX - 8, kitchenY - 3, 7, 1, 0x6a6a6a).setDepth(3.3);
-            this.add.circle(kitchenX - 10, kitchenY - 1, 0.8, 0xff5a1c).setDepth(3.4);
-            this.add.circle(kitchenX - 6, kitchenY - 1, 0.8, 0xff5a1c).setDepth(3.4);
-            // Sink
-            this.add.rectangle(kitchenX + 8, kitchenY - 1, 8, 5, 0x6a8a99).setDepth(3.2);
-            this.add.rectangle(kitchenX + 8, kitchenY - 3, 2, 2, 0xc0d0d8).setDepth(3.3);
+            // Forge — far right. Locked behind the cabin upgrade. Hot coal
+            // bed under a stone-rimmed pit + a small anvil on a wooden
+            // stump. Press E to open the forge panel and craft tool tiers.
+            const forgeX = 168, forgeY = FLOOR_Y - 6;
+            // Hearth base (stone foundation)
+            this.add.rectangle(forgeX, forgeY + 2, 30, 6, 0x4a4a4a).setDepth(3);
+            this.add.rectangle(forgeX, forgeY - 1, 30, 2, 0x6a6a6a).setDepth(3.05);
+            // Brick rim around the coal pit
+            this.add.rectangle(forgeX - 10, forgeY - 4, 4, 6, 0x6a2a18).setDepth(3.1);
+            this.add.rectangle(forgeX + 5, forgeY - 4, 4, 6, 0x6a2a18).setDepth(3.1);
+            this.add.rectangle(forgeX - 2, forgeY - 6, 14, 2, 0x6a2a18).setDepth(3.1);
+            // Glowing coal bed (additive)
+            this.add.rectangle(forgeX - 2, forgeY - 3, 12, 3, 0xff5a1c, 0.95).setDepth(3.2).setBlendMode(Phaser.BlendModes.ADD);
+            this.add.rectangle(forgeX - 2, forgeY - 3, 12, 1, 0xffd27a, 0.9).setDepth(3.3).setBlendMode(Phaser.BlendModes.ADD);
+            // Embers
+            this.forgeEmbers = this.add.graphics().setDepth(3.4);
+            this.forgeEmbers.fillStyle(0xfff1c4, 1);
+            for (let i = 0; i < 6; i++) {
+                this.forgeEmbers.fillRect(forgeX - 6 + (i * 2), forgeY - 3 - (i % 2), 1, 1);
+            }
+            // Smoke wisp above the hearth
+            const smoke = this.add.rectangle(forgeX + 1, forgeY - 11, 3, 4, 0xaaaaaa, 0.5).setDepth(3.5);
+            this.tweens.add({
+                targets: smoke,
+                y: forgeY - 18, alpha: {from: 0.55, to: 0},
+                duration: 1800, repeat: -1, ease: 'Sine.easeOut',
+            });
+            // Anvil + stump on the right
+            this.add.rectangle(forgeX + 11, forgeY + 2, 5, 5, 0x4a3220).setDepth(3.1); // stump
+            this.add.rectangle(forgeX + 11, forgeY - 2, 7, 2, 0x2a2a2a).setDepth(3.2); // anvil base
+            this.add.rectangle(forgeX + 11, forgeY - 3, 9, 1, 0x6a6a6a).setDepth(3.3); // anvil top
+            this.add.rectangle(forgeX + 14, forgeY - 3, 2, 1, 0x2a2a2a).setDepth(3.4); // horn
             this.furniture.push({
-                kind: 'kitchen', x: kitchenX, y: kitchenY, range: 16,
-                label: 'Cook', interact: () => this.openKitchen(),
+                kind: 'forge', x: forgeX, y: forgeY, range: 18,
+                label: 'Use Forge', interact: () => this.openForgePanel(),
             });
         }
     }
@@ -661,9 +681,11 @@ export default class HouseScene extends Phaser.Scene {
         this._exitBtn?.remove();
         this._decorBtn?.remove();
         this._decorPanel?.remove();
+        this._forgePanel?.remove();
         this._exitBtn = null;
         this._decorBtn = null;
         this._decorPanel = null;
+        this._forgePanel = null;
         this.restoreWorldOverlays();
     }
 
@@ -785,6 +807,206 @@ export default class HouseScene extends Phaser.Scene {
 
     openKitchen() {
         this.flashToast('Kitchen — recipes coming soon.');
+    }
+
+    /**
+     * Open / toggle the forge panel — the cabin-tier station that gates
+     * pickaxe + axe tier upgrades. Reads inventory + tool tiers from
+     * GameScene, mutates the toolbar item directly on craft so the next
+     * mining swing already lands at the new hitPower multiplier.
+     */
+    openForgePanel() {
+        if (this._forgePanel) {
+            this._forgePanel.remove();
+            this._forgePanel = null;
+            return;
+        }
+        const panel = document.createElement('div');
+        panel.className = 'hud-panel';
+        panel.id = 'house_forge_panel';
+        Object.assign(panel.style, {
+            position: 'absolute',
+            top: '60px',
+            right: '18px',
+            zIndex: '1002',
+            padding: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            minWidth: '260px',
+            maxWidth: '320px',
+            color: '#33ff33',
+            fontFamily: "'VT323','Share Tech Mono',monospace",
+            background: 'rgba(0, 16, 0, 0.97)',
+            border: '2px solid #33ff33',
+            textShadow: '0 0 4px rgba(51,255,51,0.6)',
+        });
+        const title = document.createElement('div');
+        title.textContent = '◆ FORGE ◆';
+        title.style.fontSize = '18px';
+        title.style.textAlign = 'center';
+        title.style.letterSpacing = '0.18em';
+        title.style.borderBottom = '1px dashed #1a8a1a';
+        title.style.paddingBottom = '6px';
+        panel.appendChild(title);
+
+        this._forgePanelTitle = title;
+        this._forgePanelBody = document.createElement('div');
+        this._forgePanelBody.style.display = 'flex';
+        this._forgePanelBody.style.flexDirection = 'column';
+        this._forgePanelBody.style.gap = '8px';
+        panel.appendChild(this._forgePanelBody);
+
+        document.body.appendChild(panel);
+        this._forgePanel = panel;
+        this._renderForgePanel();
+    }
+
+    _renderForgePanel() {
+        const body = this._forgePanelBody;
+        if (!body) return;
+        body.innerHTML = '';
+        const gs = this.gameScene;
+        const im = gs?.inventoryManager;
+        if (!im) return;
+
+        // Current tier readout — gives the player something to read while
+        // they assemble the materials for the next bump.
+        const tb = gs.toolBarManager;
+        const findItem = (id) =>
+            im.slots.find(s => s && s.id === id)
+            || tb?.slots?.find(s => s && s.id === id);
+        const pickaxe = findItem('pickaxe');
+        const axe = findItem('axe');
+        const status = document.createElement('div');
+        status.style.fontSize = '13px';
+        status.style.lineHeight = '1.4';
+        status.style.color = '#1a8a1a';
+        status.innerHTML =
+            `<div>PICKAXE: <span style="color:#33ff33">${pickaxe?.name || '—'}</span></div>` +
+            `<div>AXE: <span style="color:#33ff33">${axe?.name || '—'}</span></div>`;
+        body.appendChild(status);
+
+        const divider = document.createElement('div');
+        divider.style.borderTop = '1px dashed #1a8a1a';
+        body.appendChild(divider);
+
+        FORGE_RECIPES.forEach(recipe => {
+            const card = document.createElement('div');
+            card.style.border = '1px solid #1a8a1a';
+            card.style.padding = '6px 8px';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '4px';
+
+            const head = document.createElement('div');
+            head.style.fontSize = '14px';
+            head.style.letterSpacing = '0.05em';
+            head.textContent = recipe.name.toUpperCase();
+            card.appendChild(head);
+
+            const desc = document.createElement('div');
+            desc.style.fontSize = '11px';
+            desc.style.color = '#1a8a1a';
+            desc.textContent = recipe.description || '';
+            card.appendChild(desc);
+
+            const costs = document.createElement('div');
+            costs.style.fontSize = '12px';
+            costs.style.display = 'flex';
+            costs.style.gap = '10px';
+            costs.style.color = '#1a8a1a';
+            let canAfford = true;
+            recipe.inputs.forEach(input => {
+                const have = im.getResourceCount?.(input.id) || 0;
+                const short = have < input.amount;
+                if (short) canAfford = false;
+                const tag = document.createElement('span');
+                tag.textContent = `${input.id.toUpperCase()} ${have}/${input.amount}`;
+                if (short) tag.style.color = '#ff5050';
+                costs.appendChild(tag);
+            });
+            card.appendChild(costs);
+
+            // One-shot upgrade owned-state check: each recipe targets a
+            // specific tool + tier; if the matching tool's metadata.toolTier
+            // is already at or above the recipe target, it's installed.
+            const targetItem = findItem(recipe.output.toolId);
+            const curTier = targetItem?.metadata?.toolTier | 0;
+            const owned = curTier >= recipe.output.tier;
+            // Also need to require the previous tier — skipping rungs would
+            // let the player jump straight to iron with no copper detour.
+            const meetsPrereq = curTier >= recipe.output.tier - 1;
+
+            const btn = document.createElement('button');
+            btn.className = 'hud-btn';
+            btn.style.padding = '5px 10px';
+            btn.style.fontSize = '12px';
+            btn.style.background = 'transparent';
+            btn.style.border = '1px solid #33ff33';
+            btn.style.color = '#33ff33';
+            btn.style.fontFamily = 'inherit';
+            btn.style.cursor = 'pointer';
+            btn.disabled = owned || !canAfford || !meetsPrereq;
+            btn.textContent = owned
+                ? '[ INSTALLED ]'
+                : !meetsPrereq
+                    ? '[ NEEDS PRIOR TIER ]'
+                    : canAfford
+                        ? '[ FORGE ]'
+                        : '[ INSUFFICIENT ]';
+            if (btn.disabled) {
+                btn.style.borderColor = '#1a8a1a';
+                btn.style.color = '#1a8a1a';
+                btn.style.cursor = 'not-allowed';
+            }
+            btn.addEventListener('click', () => {
+                if (!btn.disabled) this._craftAtForge(recipe);
+            });
+            card.appendChild(btn);
+
+            body.appendChild(card);
+        });
+    }
+
+    _craftAtForge(recipe) {
+        const gs = this.gameScene;
+        const im = gs?.inventoryManager;
+        const tb = gs?.toolBarManager;
+        if (!im) return;
+
+        // Re-check costs in case state shifted between render and click.
+        for (const input of recipe.inputs) {
+            if ((im.getResourceCount?.(input.id) || 0) < input.amount) return;
+        }
+        const findItem = (id) =>
+            im.slots.find(s => s && s.id === id)
+            || tb?.slots?.find(s => s && s.id === id);
+        const target = findItem(recipe.output.toolId);
+        if (!target) {
+            this.flashToast(`Need a ${recipe.output.toolId} in your kit.`);
+            return;
+        }
+        const curTier = target.metadata?.toolTier | 0;
+        if (curTier >= recipe.output.tier) return;
+        if (curTier < recipe.output.tier - 1) return;
+
+        for (const input of recipe.inputs) {
+            im.consumeResource?.(input.id, input.amount);
+        }
+        // Mutate the toolbar item in place — keeps the same slot + icon
+        // sprite but bumps the tier metadata that breakable / tree damage
+        // reads on every swing. updateMetaData also nudges renderers.
+        target.name = recipe.output.newName;
+        target.updateMetaData?.({
+            ...(target.metadata || {}),
+            toolTier: recipe.output.tier,
+        });
+        tb?.render?.();
+        if (gs.selectedIndex != null) tb?.setSelected?.(gs.selectedIndex);
+        im.render?.();
+        this.flashToast(`Forged: ${recipe.output.newName}`);
+        this._renderForgePanel();
     }
 
     openTv() {

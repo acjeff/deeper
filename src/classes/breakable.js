@@ -3,6 +3,9 @@ import {darkenColor} from "../services/colourManager";
 
 const hexStringToInt = (str) => parseInt(str.replace(/^0x/, ''), 16);
 
+// Pickaxe tier → mining hitPower multiplier. Worn → Copper → Iron.
+const PICKAXE_TIER_MULT = [1, 1.6, 2.5];
+
 export class Breakable extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
@@ -344,7 +347,14 @@ export class Breakable extends Tile {
                 if (this.clicking) return;
                 this.clicking = true;
                 this.game.player.energy -= 1;
-                const hitPower = this.game.player.hitPower;
+                // Pickaxe tier (forged at the cabin Forge) multiplies the
+                // raw hitPower so harder veins crack proportionally faster.
+                // Tiers come from the toolbar item's metadata.toolTier and
+                // map: 0 = worn (×1), 1 = copper (×1.6), 2 = iron (×2.5).
+                const tierMult = PICKAXE_TIER_MULT[
+                    this.game.selectedTool?.metadata?.toolTier | 0
+                ] || 1;
+                const hitPower = this.game.player.hitPower * tierMult;
                 let baseCell, damageAmount = this.tileDetails.damageAmount || 0;
                 damageAmount += hitPower;
                 let health = -(damageAmount / this.tileDetails.strength - 1);
