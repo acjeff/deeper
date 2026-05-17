@@ -45,6 +45,15 @@ export default class GameScene extends Phaser.Scene {
             },
             2: {
                 image: 'wood'
+            },
+            3: {
+                image: 'bedrock'
+            },
+            4: {
+                image: 'copper'
+            },
+            5: {
+                image: 'iron'
             }
         }
         this.railTypes = {
@@ -73,6 +82,28 @@ export default class GameScene extends Phaser.Scene {
                 strength: 1000,
                 weight: 100,
                 type: 1
+            },
+            // Layer-cap bedrock that fills the chasm interior at each band
+            // boundary. Unbreakable by pickaxe (strength 999999 short-circuits
+            // the damage maths in Breakable.onClick) — only the platform-
+            // mounted drill can clear it.
+            bedrock: {
+                id: 1,
+                strength: 999999,
+                type: 3,
+                cap: true
+            },
+            copper: {
+                id: 1,
+                strength: 1500,
+                weight: 100,
+                type: 4
+            },
+            iron: {
+                id: 1,
+                strength: 2500,
+                weight: 100,
+                type: 5
             },
             liquid: {
                 id: 2
@@ -108,8 +139,36 @@ export default class GameScene extends Phaser.Scene {
                 widthRange: [2, 3],
                 heightRange: [2, 3],
                 count: 1000,
-                layerWeights: [1, 0, 0, 0, 0, 0, 0],
+                // Coal stays useful below the surface band so the player can
+                // keep refuelling the drill on the way down even after they've
+                // unlocked copper.
+                layerWeights: [2, 1, 1, 0, 0, 0, 0],
                 columnWeights: [0, 1, 0, 0, 0, 1, 0]
+            },
+            // Copper veins seed layers 2-3 — discovered on the first drill
+            // descent, used for the Copper Drill Bit and the Tier-2 platform
+            // upgrade.
+            {
+                tile: {
+                    ...this.tileTypes.copper
+                },
+                widthRange: [2, 3],
+                heightRange: [2, 3],
+                count: 700,
+                layerWeights: [0, 1, 1, 0, 0, 0, 0],
+                columnWeights: [0, 1, 0, 0, 1, 0, 0]
+            },
+            // Iron deeper still — layer 4-5. Required for the Iron Drill Bit
+            // that cracks the deepest caps.
+            {
+                tile: {
+                    ...this.tileTypes.iron
+                },
+                widthRange: [2, 3],
+                heightRange: [2, 3],
+                count: 600,
+                layerWeights: [0, 0, 0, 1, 1, 0, 0],
+                columnWeights: [0, 0, 1, 0, 0, 1, 0]
             },
             {
                 tile: {
@@ -157,8 +216,8 @@ export default class GameScene extends Phaser.Scene {
         this.toolBarManager = new ToolbarManager(this);
         this.inventoryManager = new InventoryManager(this);
 
-        const pickaxe = new InventoryItem('pickaxe', null, 'Iron Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil]});
-        const axe = new InventoryItem('axe', null, 'Iron Axe', 'tool', this.textures.exists('axe') ? this.textures.get('axe').getSourceImage().toDataURL() : 'images/pickaxe.png', {interactsWith: [this.tileTypes.tree]});
+        const pickaxe = new InventoryItem('pickaxe', null, 'Worn Pickaxe', 'tool', 'images/pickaxe.png', {interactsWith: [this.tileTypes.soil], toolTier: 0});
+        const axe = new InventoryItem('axe', null, 'Worn Axe', 'tool', this.textures.exists('axe') ? this.textures.get('axe').getSourceImage().toDataURL() : 'images/pickaxe.png', {interactsWith: [this.tileTypes.tree], toolTier: 0});
         const glowStick = new InventoryItem('glowstick', null, 'Glow-stick', 'tool', 'images/glow-stick.png', {
             throwable: true,
             number: 100,
@@ -248,6 +307,9 @@ export default class GameScene extends Phaser.Scene {
         // Same idempotent pattern — drop the ghost town onto the surface
         // for existing saves that pre-date the feature.
         this.mapService.ensureGhostTown();
+        // Backfill bedrock layer caps onto pre-existing saves so the
+        // drill-down progression applies to in-progress runs too.
+        this.mapService.ensureLayerCaps();
 
         window.setTimeout(async () => {
             // Parallax backdrop sits underneath the world, behind every

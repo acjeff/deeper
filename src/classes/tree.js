@@ -139,7 +139,12 @@ export class Tree extends Tile {
 
             const matDef = this.maturityDef();
             const maxHealth = matDef.hitsToFell;
-            const newHealth = (this.tileDetails.health ?? maxHealth) - 1;
+            // Axe tier 0/1/2 (worn / copper / iron) chops 1/2/3 health per
+            // swing — copper and iron axes earn their forge cost by felling
+            // even ancient trunks in a handful of hits.
+            const tier = this.game.selectedTool?.metadata?.toolTier | 0;
+            const chop = [1, 2, 3][Math.max(0, Math.min(2, tier))] || 1;
+            const newHealth = (this.tileDetails.health ?? maxHealth) - chop;
 
             // Wobble feedback toward the swing side.
             if (this.treeSprite) {

@@ -224,6 +224,11 @@ export default class MapService {
         // we can clear nearby trunks that would clip into the facades.
         this.placeGhostTown();
 
+        // Bedrock caps seal the chasm at every layer boundary. The platform
+        // can't pass them until the player drills through, which gates
+        // descent into the lower biomes behind the drill-bit progression.
+        this.placeLayerCaps();
+
         // worldX, worldY, tileType, cellItem
         // Update region: every cell in columns 40 through 48 gets updated to a new tile type.
         // this.updateRegion(156, 164, this.game.tileTypes.empty);
@@ -417,6 +422,71 @@ export default class MapService {
      * generateMap can still call it without branching.
      */
     placeGhostTown() {
+    }
+
+    /**
+     * Drop a single row of bedrock across the chasm interior at every layer
+     * boundary below the surface. Each cap is one tile tall and just narrow
+     * enough to fit between the chasm walls — the wall tunnels stay clear
+     * so foot traffic via the side soil still works, but the platform can't
+     * descend past a cap until the drill clears it.
+     *
+     * Cap rows are listed on `this.game.layerCapRows` so the lift terminal
+     * can render a "DRILL" call-to-action when the platform is parked at
+     * one and the drill operation knows which cells to clear.
+     */
+    placeLayerCaps() {
+        const tileTypes = this.game.tileTypes;
+        if (!tileTypes?.bedrock) return;
+        const chasm = this.game.chasmRange;
+        const layerH = this.layerHeight;
+        const above = this.game.aboveGround;
+
+        const caps = [];
+        for (let i = 1; i < this.layerCount; i++) {
+            // Land exactly on the layer boundary; nudge by one row if it
+            // would collide with a tunnel slot in the chasm wall (every
+            // 30th row carries a lift switch and a wall opening).
+            let capY = i * layerH;
+            if (capY <= above + 4) continue;
+            if (capY % 30 === 0) capY -= 1;
+            for (let x = chasm[0] + 1; x < chasm[1]; x++) {
+                this._setCell(x, capY, {...tileTypes.bedrock, capLayer: i});
+            }
+            caps.push({layer: i, capY, depthRows: capY - above});
+        }
+        this.game.layerCapRows = caps;
+    }
+
+    /**
+     * Backfill bedrock caps onto saves that pre-date the layer-cap feature.
+     * Idempotent so it's safe to call on every load — only seeds rows that
+     * don't already contain bedrock.
+     */
+    ensureLayerCaps() {
+        const tileTypes = this.game.tileTypes;
+        if (!tileTypes?.bedrock || !this.game.grid) return;
+        const chasm = this.game.chasmRange;
+        const layerH = this.layerHeight;
+        const above = this.game.aboveGround;
+        const caps = [];
+        for (let i = 1; i < this.layerCount; i++) {
+            let capY = i * layerH;
+            if (capY <= above + 4) continue;
+            if (capY % 30 === 0) capY -= 1;
+            // Sample the centre cell to decide if this layer is already
+            // capped (or already drilled). Either state means "leave it".
+            const sample = this._cellAt(Math.floor((chasm[0] + chasm[1]) / 2), capY);
+            const isBedrock = sample && sample.id === tileTypes.bedrock.id && sample.type === tileTypes.bedrock.type;
+            const isEmpty   = sample && sample.id === tileTypes.empty.id;
+            if (!isBedrock && !isEmpty) {
+                for (let x = chasm[0] + 1; x < chasm[1]; x++) {
+                    this._setCell(x, capY, {...tileTypes.bedrock, capLayer: i});
+                }
+            }
+            caps.push({layer: i, capY, depthRows: capY - above});
+        }
+        this.game.layerCapRows = caps;
     }
 
     /**
@@ -899,6 +969,29 @@ export default class MapService {
         const chunkPixelY = chunkStartY * this.game.tileSize;
         const chunkPixelSize = this.game.chunkSize * this.game.tileSize;
 
+        // Crash insulation: when a tile slips into an entity group without a
+        // properly-shaped tileRef (the platform's hut door + control panel
+        // both expose Tile-shaped stubs to satisfy this iteration), missing
+        // a destroy method would otherwise stop the player's whole session
+        // mid-walk. Skip + warn instead of throwing.
+        const safeDestroy = (tile, prefs) => {
+            const fn = tile?.tileRef?.destroy;
+            if (typeof fn === 'function') {
+                fn.call(tile.tileRef, prefs);
+            } else {
+                if (!this._warnedTileRefShape) {
+                    this._warnedTileRefShape = true;
+                    console.warn(
+                        '[map.unloadChunk] tile in entity group missing tileRef.destroy — skipping. ' +
+                        'tileRef keys:', tile?.tileRef ? Object.keys(tile.tileRef) : tile?.tileRef
+                    );
+                }
+                // Phaser-level fallback so the leftover sprite at least
+                // disappears rather than rendering forever in an unloaded chunk.
+                if (typeof tile?.destroy === 'function') tile.destroy();
+            }
+        };
+
         this.game.entityChildren.forEach((entityGroup) => {
             if (entityGroup?.children) {
                 entityGroup.children.getArray().slice().forEach((tile) => {
@@ -909,7 +1002,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.tileRef.destroy({preserveAttached: true});
+                        safeDestroy(tile, {preserveAttached: true});
                     }
                 });
             } else if (Array.isArray(entityGroup)) {
@@ -921,7 +1014,7 @@ export default class MapService {
                         x >= chunkPixelX && x < chunkPixelX + chunkPixelSize &&
                         y >= chunkPixelY && y < chunkPixelY + chunkPixelSize
                     ) {
-                        tile.tileRef.destroy();
+                        safeDestroy(tile);
                     }
                 });
             }

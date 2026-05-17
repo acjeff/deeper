@@ -26,7 +26,17 @@ const STYLE_ID = 'lift-terminal-styles';
 const RESOURCE_LABELS = {
     wood: 'WOOD',
     coal: 'COAL',
+    copper: 'COPPER',
+    iron: 'IRON',
 };
+
+// Coal cost per drill, indexed by which cap layer is being drilled. Layer 1
+// is dirt-cheap to introduce the mechanic; deeper caps demand more fuel
+// and a stronger bit. The bit-tier requirement lives in DRILL_BIT_FOR_LAYER.
+const DRILL_FUEL_COST = {1: 30, 2: 50, 3: 80, 4: 120, 5: 180, 6: 250};
+const DRILL_BIT_FOR_LAYER = {1: 0, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2};
+const DRILL_BIT_NAMES = ['BASIC', 'COPPER', 'IRON'];
+const RIG_TIER_NAMES = ['MK-I RAFT', 'MK-II TENT', 'MK-III CABIN'];
 
 function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -319,6 +329,8 @@ export default class LiftTerminal {
                         <h3>RIG STATUS</h3>
                         <div class="lift-terminal-row"><span class="lbl">DEPTH</span><span data-field="depth">--</span></div>
                         <div class="lift-terminal-row"><span class="lbl">ROPE</span><span data-field="rope">--</span></div>
+                        <div class="lift-terminal-row"><span class="lbl">RIG</span><span data-field="rigTier">--</span></div>
+                        <div class="lift-terminal-row"><span class="lbl">DRILL</span><span data-field="drillBit">--</span></div>
                         <div class="lift-terminal-row"><span class="lbl">STATUS</span><span data-field="status">--</span></div>
                     </div>
                     <div class="lift-terminal-section">
@@ -327,6 +339,8 @@ export default class LiftTerminal {
                             <div class="cell"><span class="lbl">WOOD</span><span class="val" data-field="stockWood">0</span></div>
                             <div class="cell"><span class="lbl">COAL</span><span class="val" data-field="stockCoal">0</span></div>
                             <div class="cell"><span class="lbl">ROPE</span><span class="val" data-field="stockMetal">0</span></div>
+                            <div class="cell"><span class="lbl">COPPER</span><span class="val" data-field="stockCopper">0</span></div>
+                            <div class="cell"><span class="lbl">IRON</span><span class="val" data-field="stockIron">0</span></div>
                         </div>
                     </div>
                     <div class="lift-terminal-section">
@@ -335,6 +349,10 @@ export default class LiftTerminal {
                             +<span data-field="extendIncrement">--</span>m
                             <span class="right">COST <span data-field="extendCost">--</span></span>
                         </button>
+                    </div>
+                    <div class="lift-terminal-section">
+                        <h3>DRILL</h3>
+                        <div data-field="drillBody"></div>
                     </div>
                 </div>
                 <div class="lift-terminal-col">
@@ -362,13 +380,18 @@ export default class LiftTerminal {
             depth: root.querySelector('[data-field="depth"]'),
             rope: root.querySelector('[data-field="rope"]'),
             status: root.querySelector('[data-field="status"]'),
+            rigTier: root.querySelector('[data-field="rigTier"]'),
+            drillBit: root.querySelector('[data-field="drillBit"]'),
             extendIncrement: root.querySelector('[data-field="extendIncrement"]'),
             extendCost: root.querySelector('[data-field="extendCost"]'),
             levels: root.querySelector('[data-field="levels"]'),
             stockWood: root.querySelector('[data-field="stockWood"]'),
             stockCoal: root.querySelector('[data-field="stockCoal"]'),
             stockMetal: root.querySelector('[data-field="stockMetal"]'),
+            stockCopper: root.querySelector('[data-field="stockCopper"]'),
+            stockIron: root.querySelector('[data-field="stockIron"]'),
             recipes: root.querySelector('[data-field="recipes"]'),
+            drillBody: root.querySelector('[data-field="drillBody"]'),
         };
 
         root.querySelector('[data-action="extend"]').addEventListener('click', () => this.extendRope());
@@ -422,8 +445,36 @@ export default class LiftTerminal {
         return this.craneManager.surfaceWorldY() + this.maxExtension;
     }
 
+    /**
+     * World Y of the topmost still-bedrock cap below the surface, or null
+     * if every cap has been drilled. Used to clamp `canReach` so the rope
+     * length isn't enough on its own — the shaft must also be open.
+     */
+    nextBlockingCapWorldY() {
+        const ts = this.game.tileSize;
+        const caps = this.game.layerCapRows || [];
+        const ms = this.game.mapService;
+        const bedrockId = this.game.tileTypes.bedrock?.id;
+        const bedrockType = this.game.tileTypes.bedrock?.type;
+        if (bedrockId == null || !ms) return null;
+        const centreX = Math.floor((this.game.chasmRange[0] + this.game.chasmRange[1]) / 2);
+        for (const cap of caps) {
+            const cell = ms._cellAt(centreX, cap.capY);
+            if (cell && cell.id === bedrockId && cell.type === bedrockType) {
+                return cap.capY * ts;
+            }
+        }
+        return null;
+    }
+
     canReach(worldY) {
-        return worldY <= this.maxReachableY() + 1;
+        if (worldY > this.maxReachableY() + 1) return false;
+        // Caps block descent regardless of rope reach. The platform parks
+        // one tile above the cap (so the deck still shows above it), so a
+        // request for that or any deeper Y is denied until the drill clears.
+        const capY = this.nextBlockingCapWorldY();
+        if (capY != null && worldY >= capY - this.game.tileSize) return false;
+        return true;
     }
 
     refresh() {
@@ -435,16 +486,128 @@ export default class LiftTerminal {
         this.fields.depth.textContent = `-${currentDepth} M`;
         this.fields.rope.textContent = `-${Math.round(this.maxExtension)} M`;
         this.fields.status.textContent = cm.moving ? 'IN MOTION' : 'IDLE';
+        this.fields.rigTier.textContent = RIG_TIER_NAMES[cm.rigTier] || 'MK-?';
+        this.fields.drillBit.textContent = DRILL_BIT_NAMES[cm.drillBitTier] || '?';
         this.fields.extendIncrement.textContent = String(this.extendIncrement);
         this.fields.extendCost.textContent = String(this.extendCost);
 
         this.renderLevels(currentY, surfaceY);
+        this.renderDrill();
         this.renderCrafting();
+    }
+
+    /**
+     * Show whether the platform is parked at a layer cap and, if so, expose
+     * a single DRILL button that consumes coal (gated by drill-bit tier).
+     * Otherwise show a hint at where the next drillable cap lives so the
+     * player has a goal in mind when they leave the terminal.
+     */
+    renderDrill() {
+        const body = this.fields.drillBody;
+        if (!body) return;
+        body.innerHTML = '';
+        const cm = this.craneManager;
+        const cap = cm.capDirectlyBelow ? cm.capDirectlyBelow() : null;
+        const fmtBitReq = (req) =>
+            req === 0 ? 'BASIC BIT' :
+            req === 1 ? 'COPPER BIT REQ.' :
+                        'IRON BIT REQ.';
+
+        if (!cap) {
+            const hint = document.createElement('div');
+            hint.className = 'lift-terminal-empty';
+            const next = (this.game.layerCapRows || []).find(c => {
+                const ts = this.game.tileSize;
+                const centreX = Math.floor((this.game.chasmRange[0] + this.game.chasmRange[1]) / 2);
+                const cell = this.game.mapService._cellAt(centreX, c.capY);
+                return cell && cell.id === this.game.tileTypes.bedrock.id && cell.type === this.game.tileTypes.bedrock.type;
+            });
+            if (next) {
+                const surfaceY = cm.surfaceWorldY();
+                const ts = this.game.tileSize;
+                const depthM = Math.round((next.capY * ts) - surfaceY);
+                hint.textContent = `> NEXT CAP @ -${depthM}M (${fmtBitReq(DRILL_BIT_FOR_LAYER[next.layer] ?? 0)}). PARK PLATFORM ABOVE TO DRILL.`;
+            } else {
+                hint.textContent = '> ALL KNOWN CAPS CLEARED.';
+            }
+            body.appendChild(hint);
+            return;
+        }
+
+        const cost = DRILL_FUEL_COST[cap.layer] || 50;
+        const bitReq = DRILL_BIT_FOR_LAYER[cap.layer] ?? 0;
+        const haveCoal = this._resourceCount('coal');
+        const hasBit = cm.drillBitTier >= bitReq;
+        const canDrill = haveCoal >= cost && hasBit && !cm.moving;
+
+        const status = document.createElement('div');
+        status.className = 'lift-terminal-row';
+        status.innerHTML = `<span class="lbl">CAP</span><span>L${cap.layer}  (${fmtBitReq(bitReq)})</span>`;
+        body.appendChild(status);
+
+        const fuel = document.createElement('div');
+        fuel.className = 'lift-terminal-row';
+        const shortFuel = haveCoal < cost ? ' style="color:#ff5050"' : '';
+        fuel.innerHTML = `<span class="lbl">FUEL</span><span${shortFuel}>COAL ${haveCoal}/${cost}</span>`;
+        body.appendChild(fuel);
+
+        const btn = document.createElement('button');
+        btn.className = 'lift-terminal-btn';
+        btn.disabled = !canDrill;
+        const label = !hasBit
+            ? '[ BIT TOO WEAK ]'
+            : haveCoal < cost
+                ? '[ NEED MORE COAL ]'
+                : '[ DRILL THROUGH ]';
+        btn.innerHTML = label;
+        btn.addEventListener('click', () => {
+            if (!btn.disabled) this.drill(cap);
+        });
+        body.appendChild(btn);
+    }
+
+    /**
+     * Spend the fuel, clear the cap, refresh. Re-checks both gates in case
+     * inventory state shifted between render and click.
+     */
+    drill(cap) {
+        const cm = this.craneManager;
+        const cost = DRILL_FUEL_COST[cap.layer] || 50;
+        const bitReq = DRILL_BIT_FOR_LAYER[cap.layer] ?? 0;
+        if (cm.moving) return;
+        if (cm.drillBitTier < bitReq) return;
+        if (this._resourceCount('coal') < cost) return;
+        this._consumeResource('coal', cost);
+        cm.drillCap(cap);
+        this.refresh();
     }
 
     renderLevels(currentY, surfaceY) {
         const cm = this.craneManager;
-        const levels = this._scanLevelsFromGrid();
+        const ts = this.game.tileSize;
+        const switchLevels = this._scanLevelsFromGrid().map(l => ({...l, kind: 'switch'}));
+
+        // Synthesise a "cap park" entry one tile above each undrilled
+        // bedrock cap — the wall-switch grid alone has nothing close enough
+        // to position the platform for a drill, so we manufacture stops at
+        // the right Y. The shifted park position lines the deck bottom up
+        // flush with the cap so capDirectlyBelow() resolves to the cap.
+        const ms = this.game.mapService;
+        const bedrockId = this.game.tileTypes.bedrock?.id;
+        const bedrockType = this.game.tileTypes.bedrock?.type;
+        const centreX = Math.floor((this.game.chasmRange[0] + this.game.chasmRange[1]) / 2);
+        const capLevels = (this.game.layerCapRows || []).map(cap => {
+            const cell = ms._cellAt(centreX, cap.capY);
+            const drilled = !cell || cell.id !== bedrockId || cell.type !== bedrockType;
+            return {
+                kind: 'cap',
+                worldY: cap.capY * ts - (ts + ts / 2),
+                cap,
+                drilled,
+            };
+        }).filter(l => !l.drilled);
+
+        const levels = [...switchLevels, ...capLevels].sort((a, b) => a.worldY - b.worldY);
         const list = this.fields.levels;
         list.innerHTML = '';
 
@@ -456,18 +619,25 @@ export default class LiftTerminal {
             return;
         }
 
-        levels.forEach((lvl, i) => {
+        let switchIdx = 0;
+        levels.forEach(lvl => {
             const depth = Math.round(lvl.worldY - surfaceY);
             const reachable = this.canReach(lvl.worldY);
-            const atHere = Math.abs(currentY - lvl.worldY) < 1;
+            const atHere = Math.abs(currentY - lvl.worldY) < 2;
             const btn = document.createElement('button');
             btn.className = 'lift-terminal-btn';
             btn.disabled = !reachable || atHere || cm.moving;
             const tag = !reachable ? 'LOCKED' : (atHere ? 'CURRENT' : 'TRAVEL');
-            const num = String(i + 1).padStart(2, '0');
             const depthLabel = depth >= 0 ? `-${depth}m` : `+${-depth}m`;
-            btn.innerHTML =
-                `LVL ${num} &nbsp; ${depthLabel}<span class="right">[ ${tag} ]</span>`;
+            let label;
+            if (lvl.kind === 'cap') {
+                label = `CAP L${lvl.cap.layer} &nbsp; ${depthLabel}`;
+            } else {
+                switchIdx++;
+                const num = String(switchIdx).padStart(2, '0');
+                label = `LVL ${num} &nbsp; ${depthLabel}`;
+            }
+            btn.innerHTML = `${label}<span class="right">[ ${tag} ]</span>`;
             btn.addEventListener('click', () => {
                 if (!btn.disabled) this.travelTo(lvl.worldY);
             });
@@ -496,6 +666,8 @@ export default class LiftTerminal {
         this.fields.stockWood.textContent = String(this._resourceCount('wood'));
         this.fields.stockCoal.textContent = String(this._resourceCount('coal'));
         this.fields.stockMetal.textContent = String(this.metal);
+        this.fields.stockCopper.textContent = String(this._resourceCount('copper'));
+        this.fields.stockIron.textContent = String(this._resourceCount('iron'));
 
         const list = this.fields.recipes;
         list.innerHTML = '';
@@ -531,12 +703,23 @@ export default class LiftTerminal {
             });
             card.appendChild(costs);
 
+            // One-shot upgrades flip from CRAFT to OWNED once the player has
+            // reached the recipe's target tier — keeps the recipe in the
+            // catalogue (so the cost stays visible as a reference) but
+            // disables it so accidental clicks don't no-op silently.
+            const cm = this.craneManager;
+            let owned = false;
+            if (recipe.output.kind === 'drillBit' && cm.drillBitTier >= recipe.output.tier) owned = true;
+            if (recipe.output.kind === 'rigTier'  && cm.rigTier      >= recipe.output.tier) owned = true;
+
             const btn = document.createElement('button');
             btn.className = 'lift-terminal-btn';
-            btn.disabled = !canAfford;
-            btn.innerHTML = canAfford
-                ? `[ CRAFT ] +${recipe.output.amount}`
-                : `[ INSUFFICIENT ]`;
+            btn.disabled = owned || !canAfford;
+            btn.innerHTML = owned
+                ? '[ INSTALLED ]'
+                : canAfford
+                    ? (recipe.output.amount ? `[ CRAFT ] +${recipe.output.amount}` : '[ INSTALL ]')
+                    : '[ INSUFFICIENT ]';
             btn.title = recipe.description || '';
             btn.addEventListener('click', () => {
                 if (!btn.disabled) this.craft(recipe);
@@ -550,11 +733,18 @@ export default class LiftTerminal {
     /**
      * Run a recipe: re-check costs (in case state changed between render
      * and click), then consume inputs and apply the output. Output kinds:
-     *   - 'metal': top up the rig's rope stockpile.
-     *   - 'tool':  bump an existing tool stack's metadata.number. If the
-     *              player isn't carrying that tool, the craft is refused
-     *              (resources stay untouched) so we don't silently eat
-     *              materials for an item the player can't receive.
+     *   - 'metal':    top up the rig's rope stockpile.
+     *   - 'tool':     bump an existing tool stack's metadata.number. If
+     *                 the player isn't carrying that tool, the craft is
+     *                 refused (resources stay untouched) so we don't
+     *                 silently eat materials for an item the player can't
+     *                 receive.
+     *   - 'drillBit': upgrade the rig's drill-bit tier (one-shot — once
+     *                 owned, the bit applies to all future drills).
+     *   - 'rigTier':  upgrade the platform/shelter tier (one-shot ladder
+     *                 to the next tier; refuses if already past).
+     * One-shot upgrades refuse before consuming inputs if the player is
+     * already at or above the target tier.
      */
     craft(recipe) {
         for (const input of recipe.inputs) {
@@ -567,6 +757,9 @@ export default class LiftTerminal {
                 || tb?.slots?.some(s => s && s.id === recipe.output.toolId);
             if (!hasSlot) return;
         }
+        const cm = this.craneManager;
+        if (recipe.output.kind === 'drillBit' && cm.drillBitTier >= recipe.output.tier) return;
+        if (recipe.output.kind === 'rigTier'  && cm.rigTier      >= recipe.output.tier) return;
 
         for (const input of recipe.inputs) {
             this._consumeResource(input.id, input.amount);
@@ -576,6 +769,10 @@ export default class LiftTerminal {
             this.metal += recipe.output.amount;
         } else if (recipe.output.kind === 'tool') {
             this.game.inventoryManager?.addToToolStack?.(recipe.output.toolId, recipe.output.amount);
+        } else if (recipe.output.kind === 'drillBit') {
+            cm.setDrillBitTier(recipe.output.tier);
+        } else if (recipe.output.kind === 'rigTier') {
+            cm.setRigTier(recipe.output.tier);
         }
 
         this.refresh();

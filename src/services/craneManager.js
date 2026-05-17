@@ -261,6 +261,18 @@ export default class CraneManager {
         // snapping in a single frame.
         this.liftMinDurationMs = 150;
         this.game = scene;
+        // Progression dials owned by the rig — gated behind crafting at the
+        // lift terminal. rigTier controls the platform/shelter visuals and
+        // sleep restoration; drillBitTier controls how deep the platform-
+        // mounted drill can crack a layer cap.
+        //   rigTier 0: bare platform + bedroll (no walls)
+        //   rigTier 1: platform + canvas tent
+        //   rigTier 2: full hut (current home)
+        //   drillBit 0: starter — clears layer 1 cap (coal-fuelled)
+        //   drillBit 1: copper — clears caps 2-3
+        //   drillBit 2: iron   — clears caps 4-6
+        this.rigTier = scene.rigTier ?? 0;
+        this.drillBitTier = scene.drillBitTier ?? 0;
         this.ropeColor = '0x6B3E22';
         const width = (this.game.chasmRange[1] - this.game.chasmRange[0]) * 10;
         const platformX = (this.game.chasmRange[0] * 10) + width / 2;
@@ -350,6 +362,13 @@ export default class CraneManager {
      * platform's top and re-synced every frame so they stay glued during
      * lift travel. Decor is persisted on the GameScene so it survives
      * scene transitions even though there's no world grid cell to anchor.
+     *
+     * The shelter art swaps between three tier-specific compositions:
+     *   tier 0: bedroll only — no walls, exposed deck.
+     *   tier 1: canvas tent — taller silhouette, still no facade.
+     *   tier 2: full hut facade with stoop, window glow, decor inside.
+     * Only one composition is visible at a time; the others stay hidden
+     * so a tier change just toggles visibility instead of teardown.
      */
     createPlatformHut(platformX, platformY) {
         const ts = this.game.tileSize;
@@ -366,6 +385,7 @@ export default class CraneManager {
             };
         }
 
+        // --- Tier 2: full hut facade -------------------------------------
         const facade = this.game.add.image(platformX, platformTop, textureKey);
         facade.setOrigin(0.5, 1);
         facade.setDisplaySize(HUT_TILE_W * ts, HUT_TILE_H * ts);
@@ -387,20 +407,35 @@ export default class CraneManager {
         windowGlow.setDepth(0.59);
         windowGlow.setBlendMode(Phaser.BlendModes.ADD);
 
-        // Invisible interactable rectangle sat just above the platform so
-        // the existing hutGroup overlap picks it up like a normal hut.
+        // --- Tier 0: bedroll laid out on the deck ------------------------
+        const bedroll = this.game.add.image(platformX, platformTop - 1, 'bedroll');
+        bedroll.setOrigin(0.5, 1);
+        bedroll.setDisplaySize(ts * 1.6, ts * 0.7);
+        bedroll.setDepth(0.62);
+        // Tiny lantern beside the bedroll so the early-game home isn't
+        // pitch black at night. Reuses the hut window glow palette.
+        const campLight = this.game.add.rectangle(
+            platformX - ts * 0.9, platformTop - ts * 0.4, ts * 0.4, ts * 0.4, 0xffd27a, 0.5
+        );
+        campLight.setDepth(0.61);
+        campLight.setBlendMode(Phaser.BlendModes.ADD);
+
+        // --- Tier 1: tent ------------------------------------------------
+        const tent = this.game.add.image(platformX, platformTop, 'tent');
+        tent.setOrigin(0.5, 1);
+        tent.setDisplaySize(ts * 2.6, ts * 2.0);
+        tent.setDepth(0.6);
+
+        // Door collider — same hit area at every tier so interaction stays
+        // predictable while the visible shelter changes around it.
         const door = this.game.add.rectangle(
             platformX, platformTop - (ts * 1.4) / 2, ts, ts * 1.4, 0xffffff
         );
         door.setAlpha(0);
         this.game.hutGroup.add(door);
-        // Stubs match the Tile-shaped interface — getAdjacentBlocks /
-        // chunk-unload / hover scans iterate every entity group and call
-        // these without checking whether they exist, so leaving them off
-        // crashes on the first chunk unload.
         door.tileRef = {
             tileDetails: {isPlayerHouse: true, paletteKey, hutId: 'platform_home'},
-            interactionText: 'Enter Home',
+            interactionText: 'Rest',
             enterHut: () => this._enterPlatformHut(),
             destroy: () => {},
             checkState: () => {},
@@ -409,24 +444,132 @@ export default class CraneManager {
             onClick: () => {},
         };
 
-        this.platformHut = {facade, stoop, windowGlow, door};
+        this.platformHut = {facade, stoop, windowGlow, bedroll, campLight, tent, door};
+        this._applyRigTierVisuals();
         this._syncPlatformHut();
+    }
+
+    /**
+     * Show/hide the shelter pieces matching the current rigTier and update
+     * the door's interaction prompt. Called on construct + on every
+     * setRigTier; cheap because every piece is already in the scene.
+     */
+    _applyRigTierVisuals() {
+        if (!this.platformHut) return;
+        const {facade, stoop, windowGlow, bedroll, campLight, tent, door} = this.platformHut;
+        const t = this.rigTier;
+        bedroll.setVisible(t === 0);
+        campLight.setVisible(t === 0 || t === 1);
+        tent.setVisible(t === 1);
+        facade.setVisible(t >= 2);
+        stoop.setVisible(t >= 2);
+        windowGlow.setVisible(t >= 2);
+        if (door?.tileRef) {
+            door.tileRef.interactionText =
+                t === 0 ? 'Use Bedroll' :
+                t === 1 ? 'Enter Tent'  :
+                          'Enter Home';
+        }
+    }
+
+    setRigTier(tier) {
+        const t = Math.max(0, Math.min(2, tier | 0));
+        if (t === this.rigTier) return;
+        this.rigTier = t;
+        this.game.rigTier = t;
+        this._applyRigTierVisuals();
+    }
+
+    setDrillBitTier(tier) {
+        const t = Math.max(0, Math.min(2, tier | 0));
+        if (t === this.drillBitTier) return;
+        this.drillBitTier = t;
+        this.game.drillBitTier = t;
     }
 
     _syncPlatformHut() {
         if (!this.platformHut) return;
         const ts = this.game.tileSize;
         const platformTop = this.craneFlat.y - PLATFORM_HALF_H;
-        const {facade, stoop, windowGlow, door} = this.platformHut;
+        const {facade, stoop, windowGlow, bedroll, campLight, tent, door} = this.platformHut;
         facade.x = this.craneFlat.x;
         facade.y = platformTop;
         stoop.x = this.craneFlat.x;
         stoop.y = platformTop;
         windowGlow.x = this.craneFlat.x;
         windowGlow.y = platformTop - ts * 2.1;
+        bedroll.x = this.craneFlat.x;
+        bedroll.y = platformTop - 1;
+        campLight.x = this.craneFlat.x - ts * 0.9;
+        campLight.y = platformTop - ts * 0.4;
+        tent.x = this.craneFlat.x;
+        tent.y = platformTop;
         door.x = this.craneFlat.x;
         door.y = platformTop - (ts * 1.4) / 2;
         if (door.body) door.body.updateFromGameObject();
+    }
+
+    /**
+     * Find the bedrock cap row sitting directly underneath the platform, if
+     * any. Used by the lift terminal to enable its DRILL action and to know
+     * which cells to clear when the drill fires. Returns null when no cap
+     * is within reach (a few tiles below the deck) — that includes both
+     * "already drilled past" and "platform parked above empty chasm".
+     */
+    capDirectlyBelow() {
+        const ts = this.game.tileSize;
+        const caps = this.game.layerCapRows || [];
+        if (!caps.length) return null;
+        const platformBottomY = this.craneFlat.body
+            ? this.craneFlat.body.y + (this.craneFlat.body.height || 5)
+            : this.craneFlat.y + PLATFORM_HALF_H;
+        const platformBottomCellY = Math.floor(platformBottomY / ts);
+        for (const cap of caps) {
+            const dy = cap.capY - platformBottomCellY;
+            // Cap row lives within ~3 tiles below the deck — far enough to
+            // forgive small parking errors, close enough that the player
+            // is clearly "at" this cap rather than drifting between two.
+            if (dy >= 0 && dy <= 3) {
+                // Verify the centre cell still holds bedrock (already-drilled
+                // caps stay in the list but resolve to empty cells).
+                const centreX = Math.floor((this.game.chasmRange[0] + this.game.chasmRange[1]) / 2);
+                const cell = this.game.mapService._cellAt(centreX, cap.capY);
+                const bedrockType = this.game.tileTypes.bedrock?.type;
+                if (cell && cell.id === this.game.tileTypes.bedrock.id && cell.type === bedrockType) {
+                    return cap;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Replace every bedrock cell in `cap` with empty cells, opening the
+     * shaft to the next layer. Caller is responsible for the bit-tier and
+     * fuel checks; this just performs the world mutation.
+     */
+    drillCap(cap) {
+        if (!cap) return false;
+        const ms = this.game.mapService;
+        const ts = this.game.tileSize;
+        const empty = this.game.tileTypes.empty;
+        const chasm = this.game.chasmRange;
+        for (let x = chasm[0] + 1; x < chasm[1]; x++) {
+            const worldX = x * ts;
+            const worldY = cap.capY * ts;
+            // Pass the sprite as cellItem — Tile.init stamps chunkKey /
+            // cellX / cellY / tileRef onto the sprite so setTile can resolve
+            // the grid slot and dispose the old tile in one call.
+            const sprite = ms.spriteAtWorld(worldX, worldY);
+            ms.setTile(worldX, worldY, {...empty}, sprite || undefined);
+        }
+        // Quick visual punch: dust burst at each cleared tile so the drill
+        // operation reads as something physical happened.
+        const cx = ((chasm[0] + chasm[1]) / 2) * ts;
+        const cy = cap.capY * ts;
+        this.game.dustEmitter?.setPosition(cx, cy);
+        this.game.dustEmitter?.explode(80);
+        return true;
     }
 
     _enterPlatformHut() {
@@ -439,6 +582,9 @@ export default class CraneManager {
                 isPlayerHouse: true,
                 paletteKey: 'homestead',
                 decor: this.game.platformHutDecor,
+                // Forward the rig tier so the interior renders the right
+                // furniture set and scales sleep restoration.
+                homeTier: this.rigTier,
             },
             persistDecor: (group, key) => {
                 this.game.platformHutDecor[group] = key;

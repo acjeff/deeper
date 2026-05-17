@@ -46,6 +46,11 @@ export default class PreloadScene extends Phaser.Scene {
 
     create() {
         this.generateAxeTexture();
+        this.generateOreTexture('copper', '#a86038', '#d68a52', '#5a2e10', '#f0b070');
+        this.generateOreTexture('iron',   '#9aa0a8', '#cdd2d9', '#3a4048', '#eef0f4');
+        this.generateBedrockTexture();
+        this.generateBedrollTexture();
+        this.generateTentTexture();
         this.scene.start("MenuScene");
     }
 
@@ -93,6 +98,151 @@ export default class PreloadScene extends Phaser.Scene {
         }
 
         tex.refresh();
+    }
+
+    // Ore overlay sprites that sit on top of the dark dirt tile texture.
+    // Same authoring shape as the existing coal art (dark base, flecks of
+    // ore colour clustered into a vein) so all three ores read as the same
+    // family at different richness/colour.
+    generateOreTexture(key, base, light, shadow, sparkle) {
+        if (this.textures.exists(key)) return;
+        const w = 16, h = 16;
+        const tex = this.textures.createCanvas(key, w, h);
+        const ctx = tex.context;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, w, h);
+
+        const veins = [
+            [3, 4], [4, 4], [5, 5], [6, 5], [6, 6], [7, 6],
+            [8, 7], [9, 7], [10, 8], [11, 8], [12, 9],
+            [4, 9], [5, 10], [6, 10], [7, 11], [8, 11],
+            [9, 12], [10, 12], [3, 12], [11, 5], [12, 6],
+        ];
+        ctx.fillStyle = shadow;
+        for (const [x, y] of veins) ctx.fillRect(x, y + 1, 1, 1);
+        ctx.fillStyle = base;
+        for (const [x, y] of veins) ctx.fillRect(x, y, 1, 1);
+        ctx.fillStyle = light;
+        const highlights = [[5, 4], [7, 5], [9, 6], [11, 8], [6, 9], [8, 10]];
+        for (const [x, y] of highlights) ctx.fillRect(x, y, 1, 1);
+        ctx.fillStyle = sparkle;
+        const sparkles = [[5, 5], [9, 8], [11, 9]];
+        for (const [x, y] of sparkles) ctx.fillRect(x, y, 1, 1);
+
+        tex.refresh();
+    }
+
+    // Bedrock layer-cap tile. Reads as solid stone — uniform mid-grey
+    // body with a few darker pits and lighter chips so it doesn't tile
+    // into a flat stripe across the chasm. Players see it as the floor
+    // they need to drill through to descend further.
+    generateBedrockTexture() {
+        if (this.textures.exists('bedrock')) return;
+        const w = 16, h = 16;
+        const tex = this.textures.createCanvas('bedrock', w, h);
+        const ctx = tex.context;
+        ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = '#4a4a4a';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#5e5e5e';
+        for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+        ctx.fillStyle = '#3a3a3a';
+        const pits = [[2,3],[5,1],[8,4],[12,2],[3,7],[10,8],[14,10],[6,11],[1,13],[11,14]];
+        for (const [x, y] of pits) ctx.fillRect(x, y, 2, 2);
+        ctx.fillStyle = '#777';
+        const chips = [[4,6],[9,3],[13,7],[7,9],[2,11],[12,12]];
+        for (const [x, y] of chips) ctx.fillRect(x, y, 1, 1);
+        ctx.fillStyle = '#222';
+        for (let i = 0; i < 14; i++) {
+            const x = (i * 5 + 3) % w;
+            const y = (i * 7 + 2) % h;
+            ctx.fillRect(x, y, 1, 1);
+        }
+        tex.refresh();
+    }
+
+    // Tier-0 home: a rolled sleeping bag on the platform deck. Tiny
+    // sprite, drawn pixel-perfect at 1× and scaled up by setDisplaySize
+    // when the rig mounts it. Brown pad + red blanket + a small pillow.
+    generateBedrollTexture() {
+        if (this.textures.exists('bedroll')) return;
+        const w = 18, h = 8;
+        const tex = this.textures.createCanvas('bedroll', w, h);
+        const ctx = tex.context;
+        ctx.imageSmoothingEnabled = false;
+        // Mat
+        ctx.fillStyle = '#5a3a22';
+        ctx.fillRect(0, 4, w, 4);
+        ctx.fillStyle = '#7a4a28';
+        ctx.fillRect(0, 4, w, 1);
+        ctx.fillStyle = '#2a1808';
+        ctx.fillRect(0, h - 1, w, 1);
+        // Blanket
+        ctx.fillStyle = '#a8443a';
+        ctx.fillRect(2, 2, w - 4, 4);
+        ctx.fillStyle = '#c46044';
+        ctx.fillRect(2, 2, w - 4, 1);
+        ctx.fillStyle = '#5a1a10';
+        ctx.fillRect(2, 5, w - 4, 1);
+        // Stitching seams
+        ctx.fillStyle = '#3a1008';
+        for (let x = 4; x < w - 2; x += 3) ctx.fillRect(x, 3, 1, 2);
+        // Pillow at the head
+        ctx.fillStyle = '#f4e7c6';
+        ctx.fillRect(1, 1, 5, 3);
+        ctx.fillStyle = '#c9b58a';
+        ctx.fillRect(1, 3, 5, 1);
+    }
+
+    // Tier-1 home: a small canvas tent pitched on the platform. Low
+    // triangular silhouette with a darker open flap and a couple of guy
+    // ropes. Sits a bit taller than the bedroll without yet hitting full
+    // hut size — same width footprint as the bedroll so the upgrade reads.
+    generateTentTexture() {
+        if (this.textures.exists('tent')) return;
+        const w = 28, h = 22;
+        const tex = this.textures.createCanvas('tent', w, h);
+        const ctx = tex.context;
+        ctx.imageSmoothingEnabled = false;
+        // Triangular tent body — two coloured slopes for depth.
+        const apex = w / 2;
+        const baseY = h - 3;
+        for (let y = 2; y <= baseY; y++) {
+            const half = Math.round(((y - 2) / (baseY - 2)) * (w / 2 - 2));
+            const x0 = apex - half;
+            const x1 = apex + half;
+            ctx.fillStyle = (y - 2) < 5 ? '#b89a5e' : '#a08240';
+            ctx.fillRect(x0, y, x1 - x0, 1);
+        }
+        // Right slope shading
+        for (let y = 4; y <= baseY; y++) {
+            const half = Math.round(((y - 2) / (baseY - 2)) * (w / 2 - 2));
+            ctx.fillStyle = '#7a5a28';
+            ctx.fillRect(apex + half - 2, y, 2, 1);
+        }
+        // Ridge line
+        ctx.fillStyle = '#3a2a10';
+        ctx.fillRect(apex - 1, 2, 2, baseY - 1);
+        // Flap doorway
+        ctx.fillStyle = '#3a2a18';
+        ctx.fillRect(apex - 3, baseY - 7, 6, 7);
+        ctx.fillStyle = '#1a0e06';
+        ctx.fillRect(apex - 1, baseY - 6, 2, 6);
+        ctx.fillStyle = '#5a4222';
+        ctx.fillRect(apex - 3, baseY - 7, 1, 7);
+        ctx.fillRect(apex + 2, baseY - 7, 1, 7);
+        // Ground line
+        ctx.fillStyle = '#2a1808';
+        ctx.fillRect(0, baseY, w, 1);
+        // Guy ropes
+        ctx.fillStyle = '#cdb89a';
+        ctx.fillRect(2, baseY - 2, 1, 1);
+        ctx.fillRect(3, baseY - 1, 1, 1);
+        ctx.fillRect(w - 3, baseY - 2, 1, 1);
+        ctx.fillRect(w - 4, baseY - 1, 1, 1);
+        // Apex finial
+        ctx.fillStyle = '#1a0e06';
+        ctx.fillRect(apex - 1, 1, 2, 2);
     }
 
 }

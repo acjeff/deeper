@@ -3,6 +3,9 @@ import {darkenColor} from "../services/colourManager";
 
 const hexStringToInt = (str) => parseInt(str.replace(/^0x/, ''), 16);
 
+// Pickaxe tier → mining hitPower multiplier. Worn → Copper → Iron.
+const PICKAXE_TIER_MULT = [1, 1.6, 2.5];
+
 export class Breakable extends Tile {
     constructor({game, worldX, worldY, tileDetails, cellDetails}) {
         super({game, worldX, worldY, tileDetails, cellDetails});
@@ -344,7 +347,14 @@ export class Breakable extends Tile {
                 if (this.clicking) return;
                 this.clicking = true;
                 this.game.player.energy -= 1;
-                const hitPower = this.game.player.hitPower;
+                // Pickaxe tier (forged at the cabin Forge) multiplies the
+                // raw hitPower so harder veins crack proportionally faster.
+                // Tiers come from the toolbar item's metadata.toolTier and
+                // map: 0 = worn (×1), 1 = copper (×1.6), 2 = iron (×2.5).
+                const tierMult = PICKAXE_TIER_MULT[
+                    this.game.selectedTool?.metadata?.toolTier | 0
+                ] || 1;
+                const hitPower = this.game.player.hitPower * tierMult;
                 let baseCell, damageAmount = this.tileDetails.damageAmount || 0;
                 damageAmount += hitPower;
                 let health = -(damageAmount / this.tileDetails.strength - 1);
@@ -365,12 +375,17 @@ export class Breakable extends Tile {
                     this.game.dustEmitter.explode(50);
                     baseCell = this.tileDetails.trapped || {...this.game.tileTypes.empty};
                     this.clicking = false;
-                    // Coal veins also drop a unit straight to the player's
-                    // inventory so crafting at the lift doesn't require a
-                    // minecart pickup. The minecart catch path still works
-                    // for the visible debris that scatters from the break.
+                    // Coal/copper/iron veins drop a unit straight to the
+                    // player's inventory so crafting at the lift doesn't
+                    // require a minecart pickup. The minecart catch path
+                    // still works for the visible debris that scatters from
+                    // the break.
                     if (this.tileDetails.type === 1) {
                         this.game.inventoryManager?.addCoal?.(1);
+                    } else if (this.tileDetails.type === 4) {
+                        this.game.inventoryManager?.addCopper?.(1);
+                    } else if (this.tileDetails.type === 5) {
+                        this.game.inventoryManager?.addIron?.(1);
                     }
                     this.game.mapService.setTile(this.worldX, this.worldY, baseCell, this.sprite);
                 } else {

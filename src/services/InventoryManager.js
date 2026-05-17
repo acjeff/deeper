@@ -443,6 +443,33 @@ export default class InventoryManager {
         );
     }
 
+    addCopper(amount = 1) {
+        const url = this._iconUrlForTexture('copper');
+        this._addOrStack('copper', amount, () =>
+            new InventoryItem('copper', null, 'Copper', 'material', url, {number: amount})
+        );
+    }
+
+    addIron(amount = 1) {
+        const url = this._iconUrlForTexture('iron');
+        this._addOrStack('iron', amount, () =>
+            new InventoryItem('iron', null, 'Iron', 'material', url, {number: amount})
+        );
+    }
+
+    // Inventory icons are HTML <img> elements, so procedural canvas
+    // textures need to be exported as a data URL once. Falls back to the
+    // coal sprite if the texture isn't there yet so the icon never blanks.
+    _iconUrlForTexture(key) {
+        const tex = this.game?.textures;
+        if (!tex || !tex.exists(key)) return 'images/coal.png';
+        try {
+            return tex.get(key).getSourceImage().toDataURL();
+        } catch (e) {
+            return 'images/coal.png';
+        }
+    }
+
     _addOrStack(id, amount, factory) {
         const bump = (existing) => {
             const current = existing.metadata?.number || 0;
